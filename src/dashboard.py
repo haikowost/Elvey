@@ -13,7 +13,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from pydantic import BaseModel
 
-from . import db, zoho
+from . import db, harvest, zoho
 from .config import load_config
 from .images import coverage, update_account_kyc_status
 from .util import DEPARTMENTS, norm_company
@@ -207,6 +207,16 @@ def create_app(cfg=None) -> FastAPI:
         d["setup_steps"] = zoho.setup_steps(d["missing_fields"], cfg) if any(d["missing_fields"].values()) else None
         d["live_enabled"] = bool((cfg.get("zoho") or {}).get("live_enabled"))
         return d
+
+    @app.get("/api/verify")
+    def verify_report():
+        with lock:
+            return harvest.verify(conn, cfg, fix=False)
+
+    @app.post("/api/verify")
+    def verify_and_fix():
+        with lock:
+            return harvest.verify(conn, cfg, fix=True)
 
     @app.post("/api/zoho/pull")
     def pull():

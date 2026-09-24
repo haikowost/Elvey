@@ -91,6 +91,7 @@ dialog pre { white-space: pre-wrap; font-size: 12px; max-height: 55vh; overflow:
 
 <main>
   <section id="view-tree">
+    <div id="dqbox" class="warnbox hidden"></div>
     <div class="bar">
       <span id="branches"></span>
       <input type="search" id="q" placeholder="Search name, company, role, rep…">
@@ -489,7 +490,28 @@ async function loadLog() {
     `<tr><td>${esc(r.ts)}</td><td>${esc(r.entity)} #${r.local_id}</td><td>${esc(r.action)}</td><td>${esc(r.zoho_id || '')}</td><td>${esc(r.result)}</td></tr>`).join('')}</table>` : 'No pushes yet.';
 }
 
-loadStats(); loadTree();
+// ---------------------------------------------------------------- Data-quality self-check
+const DQ_LABELS = { footer_polluted: "summary was actually LinkedIn's page footer",
+  empty_but_marked_done: 'marked done but nothing usable was captured', partial: 'summary but no role/work history',
+  stuck_unknown_employment: 'employment status never resolved', duplicate_profile_url: 'two contacts, same LinkedIn profile' };
+async function loadVerify() {
+  let rep;
+  try { rep = await api('/api/verify'); } catch { $('#dqbox').classList.add('hidden'); return; }
+  const total = Object.keys(DQ_LABELS).reduce((n, k) => n + (rep[k] || []).length, 0);
+  if (!total) { $('#dqbox').classList.add('hidden'); return; }
+  $('#dqbox').classList.remove('hidden');
+  $('#dqbox').innerHTML = `<b>Data quality self-check:</b> ` +
+    Object.entries(DQ_LABELS).filter(([k]) => (rep[k] || []).length).map(([k, l]) => `${rep[k].length} ${l}`).join(' · ') +
+    `. <button class="btn ghost" id="dqfix" style="margin-left:6px">Fix what can be fixed</button>` +
+    ` <span class="muted">(re-queues bad results; run the harvester again to refresh them)</span>`;
+  $('#dqfix').onclick = async () => {
+    $('#dqfix').disabled = true; $('#dqfix').textContent = 'Fixing…';
+    const r = await api('/api/verify', { method: 'POST' });
+    alert(r.requeued.length ? `Re-queued ${r.requeued.length} contact(s). Run the harvester to refresh them.` : 'Nothing needed fixing.');
+    await loadVerify(); await loadTree();
+  };
+}
+loadStats(); loadTree(); loadVerify();
 </script>
 </body>
 </html>

@@ -328,3 +328,101 @@ def test_apply_result_stores_location(cfg, loaded):
     harvest.apply_result(loaded, cfg, bob, res, need_face=False)
     row = db.one(loaded, "SELECT city, province, country, location_source FROM contacts WHERE id=?", [bob["id"]])
     assert row == {"city": "Johannesburg", "province": "Gauteng", "country": "South Africa", "location_source": "linkedin"}
+
+
+def test_heading_key_tolerates_punctuation():
+    for v in ("Experience", "Experience 4", "Experience4", "Experience ·", "Experience:"):
+        assert harvest._heading_key(v) == "experience"
+
+
+def test_partial_result_flagged_and_debugged(cfg, loaded):
+    """Summary captured but role/work-history still missing must not be silently called complete."""
+    bob = _contact(loaded, "Bob Jones")
+    res = Result("done", profile_url="u", profile_name="Bob Jones", about="Buys stuff.",
+                 debug_text="PAGE TEXT WITH NO HEADLINE OR EXPERIENCE")
+    label = harvest.apply_result(loaded, cfg, bob, res, need_face=False)
+    assert label == "done/partial"
+    row = db.one(loaded, "SELECT enrich_status, linkedin_summary FROM contacts WHERE id=?", [bob["id"]])
+    assert row["enrich_status"] == "done" and row["linkedin_summary"] == "Buys stuff."  # still saved, just flagged
+    assert (cfg.data_dir / "debug" / f"partial_{bob['id']}.txt").read_text().startswith("contact: Bob Jones")
+
+    # a full result (headline + experience) is not flagged and leaves no partial file behind
+    carla = _contact(loaded, "Carla Müller")
+    full = Result("done", profile_url="u2", profile_name="Carla Müller", headline="PM at Beta",
+                 about="...", experience=[{"title": "PM", "company": "Beta", "dates": "2020 - Present"}])
+    assert harvest.apply_result(loaded, cfg, carla, full, need_face=False) == "done"
+    assert not (cfg.data_dir / "debug" / f"partial_{carla['id']}.txt").exists()
+
+
+# ------------------------------------------------------------------ self-check (verify)
+
+def _mark_done(conn, contact_id, **fields):
+    fields.setdefault("enrich_status", "done")
+    conn.execute(f"UPDATE contacts SET {', '.join(k + '=?' for k in fields)} WHERE id=?", [*fields.values(), contact_id])
+    conn.commit()
+
+
+def test_verify_flags_and_fixes_footer_pollution(cfg, loaded):
+    bob = _contact(loaded, "Bob Jones")
+    _mark_done(loaded, bob["id"], linkedin_summary="Accessibility Talent Solutions Community Guidelines Careers",
+               linkedin_experience="[]")
+    rep = harvest.verify(loaded, cfg, fix=True)
+    assert [e["id"] for e in rep["footer_polluted"]] == [bob["id"]]
+    assert rep["requeued"] == [bob["id"]]
+    row = db.one(loaded, "SELECT enrich_status, linkedin_summary FROM contacts WHERE id=?", [bob["id"]])
+    assert row["enrich_status"] == "pending" and row["linkedin_summary"] is None  # garbage cleared, ready to retry
+
+
+def test_verify_flags_empty_marked_done_and_partial_and_stuck(cfg, loaded):
+    bob, carla, anna = (_contact(loaded, n) for n in ("Bob Jones", "Carla Müller", "Anna Smith"))
+    _mark_done(loaded, bob["id"], linkedin_summary=None, linkedin_experience="[]")  # nothing at all
+    _mark_done(loaded, carla["id"], linkedin_summary="A summary.", role="Buyer", linkedin_experience="[]",
+              employment_status="unknown")  # has role but experience empty -> partial, and stuck
+    rep = harvest.verify(loaded, cfg, fix=True)
+    assert {e["id"] for e in rep["empty_but_marked_done"]} == {bob["id"]}
+    assert {e["id"] for e in rep["partial"]} == {carla["id"]}
+    assert carla["id"] in {e["id"] for e in rep["stuck_unknown_employment"]}
+    assert bob["id"] in rep["requeued"] and carla["id"] not in rep["requeued"]  # partial is reported, not touched
+    assert db.one(loaded, "SELECT linkedin_summary FROM contacts WHERE id=?", [carla["id"]])["linkedin_summary"] == "A summary."
+
+
+def test_verify_flags_duplicate_profile_url(cfg, loaded):
+    bob, carla = _contact(loaded, "Bob Jones"), _contact(loaded, "Carla Müller")
+    for c in (bob, carla):
+        _mark_done(loaded, c["id"], linkedin_summary="x", role="y", linkedin_experience="[]",
+                  linkedin_profile_url="https://www.linkedin.com/in/same-person")
+    rep = harvest.verify(loaded, cfg, fix=True)
+    assert len(rep["duplicate_profile_url"]) == 1
+    ids = {c["id"] for c in rep["duplicate_profile_url"][0]["contacts"]}
+    assert ids == {bob["id"], carla["id"]}
+    assert not rep["requeued"]  # a mismatch needs a human, never auto-fixed
+
+
+def test_verify_clean_database_flags_nothing(cfg, loaded):
+    rep = harvest.verify(loaded, cfg, fix=True)
+    assert all(not rep[k] for k in harvest.VERIFY_CHECKS) and not rep["requeued"]
+
+
+def test_normal_run_self_checks_quietly_first(cfg, loaded, monkeypatch, capsys):
+    bob = _contact(loaded, "Bob Jones")
+    _mark_done(loaded, bob["id"], linkedin_summary="Accessibility Talent Solutions Community Guidelines",
+               linkedin_experience="[]")
+    monkeypatch.setattr(harvest, "load_config", lambda _=None: cfg)
+    monkeypatch.setattr(harvest, "LinkedInDriver", lambda *a, **k: FakeDriver({}))
+    harvest.main(["--cap", "0"])
+    out = capsys.readouterr().out
+    assert "self-check: re-queued 1" in out
+    assert db.one(loaded, "SELECT enrich_status FROM contacts WHERE id=?", [bob["id"]])["enrich_status"] == "pending"
+
+
+def test_verify_cli_reports_and_fixes(cfg, loaded, monkeypatch, capsys):
+    bob = _contact(loaded, "Bob Jones")
+    _mark_done(loaded, bob["id"], linkedin_summary="Accessibility Talent Solutions Community Guidelines",
+               linkedin_experience="[]")
+    monkeypatch.setattr(harvest, "load_config", lambda _=None: cfg)
+    harvest.main(["--verify", "--no-fix"])
+    assert db.one(loaded, "SELECT enrich_status FROM contacts WHERE id=?", [bob["id"]])["enrich_status"] == "done"
+    harvest.main(["--verify"])
+    out = capsys.readouterr().out
+    assert "Re-queued 1" in out
+    assert db.one(loaded, "SELECT enrich_status FROM contacts WHERE id=?", [bob["id"]])["enrich_status"] == "pending"

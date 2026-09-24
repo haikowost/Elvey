@@ -151,8 +151,10 @@ def clean_profile_data(data: dict) -> dict:
 
 
 def _heading_key(line: str) -> str:
-    """'Experience' / 'Experience 4' / 'Experience4' (a count badge glued on) -> 'experience'."""
-    return re.sub(r"\s*\d+\s*$", "", (line or "").strip().lower())
+    """'Experience' / 'Experience 4' / 'Experience4' / 'Experience ·' -> 'experience'."""
+    key = (line or "").strip().lower()
+    key = re.sub(r"[\s·:\-]*\d+[\s·:\-]*$", "", key)   # trailing count badge
+    return key.strip(" ·:-")
 
 
 def _is_heading(line: str) -> bool:
@@ -411,13 +413,15 @@ JS_PROFILE = """
     }
     return out;
   };
-  const h1 = main.querySelector('h1');
-  const top = h1 ? (h1.closest('section') || h1.parentElement) : null;
+  // topLines used to be scoped to the <h1>'s own container, which misses the headline whenever
+  // LinkedIn's real (hashed-class) markup puts it in a sibling branch instead. Read straight off
+  // the page's first visible lines instead — order (name, headline, location, ...) is what the
+  // headline/location fallbacks below actually rely on, not any particular DOM nesting.
   const sections = [...main.querySelectorAll('section')].map(sec => {
-    const h = sec.querySelector('h2, h3');
+    const h = sec.querySelector('h2, h3, [role="heading"]');
     return {heading: h ? (lines(h)[0] || '') : '', lines: lines(sec).slice(0, 300)};
   }).filter(x => x.heading);
-  return {name, headline, about, experience, topLines: lines(top).slice(0, 15), sections,
+  return {name, headline, about, experience, topLines: lines(main).slice(0, 20), sections,
           text: lines(main).slice(0, 600), title: document.title};
 }
 """
@@ -650,6 +654,11 @@ def apply_result(conn, cfg, contact: dict, res: Result, need_face: bool) -> str:
             save_debug(cfg, contact, res.debug_text, "profile")
         else:
             changes.update({"enrich_status": "done", "enrich_error": None})
+            if not (res.headline and res.experience):
+                # summary captured, but the headline/current-role or work history is still missing:
+                # save what the page showed so this can be diagnosed without a separate --diagnose run
+                label = "done/partial"
+                save_debug(cfg, contact, res.debug_text, "partial")
         if not contact.get("linkedin_contact_url") and res.profile_url:
             changes["linkedin_contact_url"] = res.profile_url
         title = current_title(res.experience, res.headline)
@@ -759,6 +768,87 @@ RETRY_SQL = """UPDATE contacts SET enrich_status = 'pending', enrich_attempts = 
                       AND coalesce(linkedin_experience, '') IN ('', '[]')))"""
 
 
+VERIFY_CHECKS = ("footer_polluted", "empty_but_marked_done", "partial", "stuck_unknown_employment",
+                "duplicate_profile_url")
+
+
+def verify(conn, cfg, fix: bool = True) -> dict:
+    """Data-quality self-check over everyone already harvested — run this any time, no LinkedIn needed.
+
+    Finds:
+      footer_polluted        — a stored summary is actually LinkedIn's page footer (the bug fixed in
+                                this build); always unambiguous, always re-queued when fix=True.
+      empty_but_marked_done  — marked done under an earlier, looser definition of "empty" but really
+                                has nothing usable; re-queued when fix=True.
+      partial                — has a summary but no role or work history; reported, not auto-retried
+                                (the summary is still useful, and a retry might not do better).
+      stuck_unknown_employment — done, with a role or work history captured, but employment_status
+                                was never set to current/moved; usually clears itself after a retry.
+      duplicate_profile_url  — two different contacts point at the same LinkedIn profile: a likely
+                                mismatch that needs a person to look at it, never auto-fixed.
+
+    With fix=True (the default), footer_polluted and empty_but_marked_done rows have their bad
+    summary/experience cleared and are set back to 'pending' so the next harvest run retries them.
+    """
+    report: dict = {k: [] for k in VERIFY_CHECKS}
+    rows = db.rows(conn, """SELECT c.*, a.name AS company FROM contacts c LEFT JOIN accounts a ON a.id = c.account_id
+                            WHERE c.enrich_status = 'done'""")
+    seen_urls: dict[str, list] = {}
+    requeue: set[int] = set()
+    for r in rows:
+        summary = r["linkedin_summary"] or ""
+        exp = db.jload(r["linkedin_experience"], [])
+        entry = {"id": r["id"], "name": r["full_name"], "company": r["company"]}
+        if _FOOTER_RE.search(summary):
+            report["footer_polluted"].append(entry)
+            requeue.add(r["id"])
+        elif not (summary.strip() and (r["role"] or exp)):
+            report["empty_but_marked_done"].append(entry)
+            requeue.add(r["id"])
+        elif not (r["role"] and exp):
+            report["partial"].append(entry)
+        if r["employment_status"] == "unknown" and (r["role"] or exp):
+            report["stuck_unknown_employment"].append(entry)
+        if r["linkedin_profile_url"]:
+            seen_urls.setdefault(r["linkedin_profile_url"], []).append(entry)
+    report["duplicate_profile_url"] = [{"url": u, "contacts": es} for u, es in seen_urls.items() if len(es) > 1]
+    if fix and requeue:
+        with conn:
+            for cid in requeue:
+                db.update(conn, "contacts", cid, {"enrich_status": "pending", "enrich_attempts": 0,
+                                                   "linkedin_summary": None, "linkedin_experience": None,
+                                                   "enrich_error": "re-queued by --verify (bad stored data)"})
+    report["requeued"] = sorted(requeue)
+    return report
+
+
+def print_verify_report(report: dict) -> None:
+    labels = {"footer_polluted": "Summary was actually LinkedIn's page footer",
+             "empty_but_marked_done": "Marked done but nothing usable was captured",
+             "partial": "Summary captured, but role/work history is missing",
+             "stuck_unknown_employment": "Employment status never resolved despite having data",
+             "duplicate_profile_url": "Two contacts point at the same LinkedIn profile"}
+    total = sum(len(report[k]) for k in VERIFY_CHECKS)
+    if not total:
+        print("Nothing to flag — everyone already harvested looks complete.")
+        return
+    for key in VERIFY_CHECKS:
+        items = report[key]
+        if not items:
+            continue
+        print(f"\n{labels[key]} ({len(items)}):")
+        if key == "duplicate_profile_url":
+            for d in items[:30]:
+                print(f"  {d['url']}: " + ", ".join(f"#{c['id']} {c['name']}" for c in d["contacts"]))
+        else:
+            for e in items[:30]:
+                print(f"  #{e['id']} {e['name']} ({e['company'] or '-'})")
+        if len(items) > 30:
+            print(f"  ... and {len(items) - 30} more")
+    if report["requeued"]:
+        print(f"\nRe-queued {len(report['requeued'])} contact(s) for another try — run a normal harvest to pick them up.")
+
+
 def report(conn, n: int) -> None:
     for r in db.rows(conn, """SELECT c.*, a.name AS company FROM contacts c LEFT JOIN accounts a ON a.id = c.account_id
                               WHERE c.enrich_last_at IS NOT NULL ORDER BY c.enrich_last_at DESC LIMIT ?""", [n]):
@@ -772,6 +862,10 @@ def report(conn, n: int) -> None:
             f"\n      - {e.get('title')} @ {e.get('company') or '?'} ({e.get('dates')})" for e in exp[:3]))
         if r["enrich_error"]:
             print(f"    note: {r['enrich_error']}")
+        elif r["enrich_status"] == "done" and not (r["role"] and exp):
+            dbg = cfg.data_dir / "debug" / f"partial_{r['id']}.txt"
+            print(f"    note: summary captured but role/work history is still missing"
+                  f"{' — see ' + str(dbg) if dbg.exists() else ''}")
 
 
 def diagnose(conn, cfg, who: str, driver_factory, log=print) -> Path | None:
@@ -818,6 +912,10 @@ def main(argv: list[str] | None = None) -> None:
                     help="re-queue everyone without a summary yet (no profile found, failed, or came back empty)")
     ap.add_argument("--report", type=int, metavar="N", help="show what was stored for the last N harvested contacts")
     ap.add_argument("--diagnose", metavar="NAME_OR_ID", help="look up one person and print what was read (no DB writes)")
+    ap.add_argument("--verify", action="store_true",
+                    help="self-check everyone already harvested for bad/incomplete data and re-queue what's fixable "
+                        "(also runs automatically, quietly, at the start of every normal run)")
+    ap.add_argument("--no-fix", action="store_true", help="with --verify, only report — don't re-queue anything")
     ap.add_argument("--headless", action="store_true", help="not recommended (LinkedIn is stricter)")
     ap.add_argument("--config")
     args = ap.parse_args(argv)
@@ -832,6 +930,10 @@ def main(argv: list[str] | None = None) -> None:
     if args.diagnose:
         diagnose(conn, cfg, args.diagnose, factory)
         return
+    if args.verify:
+        rep = verify(conn, cfg, fix=not args.no_fix)
+        print_verify_report(rep)
+        return
     if args.retry:
         with conn:
             n = conn.execute(RETRY_SQL).rowcount
@@ -845,6 +947,11 @@ def main(argv: list[str] | None = None) -> None:
                   f"  face={'need' if r['image_status'] == 'none' else r['image_status']}  summary={r['enrich_status']}")
         print(f"\n{len(rows)} shown · used today: {used_today(conn)}/{(cfg.get('harvest') or {}).get('daily_cap', 40)}")
         return
+    # a quiet, automatic self-check before every real run: bad old data never sits unnoticed
+    silent = verify(conn, cfg, fix=True)
+    fixed = len(silent["requeued"])
+    if fixed:
+        print(f"(self-check: re-queued {fixed} contact(s) with bad or incomplete stored data)")
     stats = run(conn, cfg, factory, limit, args.cap, ids, args.segment)
     print(json.dumps(stats, indent=2))
 

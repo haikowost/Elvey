@@ -196,3 +196,25 @@ def test_location_captured_alongside_headline(page):
         '<div class="text-body-medium">Senior Buyer at Acme Security</div><div>Johannesburg, Gauteng, South Africa</div>'))
     data = page.evaluate(harvest.JS_PROFILE)
     assert harvest.location_from(data) == "Johannesburg, Gauteng, South Africa"
+
+
+def test_headline_and_location_found_outside_h1s_own_container(page):
+    """The old topLines scoping (h1.closest('section') || h1.parentElement) missed the headline
+    whenever it lived in a DOM branch the <h1> wasn't nested under — very plausible on LinkedIn's
+    real hashed-class markup. topLines must now find it regardless of nesting."""
+    page.set_content(f"""<main>
+      <div class="unrelated-wrapper"><div class="card-inner"><h1>Bob Jones</h1></div></div>
+      <div class="totally-different-branch">
+        <div>Senior Buyer at Acme Security</div>
+        <div>Johannesburg, Gauteng, South Africa</div>
+      </div>
+      <section><h2>Experience</h2><ul>
+        <li><div>Senior Buyer</div><div>Acme Security · Full-time</div><div>Jan 2021 - Present · 3 yrs</div></li>
+      </ul></section>
+    </main>""")
+    data = page.evaluate(harvest.JS_PROFILE)
+    assert data["headline"] == ""  # .text-body-medium doesn't exist on this markup
+    headline, about, exp = harvest.parse_profile(data)
+    assert headline == "Senior Buyer at Acme Security"
+    assert exp == [{"title": "Senior Buyer", "company": "Acme Security", "dates": "Jan 2021 - Present"}]
+    assert harvest.location_from(data) == "Johannesburg, Gauteng, South Africa"

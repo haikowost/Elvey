@@ -2,7 +2,7 @@ import json
 
 from fastapi.testclient import TestClient
 
-from src import dashboard
+from src import dashboard, db
 
 
 def test_dashboard_endpoints(cfg, loaded):
@@ -67,3 +67,20 @@ def test_contact_card_edits(cfg, loaded):
     bob2 = next(p for g in tree["customer"] for p in g["people"] if p["name"] == "Bob Jones")
     assert bob2["company"] == "Zeta Security" and len(bob2["previous_accounts"]) == 2
     assert "departments" in c.get("/api/stats").json()
+
+
+def test_verify_endpoints(cfg, loaded):
+    c = TestClient(dashboard.create_app(cfg))
+    bob = next(p for g in c.get("/api/people").json()["customer"] for p in g["people"] if p["name"] == "Bob Jones")
+    loaded.execute("UPDATE contacts SET enrich_status='done', linkedin_summary=? WHERE id=?",
+                   ["Accessibility Talent Solutions Community Guidelines", bob["id"]])
+    loaded.commit()
+
+    rep = c.get("/api/verify").json()
+    assert [e["id"] for e in rep["footer_polluted"]] == [bob["id"]]
+    still = c.get("/api/zoho/diff").json()  # GET must never have written anything
+    assert db.one(loaded, "SELECT enrich_status FROM contacts WHERE id=?", [bob["id"]])["enrich_status"] == "done"
+
+    fixed = c.post("/api/verify").json()
+    assert fixed["requeued"] == [bob["id"]]
+    assert db.one(loaded, "SELECT enrich_status FROM contacts WHERE id=?", [bob["id"]])["enrich_status"] == "pending"
