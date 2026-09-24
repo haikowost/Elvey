@@ -1,0 +1,610 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Elvey KYC</title>
+<link rel="icon" href="data:,">
+<style>
+:root {
+  --bg: #f5f6f8; --panel: #ffffff; --ink: #1c2330; --muted: #667085; --line: #e3e6eb;
+  --accent: #1f5fbf; --accent-ink: #ffffff;
+  --comp: #b4413a; --int: #2f7d4f; --cust: #1f5fbf;
+  --new: #1f7a4d; --changed: #b26a00; --sync: #667085; --warn-bg: #fff6e5; --warn-line: #f0c36d;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #12151b; --panel: #1b2029; --ink: #e6e9ef; --muted: #98a2b3; --line: #2c3340;
+    --accent: #5b9bff; --accent-ink: #0b1220; --warn-bg: #2d2412; --warn-line: #7a5b1d; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--ink); }
+header { display: flex; align-items: center; gap: 16px; padding: 12px 20px; background: var(--panel); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 5; flex-wrap: wrap; }
+header h1 { font-size: 16px; margin: 0; font-weight: 650; }
+nav button, .chip { border: 1px solid var(--line); background: transparent; color: var(--ink); padding: 6px 12px; border-radius: 999px; cursor: pointer; font: inherit; }
+nav button.on, .chip.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.stats { margin-left: auto; color: var(--muted); font-size: 12px; }
+main { padding: 16px 20px 60px; max-width: 1400px; margin: 0 auto; }
+.bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+select { padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--ink); font: inherit; }
+.warnbox { background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 8px; padding: 8px 10px; margin: 8px 0; font-size: 13px; }
+#chatlog { display: flex; flex-direction: column; gap: 10px; max-width: 760px; margin: 14px 0; }
+.bubble { padding: 10px 14px; border-radius: 12px; max-width: 88%; font-size: 14px; line-height: 1.4; }
+.bubble.bot { background: var(--panel); border: 1px solid var(--line); align-self: flex-start; }
+.bubble.bot.flag { background: var(--warn-bg); border-color: var(--warn-line); }
+.bubble.user { background: var(--accent); color: var(--accent-ink); align-self: flex-end; }
+.bubble .n { font-weight: 650; margin-bottom: 2px; }
+.bubble .r { color: var(--muted); font-size: 12px; }
+.bubble.done { opacity: .8; }
+.cc-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 6px; }
+.tag.dept { border-color: var(--accent); color: var(--accent); }
+.tag.off { border-color: var(--comp); color: var(--comp); }
+input[type=search] { padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--ink); min-width: 240px; font: inherit; }
+.btn { border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink); padding: 7px 14px; border-radius: 8px; cursor: pointer; font: inherit; }
+.btn.ghost { background: transparent; color: var(--accent); }
+.btn.danger { background: var(--comp); border-color: var(--comp); color: #fff; }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.group { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; margin-bottom: 12px; overflow: hidden; }
+.ghead { display: flex; gap: 12px; align-items: baseline; padding: 10px 14px; cursor: pointer; flex-wrap: wrap; }
+.ghead h3 { margin: 0; font-size: 15px; }
+.ghead .meta { color: var(--muted); font-size: 12px; }
+.rank { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 12px; min-width: 28px; }
+.tag { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); margin-right: 4px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; padding: 0 14px 14px; }
+.group.closed .cards, .group.closed .concerns { display: none; }
+.card { display: flex; gap: 10px; border: 1px solid var(--line); border-radius: 10px; padding: 10px; background: var(--bg); }
+.face { width: 56px; height: 56px; border-radius: 50%; flex: none; object-fit: cover; background: var(--line); display: flex; align-items: center; justify-content: center; font-weight: 650; color: #fff; font-size: 18px; }
+.card .n { font-weight: 600; }
+.card .r { color: var(--muted); font-size: 12px; }
+.card .s { font-size: 12px; margin-top: 4px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.card .x { font-size: 11px; color: var(--muted); margin-top: 4px; }
+.card a { color: var(--accent); text-decoration: none; }
+.concerns { padding: 0 14px 10px; font-size: 12px; color: var(--muted); }
+.seg-competitor .ghead h3 { color: var(--comp); } .seg-internal .ghead h3 { color: var(--int); } .seg-customer .ghead h3 { color: var(--cust); }
+table { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 12px; color: var(--muted); font-weight: 600; background: var(--bg); }
+tr.row { cursor: pointer; } tr.row:hover { background: var(--bg); }
+.pill { font-size: 11px; padding: 1px 8px; border-radius: 999px; color: #fff; white-space: nowrap; }
+.pill.new { background: var(--new); } .pill.changed { background: var(--changed); } .pill.in-sync { background: var(--sync); }
+.fields td { font-size: 12px; } .fields .old { color: var(--muted); text-decoration: line-through; }
+.fields .na { color: var(--muted); font-style: italic; }
+.detail td { background: var(--bg); }
+.warn { background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 10px; padding: 10px 14px; margin-bottom: 14px; white-space: pre-wrap; font-size: 12px; }
+.muted { color: var(--muted); }
+dialog { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); color: var(--ink); max-width: 900px; width: 92vw; max-height: 85vh; }
+dialog pre { white-space: pre-wrap; font-size: 12px; max-height: 55vh; overflow: auto; background: var(--bg); padding: 10px; border-radius: 8px; }
+.hidden { display: none !important; }
+.card { cursor: pointer; } .card:hover { border-color: var(--accent); }
+.cc-head { display: flex; gap: 16px; align-items: center; margin-bottom: 12px; }
+.cc-head .face { width: 96px; height: 96px; font-size: 30px; }
+.cc-head h3 { margin: 0 0 2px; font-size: 18px; }
+.cc-grid { display: grid; grid-template-columns: 140px 1fr; gap: 4px 12px; font-size: 13px; margin: 8px 0 14px; }
+.cc-grid dt { color: var(--muted); } .cc-grid dd { margin: 0; overflow-wrap: anywhere; }
+.cc h4 { margin: 14px 0 6px; font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.cc ol { margin: 0; padding-left: 18px; } .cc li { margin-bottom: 4px; }
+.cc a { color: var(--accent); }
+@media (max-width: 640px) { .cc-grid { grid-template-columns: 1fr; } .cc-grid dt { margin-top: 6px; } }
+@media (max-width: 640px) { main { padding: 12px 16px 60px; } input[type=search] { min-width: 0; width: 100%; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Elvey KYC</h1>
+  <nav>
+    <button data-view="tree" class="on">People Tree</button>
+    <button data-view="chat">Corrections<span id="chatbadge" class="tag hidden" style="margin-left:5px"></span></button>
+    <button data-view="zoho">Zoho sync</button>
+  </nav>
+  <div class="stats" id="stats"></div>
+</header>
+
+<main>
+  <section id="view-tree">
+    <div id="dqbox" class="warnbox hidden"></div>
+    <div class="bar">
+      <span id="branches"></span>
+      <input type="search" id="q" placeholder="Search name, company, role, rep…">
+      <select id="fdept" title="Department"><option value="">All departments</option></select>
+      <select id="fstatus" title="Status">
+        <option value="active">Active contacts</option>
+        <option value="review">Needs review (moved per LinkedIn)</option>
+        <option value="left">No longer at company</option>
+        <option value="not_relevant">Not relevant</option>
+        <option value="all">Everyone</option>
+      </select>
+      <button class="chip" id="expand">Expand all</button>
+    </div>
+    <div id="tree"></div>
+  </section>
+
+  <section id="view-zoho" class="hidden">
+    <div id="zwarn" class="warn hidden"></div>
+    <div class="bar">
+      <button class="btn ghost" id="zpull">Pull from Zoho</button>
+      <span class="muted" id="zpulled"></span>
+    </div>
+    <div class="bar">
+      <span id="zent"></span><span id="zstat"></span>
+      <input type="search" id="zq" placeholder="Filter…">
+    </div>
+    <div class="bar">
+      <button class="chip" id="zselall">Select all shown (new/changed)</button>
+      <button class="chip" id="zclear">Clear selection</button>
+      <span class="muted" id="zselcount">0 selected</span>
+      <span style="flex:1"></span>
+      <button class="btn ghost" id="zpreview">Preview push (dry run)</button>
+      <button class="btn danger" id="zlive" disabled title="Enable zoho.live_enabled in config.yaml">Push selected LIVE</button>
+    </div>
+    <table>
+      <thead><tr><th style="width:28px"></th><th>Status</th><th>Record</th><th>Company / segment</th><th>Zoho match</th><th>Changes</th></tr></thead>
+      <tbody id="ztable"></tbody>
+    </table>
+    <div class="bar" style="margin-top:10px"><button class="chip hidden" id="zmore">Show more</button></div>
+    <h3>Sync log</h3>
+    <div id="zlog" class="muted"></div>
+  </section>
+
+  <section id="view-chat" class="hidden">
+    <p class="muted">Everyone the automated harvest couldn't resolve on its own, worst first — a search that found
+      nobody, a match by name only, or two people pointing at the same LinkedIn profile. Type the correction in
+      plain English for whoever's shown; the reply says what was applied. "skip" moves on without changing anything,
+      "stop" pauses here.</p>
+    <div id="chatlog"></div>
+    <div id="chatinput" class="bar hidden">
+      <a id="chatsearch" href="#" target="_blank" rel="noopener" class="btn ghost">Search LinkedIn for them</a>
+      <input type="search" id="chatbox" placeholder="e.g. a LinkedIn URL, 'left', 'finance', 'now at Beta Integrators', 'skip'…" style="flex:1;min-width:260px">
+      <button class="btn" id="chatsend">Send</button>
+      <button class="btn ghost" id="chatskip">Skip</button>
+    </div>
+  </section>
+</main>
+
+<dialog id="dlg">
+  <h3 id="dlgtitle"></h3>
+  <div id="dlgbody"></div>
+  <div class="bar" style="justify-content:flex-end;margin-top:12px">
+    <button class="btn ghost" id="dlgclose">Close</button>
+    <button class="btn danger hidden" id="dlggo">Confirm LIVE push</button>
+  </div>
+</dialog>
+
+<dialog id="contact"><div class="cc" id="ccbody"></div>
+  <div class="bar" style="justify-content:flex-end;margin-top:12px"><button class="btn ghost" id="ccclose">Close</button></div>
+</dialog>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money = v => v ? 'R ' + Math.round(v).toLocaleString('en-ZA') : '';
+const api = async (url, opt) => { const r = await fetch(url, opt); const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.detail || j.error || r.statusText); return j; };
+const initials = n => (n || '?').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('');
+const hue = n => [...(n || '')].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 7);
+
+// ---------------------------------------------------------------- views
+document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('nav button').forEach(x => x.classList.toggle('on', x === b));
+  $('#view-tree').classList.toggle('hidden', b.dataset.view !== 'tree');
+  $('#view-zoho').classList.toggle('hidden', b.dataset.view !== 'zoho');
+  $('#view-chat').classList.toggle('hidden', b.dataset.view !== 'chat');
+  if (b.dataset.view === 'zoho' && !Z.diff) loadDiff();
+  if (b.dataset.view === 'chat' && !Chat.queue) loadChat();
+});
+
+async function loadStats() {
+  const s = await api('/api/stats');
+  const cov = s.coverage || {};
+  const faces = Object.entries(cov).filter(([k]) => k !== 'by_priority').reduce((a, [, v]) => a + (v.faces || 0), 0);
+  const summ = Object.entries(cov).filter(([k]) => k !== 'by_priority').reduce((a, [, v]) => a + (v.summaries || 0), 0);
+  $('#stats').textContent = `${s.accounts} accounts · ${s.contacts} contacts · ${faces} faces · ${summ} LinkedIn summaries`;
+  T.departments = s.departments || [];
+  T.relevant = new Set(s.relevant_departments || []);
+  $('#fdept').innerHTML = '<option value="">All departments</option><option value="__none">Department unknown</option>' +
+    T.departments.map(d => `<option>${esc(d)}</option>`).join('');
+}
+function statusOk(p, f) {
+  if (f === 'all') return true;
+  if (f === 'review') return p.contact_status === 'active' && p.employment_status === 'moved';
+  if (f === 'active') return p.contact_status === 'active';
+  return p.contact_status === f;
+}
+
+// ---------------------------------------------------------------- People Tree
+const T = { data: null, branch: 'customer', override: new Map(), expandAll: false };
+const BR = [['competitor', 'Competitors'], ['internal', 'Internal'], ['customer', 'Customers']];
+
+async function loadTree() {
+  T.data = await api('/api/people');
+  $('#branches').innerHTML = BR.map(([k, l]) => `<button class="chip ${k === T.branch ? 'on' : ''}" data-b="${k}">${l} (${T.data[k].reduce((a, g) => a + g.people.filter(p => p.contact_status === 'active').length, 0)})</button>`).join(' ');
+  document.querySelectorAll('[data-b]').forEach(b => b.onclick = () => { T.branch = b.dataset.b; loadTreeRender(); });
+  loadTreeRender();
+}
+function loadTreeRender() {
+  document.querySelectorAll('[data-b]').forEach(b => b.classList.toggle('on', b.dataset.b === T.branch));
+  const q = $('#q').value.trim().toLowerCase();
+  const groups = T.data[T.branch];
+  let html = '', shown = 0;
+  groups.forEach((g, gi) => {
+    const gText = [g.title, g.division, g.rep, g.brand_focus].join(' ').toLowerCase();
+    const fd = $('#fdept').value, fs = $('#fstatus').value;
+    const people = g.people.filter(p => statusOk(p, fs)
+      && (!fd || (fd === '__none' ? !p.department : p.department === fd))
+      && (!q || gText.includes(q) || [p.name, p.role, p.email, p.summary, p.department, p.now_at].join(' ').toLowerCase().includes(q)));
+    if (!people.length) return;
+    const key = T.branch + ':' + g.title;
+    const byDefault = T.expandAll || (T.branch !== 'customer') || gi < 8;
+    const filtering = !!q || $('#fdept').value || $('#fstatus').value !== 'active';
+    const open = filtering || (T.override.has(key) ? T.override.get(key) : byDefault);
+    shown += people.length;
+    const meta = [g.division, g.rep && 'Rep: ' + g.rep, money(g.sellout), g.brand_focus && 'Brands: ' + g.brand_focus, g.allocation].filter(Boolean).map(esc).join(' · ');
+    html += `<div class="group seg-${g.segment} ${open ? '' : 'closed'}" data-key="${esc(key)}">
+      <div class="ghead">${g.rank ? `<span class="rank">#${g.rank}</span>` : ''}<h3>${esc(g.title)}</h3>
+        <span class="meta">${people.length} ${people.length === 1 ? 'person' : 'people'}${meta ? ' · ' + meta : ''}</span>
+        <span>${g.tags.map(t => `<span class="tag">${esc(t)}</span>`).join('')}${g.zoho ? '<span class="tag">in Zoho</span>' : ''}</span></div>
+      ${g.concerns ? `<div class="concerns">Concerns: ${esc(g.concerns)}</div>` : ''}
+      <div class="cards">${open ? people.map(card).join('') : ''}</div></div>`;
+  });
+  $('#tree').innerHTML = html || '<p class="muted">No matches.</p>';
+  document.querySelectorAll('.ghead').forEach(h => h.onclick = () => {
+    const el = h.parentElement;
+    T.override.set(el.dataset.key, el.classList.contains('closed'));
+    loadTreeRender();
+  });
+}
+function card(p) {
+  const face = p.face ? `<img class="face" loading="lazy" src="${esc(p.face)}" alt="">`
+    : `<div class="face" style="background:hsl(${hue(p.name)} 45% 45%)">${esc(initials(p.name))}</div>`;
+  const exp = (p.experience || []).slice(0, 3).map(e => `${esc(e.title)}${e.company ? ' @ ' + esc(e.company) : ''} <span class="muted">${esc(e.dates || '')}</span>`).join('<br>');
+  const flags = [p.image_status === 'no_photo' && 'no LinkedIn photo', p.enrich_status === 'no_profile' && 'no LinkedIn profile',
+                 p.match_confidence === 'name-only' && 'LinkedIn match by name only – verify',
+                 p.employment_status === 'moved' && p.contact_status === 'active' && `LinkedIn: now at ${p.now_at}`,
+                 p.contact_status === 'left' && 'no longer at company', p.contact_status === 'not_relevant' && 'not relevant'].filter(Boolean);
+  const tags = [p.department && `<span class="tag dept">${esc(p.department)}</span>`,
+                p.department && T.relevant && T.relevant.size && !T.relevant.has(p.department) && '<span class="tag off">not sales</span>'].filter(Boolean).join('');
+  return `<div class="card" data-pid="${p.id}" title="Open contact card">${face}<div style="min-width:0">
+    <div class="n">${esc(p.name)} ${p.linkedin ? `<a href="${esc(p.linkedin)}" target="_blank" rel="noopener" data-stop>in</a>` : ''}</div>
+    <div class="r">${esc(p.role || 'role pending')}</div>
+    ${tags ? `<div class="x">${tags}</div>` : ''}
+    ${p.summary ? `<div class="s" title="${esc(p.summary)}">${esc(p.summary)}</div>` : ''}
+    ${exp ? `<div class="x">${exp}</div>` : ''}
+    <div class="x">${[p.email, p.cell].filter(Boolean).map(esc).join(' · ')}</div>
+    ${flags.length ? `<div class="x">⚑ ${flags.map(esc).join(' · ')}</div>` : ''}
+  </div></div>`;
+}
+function findPerson(id) {
+  for (const seg of Object.keys(T.data)) for (const g of T.data[seg]) {
+    const p = g.people.find(x => x.id === id);
+    if (p) return [p, g];
+  }
+  return [null, null];
+}
+function contactCard(id) {
+  const [p, g] = findPerson(id);
+  if (!p) return;
+  const face = p.face ? `<img class="face" src="${esc(p.face)}" alt="">`
+    : `<div class="face" style="background:hsl(${hue(p.name)} 45% 45%)">${esc(initials(p.name))}</div>`;
+  const row = (k, v) => v ? `<dt>${esc(k)}</dt><dd>${v}</dd>` : '';
+  const link = (href, text) => `<a href="${esc(href)}" target="_blank" rel="noopener">${esc(text)}</a>`;
+  const status = {done: 'LinkedIn summary captured', pending: 'not looked up on LinkedIn yet', no_profile: 'no LinkedIn profile found',
+                  failed: 'LinkedIn look-up did not work yet (will retry)'}[p.enrich_status] || p.enrich_status;
+  const exp = (p.experience || []).map(e => `<li><b>${esc(e.title)}</b>${e.company ? ' — ' + esc(e.company) : ''} <span class="muted">${esc(e.dates || '')}</span></li>`).join('');
+  $('#ccbody').innerHTML = `
+    <div class="cc-head">${face}<div>
+      <h3>${esc(p.name)}</h3>
+      <div>${esc(p.role || 'Role not known yet')}${p.role_status === 'from LinkedIn' ? ' <span class="muted">(from LinkedIn)</span>' : ''}</div>
+      <div class="muted">${esc(p.company || '')}${g && g.segment ? ' · ' + esc({competitor: 'Competitor', internal: 'Internal', customer: 'Customer'}[g.segment]) : ''}</div>
+    </div></div>
+    ${p.employment_status === 'moved' && p.contact_status === 'active' ? `<div class="warnbox">
+      <b>LinkedIn says ${esc(p.name.split(' ')[0])} now works at ${esc(p.now_at || '?')}</b>, not ${esc(p.company || 'this account')}.
+      <div class="cc-actions">
+        ${p.moved_to ? `<button class="btn" data-act="move" data-acc="${p.moved_to.id}">Move to ${esc(p.moved_to.name)}</button>`
+                     : (p.now_at ? `<button class="btn" data-act="create">Add ${esc(p.now_at)} as an account and move</button>` : '')}
+        <button class="btn ghost" data-act="left">Mark as no longer at ${esc(p.company || 'company')}</button>
+        <button class="btn ghost" data-act="keep">LinkedIn is wrong – keep</button>
+      </div></div>` : ''}
+    ${p.contact_status !== 'active' ? `<div class="warnbox">Marked <b>${p.contact_status === 'left' ? 'no longer at company' : 'not relevant'}</b>${p.status_note ? ': ' + esc(p.status_note) : ''}.
+      <div class="cc-actions"><button class="btn ghost" data-act="reactivate">Make active again</button></div></div>` : ''}
+    <dl class="cc-grid">
+      ${row('Email', p.email && `<a href="mailto:${esc(p.email)}">${esc(p.email)}</a>`)}
+      ${row('Mobile', p.mobile && `<a href="tel:${esc(p.mobile)}">${esc(p.mobile)}</a>`)}
+      ${row('Phone', p.tel && `<a href="tel:${esc(p.tel)}">${esc(p.tel)}</a>`)}
+      ${row('LinkedIn', p.linkedin && link(p.linkedin, 'Open profile'))}
+      ${row('Location', [p.city, p.province, p.country].filter(Boolean).map(esc).join(', ') + (p.city || p.province || p.country ? ' <span class="muted">(from LinkedIn)</span>' : ''))}
+      ${g && g.segment === 'customer' ? row('Account', esc([g.title, g.rank ? '#' + g.rank : ''].filter(Boolean).join(' '))) : ''}
+      ${g && g.rep ? row('Elvey rep', esc(g.rep)) : ''}
+      ${g && g.division ? row('Division', esc(g.division)) : ''}
+      ${g && g.sellout ? row('Latest sellout', esc(money(g.sellout))) : ''}
+      ${g && g.brand_focus ? row('Brand focus', esc(g.brand_focus)) : ''}
+      ${g && g.allocation ? row('Allocation', esc(g.allocation)) : ''}
+      ${row('Priority', p.priority ? '#' + p.priority : '')}
+      ${row('KYC', esc([p.face ? 'photo ✓' : (p.image_status === 'no_photo' ? 'no LinkedIn photo' : 'no photo yet'), status,
+                        p.match_confidence === 'name-only' ? 'matched by name only – please verify' : ''].filter(Boolean).join(' · ')))}
+      ${row('In Zoho', p.zoho ? 'yes' : 'not yet')}
+      ${row('Department', p.department ? esc(p.department) + ` <span class="muted">(${esc({manual: 'set by you', linkedin: 'from LinkedIn title', role: 'from job title', email: 'from email address'}[p.department_source] || p.department_source || '')})</span>` : '<span class="muted">unknown</span>')}
+      ${row('Previously at', (p.previous_accounts || []).map(a => esc(a.name) + (a.until ? ' <span class="muted">(until ' + esc(a.until) + ')</span>' : '')).join(', '))}
+    </dl>
+    <h4>LinkedIn summary</h4>
+    <div>${p.summary ? esc(p.summary) : '<span class="muted">None yet.</span>'}</div>
+    <h4>Work history</h4>
+    ${exp ? `<ol>${exp}</ol>` : '<span class="muted">None yet.</span>'}
+    ${p.enrich_error ? `<p class="muted" style="margin-top:12px">Note: ${esc(p.enrich_error)}</p>` : ''}
+    ${p.match_confidence === 'name-only' ? `<div class="warnbox">Matched by name only — not confirmed against ${esc(p.company || 'their company')}. Worth a quick check before relying on it.</div>` : ''}
+    ${p.enrich_status === 'no_profile' ? `<div class="warnbox">Our search couldn't find their profile. If you know it, paste the URL below.</div>` : ''}
+    <h4>Edit</h4>
+    <div class="cc-actions">
+      <label>Department <select id="ccdept"><option value="">— unknown —</option>${(T.departments || []).map(d => `<option ${d === p.department ? 'selected' : ''}>${esc(d)}</option>`).join('')}</select></label>
+      <label>Status <select id="ccstatus">
+        <option value="active" ${p.contact_status === 'active' ? 'selected' : ''}>Active</option>
+        <option value="left" ${p.contact_status === 'left' ? 'selected' : ''}>No longer at company</option>
+        <option value="not_relevant" ${p.contact_status === 'not_relevant' ? 'selected' : ''}>Not relevant</option></select></label>
+      <input type="search" id="ccnote" placeholder="Note (optional)" value="${esc(p.status_note || '')}">
+      <button class="btn" data-act="save">Save</button>
+    </div>
+    <div class="cc-actions">
+      <input type="search" id="ccmove" list="ccaccounts" placeholder="Move to another account…" style="min-width:260px">
+      <datalist id="ccaccounts"></datalist>
+      <button class="btn ghost" data-act="moveto">Move</button>
+    </div>
+    <div class="cc-actions">
+      <input type="search" id="cclinkedin" placeholder="Correct LinkedIn profile URL…" value="${esc(p.linkedin && p.linkedin.includes('/in/') ? p.linkedin : '')}" style="min-width:320px">
+      <button class="btn ghost" data-act="seturl">Set as their exact profile &amp; re-queue</button>
+    </div>
+    <p class="muted" id="ccmsg"></p>
+    ${p.enriched_at ? `<p class="muted">Last LinkedIn look-up: ${esc(p.enriched_at)}</p>` : ''}`;
+  if (!$('#contact').open) $('#contact').showModal();
+  loadAccounts().then(list => {
+    $('#ccaccounts').innerHTML = list.filter(a => a.id !== p.account_id).map(a => `<option value="${esc(a.name)}">`).join('');
+  });
+  document.querySelectorAll('#ccbody [data-act]').forEach(b => b.onclick = async () => {
+    const act = b.dataset.act;
+    const body = act === 'move' ? { move_to_account_id: +b.dataset.acc }
+      : act === 'create' ? { create_account: p.now_at }
+      : act === 'left' ? { contact_status: 'left', status_note: p.now_at ? 'LinkedIn: now at ' + p.now_at : null }
+      : act === 'keep' ? { keep_account: true }
+      : act === 'reactivate' ? { contact_status: 'active' }
+      : act === 'save' ? { department: $('#ccdept').value, contact_status: $('#ccstatus').value, status_note: $('#ccnote').value }
+      : null;
+    let payload = body;
+    if (act === 'moveto') {
+      const name = $('#ccmove').value.trim();
+      const acc = (await loadAccounts()).find(a => a.name.toLowerCase() === name.toLowerCase());
+      if (!name) return;
+      if (!acc && !confirm(`"${name}" is not an existing account. Create it and move ${p.name} there?`)) return;
+      payload = acc ? { move_to_account_id: acc.id } : { create_account: name };
+    }
+    if (act === 'seturl') {
+      const url = $('#cclinkedin').value.trim();
+      if (!url) return;
+      payload = { linkedin_url: url };
+    }
+    try {
+      await api('/api/contacts/' + p.id, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      T.accounts = null;
+      await loadTree();
+      contactCard(p.id);
+      $('#ccmsg').textContent = act === 'seturl' ? 'Set — re-queued for the next harvest run.' : 'Saved.';
+    } catch (e) { $('#ccmsg').textContent = 'Could not save: ' + e.message; }
+  });
+}
+async function loadAccounts() {
+  if (!T.accounts) T.accounts = await api('/api/accounts');
+  return T.accounts;
+}
+$('#tree').addEventListener('click', ev => {
+  if (ev.target.closest('[data-stop]')) return;
+  const c = ev.target.closest('.card');
+  if (c) { ev.stopPropagation(); contactCard(+c.dataset.pid); }
+});
+$('#ccclose').onclick = () => $('#contact').close();
+$('#contact').addEventListener('click', ev => { if (ev.target.id === 'contact') $('#contact').close(); });
+$('#q').oninput = () => loadTreeRender();
+$('#fdept').onchange = () => loadTreeRender();
+$('#fstatus').onchange = () => loadTreeRender();
+$('#expand').onclick = () => { T.expandAll = !T.expandAll; T.override.clear(); $('#expand').textContent = T.expandAll ? 'Collapse' : 'Expand all'; loadTreeRender(); };
+
+// ---------------------------------------------------------------- Zoho review-and-select
+const Z = { diff: null, entity: 'account', status: 'pending', sel: new Map(), open: new Set(), limit: 200 };
+// sel key "entity:id" -> {entity, local_id, fields:Set, photo:bool}
+
+async function loadDiff() {
+  $('#ztable').innerHTML = '<tr><td colspan="6" class="muted">Loading…</td></tr>';
+  try { Z.diff = await api('/api/zoho/diff'); } catch (e) { $('#ztable').innerHTML = `<tr><td colspan="6">${esc(e.message)}</td></tr>`; return; }
+  const d = Z.diff;
+  $('#zpulled').textContent = d.pulled_at ? `Zoho mirror pulled ${d.pulled_at}` : 'Never pulled — everything shows as new until you pull.';
+  $('#zwarn').classList.toggle('hidden', !d.setup_steps);
+  $('#zwarn').textContent = d.setup_steps ? 'Custom fields missing in Zoho — these are skipped on push until created:\n' + d.setup_steps : '';
+  $('#zlive').disabled = !d.live_enabled;
+  const s = d.summary;
+  $('#zent').innerHTML = [['account', 'Accounts', s.accounts], ['contact', 'Contacts', s.contacts]].map(([k, l, c]) =>
+    `<button class="chip ${Z.entity === k ? 'on' : ''}" data-e="${k}">${l} · ${c.new} new · ${c.changed} changed · ${c['in-sync']} in sync</button>`).join(' ');
+  $('#zstat').innerHTML = [['pending', 'New + changed'], ['new', 'New'], ['changed', 'Changed'], ['in-sync', 'In sync'], ['all', 'All']].map(([k, l]) =>
+    `<button class="chip ${Z.status === k ? 'on' : ''}" data-s="${k}">${l}</button>`).join(' ');
+  document.querySelectorAll('[data-e]').forEach(b => b.onclick = () => { Z.entity = b.dataset.e; Z.limit = 200; loadDiffRender(); });
+  document.querySelectorAll('[data-s]').forEach(b => b.onclick = () => { Z.status = b.dataset.s; Z.limit = 200; loadDiffRender(); });
+  loadDiffRender();
+  loadLog();
+}
+function visibleItems() {
+  const items = Z.diff[Z.entity + 's'];
+  const q = $('#zq').value.trim().toLowerCase();
+  return items.filter(i => (Z.status === 'all' || (Z.status === 'pending' ? i.status !== 'in-sync' : i.status === Z.status))
+    && (!q || [i.name, i.company, i.segment, i.division].join(' ').toLowerCase().includes(q)));
+}
+const pushable = i => i.fields.filter(f => f.available && f.local_value !== null && (i.status === 'new' || f.differs));
+function toggleSel(i, on) {
+  const k = i.entity + ':' + i.local_id;
+  if (on) Z.sel.set(k, { entity: i.entity, local_id: i.local_id, fields: new Set(pushable(i).map(f => f.local)), photo: !!(i.photo && i.photo.pending) });
+  else Z.sel.delete(k);
+}
+function loadDiffRender() {
+  document.querySelectorAll('[data-e]').forEach(b => b.classList.toggle('on', b.dataset.e === Z.entity));
+  document.querySelectorAll('[data-s]').forEach(b => b.classList.toggle('on', b.dataset.s === Z.status));
+  const items = visibleItems();
+  let html = '';
+  items.slice(0, Z.limit).forEach(i => {
+    const k = i.entity + ':' + i.local_id, sel = Z.sel.get(k);
+    const changes = pushable(i).map(f => f.zoho_field);
+    if (i.photo && i.photo.pending) changes.push('photo');
+    if (i.account_link && i.account_link.differs) changes.push('account link');
+    html += `<tr class="row" data-k="${k}">
+      <td><input type="checkbox" data-c="${k}" ${sel ? 'checked' : ''}></td>
+      <td><span class="pill ${i.status}">${i.status}</span></td>
+      <td>${esc(i.name)}${i.rank ? ` <span class="muted">#${i.rank}</span>` : ''}${i.priority ? ` <span class="muted">p${i.priority}</span>` : ''}</td>
+      <td>${esc(i.company || i.division || '')} <span class="muted">${esc(i.segment || '')}</span></td>
+      <td>${i.zoho_id ? esc(i.zoho_id) + ` <span class="muted">by ${esc(i.match_by)}</span>` : '<span class="muted">—</span>'}${i.note ? `<br><span class="muted">${esc(i.note)}</span>` : ''}</td>
+      <td class="muted">${esc(i.status === 'in-sync' ? '' : changes.join(', '))}</td></tr>`;
+    if (Z.open.has(k)) html += `<tr class="detail"><td></td><td colspan="5">${detail(i, sel)}</td></tr>`;
+  });
+  $('#ztable').innerHTML = html || '<tr><td colspan="6" class="muted">Nothing here.</td></tr>';
+  $('#zmore').classList.toggle('hidden', items.length <= Z.limit);
+  $('#zselcount').textContent = `${Z.sel.size} selected`;
+  document.querySelectorAll('[data-c]').forEach(cb => {
+    cb.onclick = ev => { ev.stopPropagation(); const i = find(cb.dataset.c); toggleSel(i, cb.checked); loadDiffRender(); };
+  });
+  document.querySelectorAll('tr.row').forEach(r => r.onclick = () => { const k = r.dataset.k; Z.open.has(k) ? Z.open.delete(k) : Z.open.add(k); loadDiffRender(); });
+  document.querySelectorAll('[data-f]').forEach(cb => cb.onchange = () => {
+    const [k, field] = cb.dataset.f.split('|'); let s = Z.sel.get(k);
+    if (!s) { toggleSel(find(k), true); s = Z.sel.get(k); s.fields.clear(); s.photo = false; }
+    if (field === '__photo') s.photo = cb.checked; else cb.checked ? s.fields.add(field) : s.fields.delete(field);
+    loadDiffRender();
+  });
+}
+function find(k) { const [e, id] = k.split(':'); return Z.diff[e + 's'].find(i => i.local_id === +id); }
+function detail(i, sel) {
+  const k = i.entity + ':' + i.local_id;
+  const rows = i.fields.map(f => {
+    const can = f.available && f.local_value !== null && (i.status === 'new' || f.differs);
+    const checked = sel && sel.fields.has(f.local);
+    return `<tr><td>${can ? `<input type="checkbox" data-f="${k}|${f.local}" ${checked ? 'checked' : ''}>` : ''}</td>
+      <td>${esc(f.zoho_field)}${f.available ? '' : ' <span class="na">(missing in Zoho)</span>'}</td>
+      <td>${esc(f.local_value ?? '')}</td>
+      <td class="${f.differs && f.zoho_value ? 'old' : 'muted'}">${esc(f.zoho_value ?? '')}</td></tr>`;
+  }).join('');
+  const ph = i.photo && i.photo.local ? `<tr><td><input type="checkbox" data-f="${k}|__photo" ${sel && sel.photo ? 'checked' : ''}></td>
+      <td>Photo</td><td>${esc(i.photo.local)}</td><td class="muted">${i.photo.zoho_has ? 'Zoho has a photo' : 'none in Zoho'}</td></tr>` : '';
+  return `<table class="fields"><tr><th></th><th>Zoho field</th><th>Local</th><th>Zoho now</th></tr>${rows}${ph}</table>`;
+}
+$('#zq').oninput = () => loadDiffRender();
+$('#zmore').onclick = () => { Z.limit += 200; loadDiffRender(); };
+$('#zselall').onclick = () => { visibleItems().filter(i => i.status !== 'in-sync').forEach(i => toggleSel(i, true)); loadDiffRender(); };
+$('#zclear').onclick = () => { Z.sel.clear(); loadDiffRender(); };
+$('#zpull').onclick = async () => {
+  $('#zpull').disabled = true; $('#zpulled').textContent = 'Pulling from Zoho…';
+  try { const r = await api('/api/zoho/pull', { method: 'POST' }); $('#zpulled').textContent = 'Pulled ' + JSON.stringify(r.pulled); Z.sel.clear(); await loadDiff(); }
+  catch (e) { $('#zpulled').textContent = 'Pull failed: ' + e.message; }
+  $('#zpull').disabled = false;
+};
+function selections() {
+  return [...Z.sel.values()].map(s => ({ entity: s.entity, local_id: s.local_id, fields: [...s.fields], photo: s.photo }))
+    .filter(s => s.fields.length || s.photo || find(s.entity + ':' + s.local_id).status !== 'changed');
+}
+async function push(live) {
+  const sels = selections();
+  if (!sels.length) { alert('Select at least one record.'); return; }
+  const r = await api('/api/zoho/push', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ selections: sels, live }) }).catch(e => ({ error: e.message }));
+  if (r.error) { alert(r.error); return; }
+  const ops = r.operations || [];
+  const count = ops.reduce((m, o) => (m[o.entity + ' ' + o.action] = (m[o.entity + ' ' + o.action] || 0) + 1, m), {});
+  const photos = ops.filter(o => o.photo).length;
+  $('#dlgtitle').textContent = live ? `Live push finished: ${r.ok} ok, ${r.failed} failed` : 'Dry run — nothing written';
+  const lines = live ? (r.results || []).map(x => `${x.ok ? 'OK ' : 'ERR'} ${x.entity} ${x.action} ${x.name} ${x.zoho_id || ''} ${x.ok ? '' : x.message || ''}`).join('\n')
+    : ops.map(o => `${o.entity} ${o.action}${o.auto ? ' (auto: parent account)' : ''} — ${o.name}${o.zoho_id ? ' [' + o.zoho_id + ']' : ''}${o.photo ? ' +photo' : ''}\n    ${JSON.stringify(o.payload)}`).join('\n');
+  $('#dlgbody').innerHTML = `<p>${Object.entries(count).map(([k, v]) => `${v} × ${esc(k)}`).join(' · ')}${photos ? ` · ${photos} photo upload(s)` : ''}</p><pre>${esc(lines)}</pre>`;
+  $('#dlggo').classList.toggle('hidden', live || !Z.diff.live_enabled);
+  $('#dlg').showModal();
+  if (live) { Z.sel.clear(); await loadDiff(); loadTree(); }
+}
+$('#zpreview').onclick = () => push(false);
+$('#zlive').onclick = () => push(false);  // always preview first; the dialog carries the live button
+$('#dlggo').onclick = async () => {
+  if (prompt('Type PUSH to write the selected records to Zoho CRM') !== 'PUSH') return;
+  $('#dlg').close(); await push(true);
+};
+$('#dlgclose').onclick = () => $('#dlg').close();
+async function loadLog() {
+  const rows = await api('/api/zoho/log?limit=50');
+  $('#zlog').innerHTML = rows.length ? `<table><tr><th>When</th><th>Entity</th><th>Action</th><th>Zoho id</th><th>Result</th></tr>${rows.map(r =>
+    `<tr><td>${esc(r.ts)}</td><td>${esc(r.entity)} #${r.local_id}</td><td>${esc(r.action)}</td><td>${esc(r.zoho_id || '')}</td><td>${esc(r.result)}</td></tr>`).join('')}</table>` : 'No pushes yet.';
+}
+
+// ---------------------------------------------------------------- Data-quality self-check
+const DQ_LABELS = { footer_polluted: "summary was actually LinkedIn's page footer",
+  empty_but_marked_done: 'marked done but nothing usable was captured', partial: 'summary but no role/work history',
+  stuck_unknown_employment: 'employment status never resolved', duplicate_profile_url: 'two contacts, same LinkedIn profile' };
+async function loadVerify() {
+  let rep;
+  try { rep = await api('/api/verify'); } catch { $('#dqbox').classList.add('hidden'); return; }
+  const total = Object.keys(DQ_LABELS).reduce((n, k) => n + (rep[k] || []).length, 0);
+  if (!total) { $('#dqbox').classList.add('hidden'); return; }
+  $('#dqbox').classList.remove('hidden');
+  $('#dqbox').innerHTML = `<b>Data quality self-check:</b> ` +
+    Object.entries(DQ_LABELS).filter(([k]) => (rep[k] || []).length).map(([k, l]) => `${rep[k].length} ${l}`).join(' · ') +
+    `. <button class="btn ghost" id="dqfix" style="margin-left:6px">Fix what can be fixed</button>` +
+    ` <span class="muted">(re-queues bad results; run the harvester again to refresh them)</span>`;
+  $('#dqfix').onclick = async () => {
+    $('#dqfix').disabled = true; $('#dqfix').textContent = 'Fixing…';
+    const r = await api('/api/verify', { method: 'POST' });
+    alert(r.requeued.length ? `Re-queued ${r.requeued.length} contact(s). Run the harvester to refresh them.` : 'Nothing needed fixing.');
+    await loadVerify(); await loadTree();
+  };
+}
+// ---------------------------------------------------------------- Corrections chat
+const Chat = { queue: null, i: 0, stopped: false };
+
+function chatBubble(cls, html) {
+  const div = document.createElement('div');
+  div.className = 'bubble ' + cls;
+  div.innerHTML = html;
+  $('#chatlog').appendChild(div);
+  div.scrollIntoView({ block: 'end', behavior: 'smooth' });
+  return div;
+}
+function chatCurrent() { return Chat.queue && Chat.queue[Chat.i]; }
+async function loadChat() {
+  $('#chatlog').innerHTML = '';
+  Chat.queue = await api('/api/chat/queue');
+  Chat.i = 0; Chat.stopped = false;
+  $('#chatbadge').classList.toggle('hidden', !Chat.queue.length);
+  $('#chatbadge').textContent = Chat.queue.length;
+  chatBubble('bot', Chat.queue.length
+    ? `<b>${Chat.queue.length}</b> to look at. Let's go one at a time.`
+    : `Nothing needs a human right now — everyone harvested so far looks resolved.`);
+  chatShowCurrent();
+}
+function chatShowCurrent() {
+  const p = chatCurrent();
+  $('#chatinput').classList.toggle('hidden', !p || Chat.stopped);
+  if (!p) { if (!Chat.stopped && Chat.queue.length) chatBubble('bot', `That's everyone — nice work.`); return; }
+  const exp = (p.experience || []).slice(0, 2).map(e => `${esc(e.title)}${e.company ? ' @ ' + esc(e.company) : ''}`).join(', ');
+  chatBubble('bot flag', `<div class="n">${esc(p.name)}${p.company ? ' — ' + esc(p.company) : ''}</div>
+    <div class="r">${esc(p.reason)}</div>
+    ${p.linkedin ? `<div class="r">Stored profile: <a href="${esc(p.linkedin)}" target="_blank" rel="noopener">${esc(p.linkedin)}</a></div>` : ''}
+    ${exp ? `<div class="r">${exp}</div>` : ''}`);
+  $('#chatsearch').href = 'https://www.linkedin.com/search/results/people/?keywords=' +
+    encodeURIComponent(p.name + ' ' + (p.company || ''));
+  $('#chatbox').value = ''; $('#chatbox').focus();
+}
+async function chatSend(message) {
+  const p = chatCurrent();
+  if (!p || !message.trim()) return;
+  chatBubble('user', esc(message));
+  const res = await api('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ contact_id: p.id, message }) });
+  chatBubble('bot done', esc(res.reply));
+  if (res.action === 'stop') { Chat.stopped = true; chatShowCurrent(); return; }
+  if (res.action === 'apply' || res.action === 'skip') {
+    Chat.queue.splice(Chat.i, 1);
+    $('#chatbadge').textContent = Chat.queue.length;
+    $('#chatbadge').classList.toggle('hidden', !Chat.queue.length);
+    if (res.action === 'apply') { loadTree(); loadVerify(); }
+    chatShowCurrent();
+  }
+  // 'unclear': leave them as the current item, just re-show the input
+}
+$('#chatsend').onclick = () => chatSend($('#chatbox').value);
+$('#chatbox').addEventListener('keydown', e => { if (e.key === 'Enter') chatSend($('#chatbox').value); });
+$('#chatskip').onclick = () => chatSend('skip');
+
+loadStats(); loadTree(); loadVerify();
+</script>
+</body>
+</html>

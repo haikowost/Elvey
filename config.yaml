@@ -1,0 +1,112 @@
+# Elvey KYC — configuration. Paths may be overridden by env vars (see .env.example).
+# Relative paths are resolved against this file's folder.
+
+paths:
+  # Google Drive KYC face library (the <Segment>__<First>_<Last>.jpg files live here).
+  kyc_folder: 'G:\.shortcut-targets-by-id\1ZYeE9cZf8VERsTP7Nq1jHVFXJvUgzThq\Elveygroup portfolio expert\Elvey KYC — People'
+  db: elvey_kyc.db
+  data_dir: data
+  # Playwright persistent Chromium profile (you log into LinkedIn here once).
+  browser_profile: data/chrome-profile
+  to_enrich_csv: data/to_enrich.csv
+
+inputs:
+  # Output of the Customer Data Consolidation task. Two layouts are supported:
+  #   relational: a workbook with dim_accounts / dim_contacts / dim_reps / fact_sellout /
+  #               view_top50_projects / view_top500_contacts sheets (the 2026-09-24 build).
+  #   flat:       one CSV/xlsx sheet, one row per contact with company columns
+  #               (headers are matched via column_aliases below).
+  # 'auto' picks relational when the dim_contacts sheet exists.
+  # Must be the .xlsx (a .gsheet file is only a Google Sheets shortcut and cannot be read).
+  workbook: 'G:\.shortcut-targets-by-id\1ZYeE9cZf8VERsTP7Nq1jHVFXJvUgzThq\Elveygroup portfolio expert\Sales\Elvey Consolidated Relational Database 20260924.xlsx'
+  format: auto
+  sheet: null            # flat format only: sheet name (default = first sheet)
+
+scope:
+  # How much of the consolidated DB to load. Set to null to load everything
+  # (e.g. all ~960 accounts / ~1,500 contacts) — nothing else is capped.
+  top_accounts: 50       # ranked accounts from view_top50_projects
+  top_contacts: 500      # ranked contacts from view_top500_contacts
+  # Competitor + Internal contacts are always loaded (they are the other two branches).
+  include_competitor_internal: true
+  # Customers who already have a KYC face in the library are loaded even outside the top-N.
+  include_kyc_faces: true
+
+segments:
+  # Accounts whose (normalised) name matches one of these are the internal branch.
+  internal_accounts: [Elvey, Elvey Group, Pentagon, Pentagon Distributors]
+  # Accounts treated as competitors. Key = account name, value = filename token.
+  competitor_accounts:
+    Duxbury: Duxbury
+    Reditron: Reditron
+  customer_token: CUST
+  internal_token: INT
+
+harvest:
+  daily_cap: 40          # LinkedIn page-sets per calendar day (search + profile = 1)
+  delay_min_s: 4
+  delay_max_s: 9
+  render_wait_s: 3       # SPA render wait after navigation
+  image_px: 240
+  jpeg_quality: 0.85
+  summary_chars: 500
+  max_experience: 5
+  max_attempts: 2        # give up on a contact after N failed attempts
+
+dashboard:
+  host: 127.0.0.1
+  port: 8765
+  # Departments the sales team works with; others get a "not sales" tag (nothing is hidden).
+  relevant_departments: [Management, Sales, Technical, Projects, Procurement]
+
+zoho:
+  api_version: v3
+  per_page: 200          # pull page size (Zoho max 200)
+  batch_size: 100        # records per create/update call (Zoho max 100)
+  pause_s: 0.3           # pause between API calls (credit friendliness)
+  # Safety latch: live pushes are refused until you set this to true
+  # (after reviewing a dry run). CLI also asks for confirmation.
+  live_enabled: false
+  # local column -> Zoho API name. Fields that don't exist in Zoho are skipped
+  # at push time and listed by `python -m src.zoho check`.
+  accounts_fields:
+    name: Account_Name
+    accno: Pentagon_Account_Number
+    division: Division
+    cluster: Cluster
+    branch: Branch
+    rep: Elvey_Rep
+    latest_sellout: Latest_Sellout
+    brand_focus: Brand_Focus
+    allocation: Allocation
+    kyc_status: KYC_Status
+    rank: Rank
+    linkedin_company_url: LinkedIn_URL
+  contacts_fields:
+    first_name: First_Name
+    last_name: Last_Name
+    email: Email
+    tel: Phone
+    cell: Mobile
+    role: Title
+    department: Department     # standard Zoho field
+    city: Mailing_City          # standard Zoho field
+    province: Mailing_State     # standard Zoho field — Zoho's label is 'State', holds our 'province'
+    country: Mailing_Country    # standard Zoho field
+    linkedin_contact_url: LinkedIn_URL
+    linkedin_summary: LinkedIn_Summary
+    segment: Segment
+  # Suggested data types when creating the custom fields in the Zoho UI.
+  custom_field_types:
+    Division: Single Line
+    Cluster: Single Line
+    Branch: Single Line
+    Elvey_Rep: Single Line
+    Latest_Sellout: Currency
+    Brand_Focus: Single Line
+    Allocation: Single Line
+    KYC_Status: Single Line
+    Rank: Number
+    LinkedIn_URL: URL
+    LinkedIn_Summary: Multi Line (Large)
+    Segment: Single Line
