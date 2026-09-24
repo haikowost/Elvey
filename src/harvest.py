@@ -32,7 +32,8 @@ from urllib.parse import quote
 from . import db
 from .config import load_config
 from .images import update_account_kyc_status
-from .util import DEPT_RANK, classify_department, face_filename, norm_company, norm_name, same_company
+from .util import (DEPT_RANK, LOC_RANK, classify_department, face_filename, norm_company, norm_name, same_company,
+                   split_location)
 
 try:
     from rapidfuzz import fuzz
@@ -68,6 +69,7 @@ class Result:
     headline: str | None = None
     about: str | None = None
     experience: list[dict] = field(default_factory=list)
+    location: str | None = None      # raw 'City, Province, Country' as shown on the profile
     photo: bytes | None = None       # JPEG bytes, already downscaled
     error: str | None = None
     debug_text: str | None = None    # visible page text (saved to data/debug when something went wrong)
@@ -124,19 +126,47 @@ _JUNK_LINE = re.compile(r"^(·\s*)?(1st|2nd|3rd\+?|3rd|he/him|she/her|they/them|
                         r"contact info|message|connect|follow|more|open to|\d+\+? (connections|followers))\b",
                         re.IGNORECASE)
 
+# The page-root selector falls back to document.body when a profile has no <main> landmark yet
+# (slow render, unusual layout). That pulls in LinkedIn's global header/footer nav, whose links
+# ('About', 'Accessibility', 'Talent Solutions', 'Community Guidelines', ...) can otherwise be
+# mistaken for the profile's own "About" section by the text-based fallback below. Anything from
+# the first footer marker on is cut before any text-based parsing runs.
+_FOOTER_RE = re.compile(r"\b(Accessibility|Talent Solutions|Community Guidelines|Ad Choices|Advertising|"
+                        r"Sales Solutions|Safety Center|Cookie Policy|User Agreement|Marketing Solutions|"
+                        r"LinkedIn Corporation|Select Language)\b", re.IGNORECASE)
+
+
+def strip_footer(lines: list[str]) -> list[str]:
+    for i, line in enumerate(lines):
+        if _FOOTER_RE.search(line):
+            return lines[:i]
+    return lines
+
+
+def clean_profile_data(data: dict) -> dict:
+    """Drop anything from the page's footer/global nav before any text-based parsing runs."""
+    return {**data, "topLines": strip_footer(data.get("topLines") or []),
+            "text": strip_footer(data.get("text") or []),
+            "sections": [s for s in (data.get("sections") or []) if not _FOOTER_RE.search(s.get("heading") or "")]}
+
+
+def _heading_key(line: str) -> str:
+    """'Experience' / 'Experience 4' / 'Experience4' (a count badge glued on) -> 'experience'."""
+    return re.sub(r"\s*\d+\s*$", "", (line or "").strip().lower())
+
 
 def _is_heading(line: str) -> bool:
-    return line.strip().lower() in SECTION_HEADINGS
+    return _heading_key(line) in SECTION_HEADINGS
 
 
 def section_lines(data: dict, heading: str) -> list[str]:
     """Lines of the profile section titled `heading` (from <section> headings, else from the page text)."""
     for sec in data.get("sections") or []:
-        if sec.get("heading", "").strip().lower() == heading:
-            return [l for l in sec.get("lines", [])[1:] if l.strip().lower() != heading]
+        if _heading_key(sec.get("heading", "")) == heading:
+            return [l for l in sec.get("lines", [])[1:] if _heading_key(l) != heading]
     text = data.get("text") or []
     for i, l in enumerate(text):
-        if l.strip().lower() == heading:
+        if _heading_key(l) == heading:
             out = []
             for m in text[i + 1:]:
                 if _is_heading(m):
@@ -197,10 +227,25 @@ def experience_from_lines(lines: list[str], limit: int = 5) -> list[dict]:
 
 def parse_profile(data: dict, limit: int = 5) -> tuple[str | None, str | None, list[dict]]:
     """(headline, about, experience) from the page data, trying the structured read first."""
+    data = clean_profile_data(data)
     experience = parse_experience(data.get("experience") or [], limit)
     if not experience:
         experience = experience_from_lines(section_lines(data, "experience"), limit)
     return headline_from(data), about_from(data), experience
+
+
+def location_from(data: dict) -> str | None:
+    """The top-card location line ('Johannesburg, Gauteng, South Africa'), if the page shows one."""
+    data = clean_profile_data(data)
+    headline = (headline_from(data) or "").strip()
+    name = norm_name(data.get("name"))
+    for l in data.get("topLines") or []:
+        l = l.strip()
+        if norm_name(l) == name or l == headline or _JUNK_LINE.match(l) or len(l) < 3:
+            continue
+        if "," in l and len(l) < 100 and not re.search(r"\bat\b", l, re.IGNORECASE):
+            return l
+    return None
 
 
 def name_from_title(title: str | None) -> str | None:
@@ -520,8 +565,10 @@ class LinkedInDriver:
             time.sleep(0.5)
             photo = self._capture(None) or search_photo
         headline, about, experience = parse_profile(data, int(self.h.get("max_experience", 5)))
+        location = location_from(data)
         return Result("done", profile_url=self.page.url.split("?")[0], profile_name=name, headline=headline,
-                      about=about, experience=experience, photo=photo, match_how=how, debug_text=page_text)
+                      about=about, experience=experience, location=location, photo=photo, match_how=how,
+                      debug_text=page_text)
 
     def close(self) -> None:
         try:
@@ -614,6 +661,9 @@ def apply_result(conn, cfg, contact: dict, res: Result, need_face: bool) -> str:
         if dept and DEPT_RANK["linkedin"] >= DEPT_RANK.get(contact.get("department_source"), 0):
             changes.update({"department": dept, "department_source": "linkedin"})
         # still at this company? LinkedIn's current role decides
+        if res.location and LOC_RANK.get("linkedin", 0) >= LOC_RANK.get(contact.get("location_source"), 0):
+            city, province, country = split_location(res.location)
+            changes.update({"city": city, "province": province, "country": country, "location_source": "linkedin"})
         now_at = current_company(res.experience, res.headline)
         changes["linkedin_current_company"] = now_at
         if now_at and contact.get("company"):

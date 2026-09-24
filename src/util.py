@@ -218,6 +218,7 @@ def format_phone(value) -> tuple[str | None, bool]:
 
 # which department source may overwrite which (manual edits always win)
 DEPT_RANK = {None: 0, "email": 1, "role": 2, "linkedin": 3, "manual": 4}
+LOC_RANK = {None: 0, "linkedin": 1, "database": 2, "manual": 3}
 
 DEPARTMENTS = ("Management", "Sales", "Technical", "Projects", "Procurement", "Finance", "Marketing",
                "Operations", "IT", "HR", "Admin")
@@ -285,3 +286,23 @@ def same_company(a: str | None, b: str | None) -> bool:
         return fuzz.token_set_ratio(na, nb) >= 88
     except ImportError:  # pragma: no cover
         return False
+
+
+# --------------------------------------------------------------------------- location
+
+def split_location(raw: Any) -> tuple[str | None, str | None, str | None]:
+    """'Johannesburg, Gauteng, South Africa' -> (city, province, country).
+
+    Two parts (no clear province, e.g. 'Gaborone, Botswana') -> (city, None, country).
+    One part -> (None, None, country). Terminology note: this is stored as province (the term
+    used in South Africa) but maps to Zoho's standard Contacts.Mailing_State field.
+    """
+    s = clean(raw)
+    if not s:
+        return None, None, None
+    parts = [p.strip() for p in s.split(",") if p.strip()]
+    if len(parts) >= 3:
+        return parts[0], parts[1], parts[-1]
+    if len(parts) == 2:
+        return parts[0], None, parts[1]
+    return None, None, parts[0]

@@ -282,6 +282,7 @@ function contactCard(id) {
       ${row('Mobile', p.mobile && `<a href="tel:${esc(p.mobile)}">${esc(p.mobile)}</a>`)}
       ${row('Phone', p.tel && `<a href="tel:${esc(p.tel)}">${esc(p.tel)}</a>`)}
       ${row('LinkedIn', p.linkedin && link(p.linkedin, 'Open profile'))}
+      ${row('Location', [p.city, p.province, p.country].filter(Boolean).map(esc).join(', ') + (p.city || p.province || p.country ? ' <span class="muted">(from LinkedIn)</span>' : ''))}
       ${g && g.segment === 'customer' ? row('Account', esc([g.title, g.rank ? '#' + g.rank : ''].filter(Boolean).join(' '))) : ''}
       ${g && g.rep ? row('Elvey rep', esc(g.rep)) : ''}
       ${g && g.division ? row('Division', esc(g.division)) : ''}

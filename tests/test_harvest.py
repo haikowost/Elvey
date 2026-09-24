@@ -276,3 +276,55 @@ def test_diagnose_writes_nothing_but_debug(cfg, loaded, capsys):
     assert path.read_text() == "PAGE TEXT" and d.closed
     assert db.one(loaded, "SELECT enrich_status FROM contacts WHERE id=?", [bob["id"]])["enrich_status"] == "pending"
     assert "Buyer at Acme" in capsys.readouterr().out
+
+
+# ------------------------------------------------------------------ footer scrub, headings, location
+
+def test_footer_nav_never_becomes_the_about_text():
+    """Reproduces the reported bug: a profile with no <main> landmark falls back to document.body,
+    which includes LinkedIn's footer. The footer's own 'About' link must never be read as the
+    profile's About section."""
+    text = ["Josslyn Abdull", "· 2nd", "Elvey Group", "Contact info", "About", "Accessibility", "Talent Solutions",
+            "Community Guidelines", "Careers", "Marketing Solutions", "Privacy & Terms", "Ad Choices",
+            "Advertising", "Sales Solutions", "Mobile", "Small Business", "Safety Center", "Questions?",
+            "Select Language", "LinkedIn Corporation © 2026"]
+    data = {"name": "Josslyn Abdull", "headline": "", "about": "", "experience": [], "topLines": text[:4],
+           "sections": [], "text": text}
+    headline, about, exp = harvest.parse_profile(data)
+    assert about is None and exp == []  # the footer must not leak into About/Experience
+    assert headline != "About" and "Accessibility" not in (headline or "")
+
+
+def test_strip_footer_and_heading_with_trailing_count():
+    lines = ["Experience", "Senior Buyer", "Acme · Full-time", "2021 - Present", "About", "Accessibility", "junk"]
+    assert harvest.strip_footer(lines) == lines[:5]  # keeps everything up to (not incl.) the footer marker
+    assert harvest.strip_footer(["a", "b"]) == ["a", "b"]
+    assert harvest._heading_key("Experience") == harvest._heading_key("Experience 4") == harvest._heading_key("Experience4") == "experience"
+
+
+def test_experience_heading_with_glued_count_badge_still_parses():
+    data = {"name": "Jaco Moolman", "headline": "CEO at Elvey", "about": "", "experience": [], "topLines": [],
+           "sections": [{"heading": "Experience4", "lines": ["Experience4", "CEO", "Elvey · Full-time",
+                                                               "Jan 2015 - Present · 11 yrs"]}], "text": []}
+    _, _, exp = harvest.parse_profile(data)
+    assert exp == [{"title": "CEO", "company": "Elvey", "dates": "Jan 2015 - Present"}]
+
+
+def test_location_from_topcard():
+    data = {"name": "Bob Jones", "headline": "Senior Buyer at Acme Security",
+           "topLines": ["Bob Jones", "· 2nd", "Senior Buyer at Acme Security", "Johannesburg, Gauteng, South Africa",
+                        "Contact info"], "text": []}
+    assert harvest.location_from(data) == "Johannesburg, Gauteng, South Africa"
+    assert harvest.location_from({"name": "Bob Jones", "topLines": ["Bob Jones"], "text": []}) is None
+    # a footer-polluted topLines must not surface a fake location either
+    polluted = {"name": "X", "topLines": ["X", "About", "Accessibility, Talent Solutions"], "text": []}
+    assert harvest.location_from(polluted) is None
+
+
+def test_apply_result_stores_location(cfg, loaded):
+    bob = _contact(loaded, "Bob Jones")
+    res = Result("done", profile_url="u", profile_name="Bob Jones", headline="Buyer at Acme Security",
+                 location="Johannesburg, Gauteng, South Africa")
+    harvest.apply_result(loaded, cfg, bob, res, need_face=False)
+    row = db.one(loaded, "SELECT city, province, country, location_source FROM contacts WHERE id=?", [bob["id"]])
+    assert row == {"city": "Johannesburg", "province": "Gauteng", "country": "South Africa", "location_source": "linkedin"}

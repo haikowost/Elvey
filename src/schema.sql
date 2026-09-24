@@ -54,6 +54,10 @@ CREATE TABLE IF NOT EXISTS contacts (
     linkedin_profile_url TEXT,               -- profile actually matched by the harvester
     department           TEXT,               -- Management|Sales|Technical|Projects|Procurement|Finance|...
     department_source    TEXT,               -- manual|role|linkedin|email
+    city                 TEXT,
+    province             TEXT,               -- Zoho calls this field 'State'
+    country              TEXT,
+    location_source      TEXT,               -- linkedin (only source captured so far)
     employment_status    TEXT NOT NULL DEFAULT 'unknown',  -- unknown|current|moved (per LinkedIn)
     linkedin_current_company TEXT,           -- current employer according to LinkedIn
     moved_to_account_id  INTEGER REFERENCES accounts(id), -- suggested account when they moved

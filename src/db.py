@@ -16,6 +16,7 @@ MIGRATIONS = {
         ("employment_status", "TEXT NOT NULL DEFAULT 'unknown'"), ("linkedin_current_company", "TEXT"),
         ("moved_to_account_id", "INTEGER REFERENCES accounts(id)"),
         ("contact_status", "TEXT NOT NULL DEFAULT 'active'"), ("status_note", "TEXT"),
+        ("city", "TEXT"), ("province", "TEXT"), ("country", "TEXT"), ("location_source", "TEXT"),
     ],
 }
 

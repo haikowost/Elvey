@@ -19,8 +19,8 @@ from typing import Any, Iterable
 
 from . import db
 from .config import load_config
-from .util import (DEPT_RANK, as_int, classify_department, clean, format_phone, linkedin_url, norm_company, norm_name,
-                   parse_face_filename, parse_money, segment_of, split_name)
+from .util import (DEPT_RANK, LOC_RANK, as_int, classify_department, clean, format_phone, linkedin_url, norm_company,
+                   norm_name, parse_face_filename, parse_money, segment_of, split_name)
 
 # Flat-file header aliases (normalised: lowercase, non-alnum removed).
 FLAT_ALIASES: dict[str, list[str]] = {
@@ -47,6 +47,9 @@ FLAT_ALIASES: dict[str, list[str]] = {
     "rank": ["rank", "priority", "contactrank"],
     "account_rank": ["accountrank"],
     "image_filename": ["imagefilename", "image", "face"],
+    "city": ["city", "town"],
+    "province": ["province", "state", "region"],
+    "country": ["country"],
 }
 
 ACCOUNT_FIELDS = ("name", "accno", "segment", "division", "cluster", "branch", "rep", "latest_sellout",
@@ -103,6 +106,8 @@ def finish_contact(c: dict) -> dict:
         dept = classify_department(None, email=c.get("email"))
         source = "email" if dept else None
     c["department"], c["department_source"] = dept, source
+    if c.get("city") or c.get("province") or c.get("country"):
+        c["location_source"] = "database"
     c["extra"] = extra or None
     return c
 
@@ -189,6 +194,7 @@ def load_relational(sheets: dict[str, list[dict]], cfg: dict, all_rows: bool = F
             "segment": seg, "org_group": org_group,
             "priority": rank if seg == "customer" else 0,
             "image_filename": clean(c.get("image_filename")),
+            "city": clean(c.get("city")), "province": clean(c.get("province")), "country": clean(c.get("country")),
             "extra": _compact({"category": clean(c.get("category")), "role_status": clean(c.get("role_status")),
                                "src": clean(c.get("src"))}),
         }))
@@ -289,6 +295,7 @@ def load_flat(rows: list[dict], cfg: dict, all_rows: bool = False) -> tuple[list
             "linkedin_contact_url": linkedin_url(get(r, "linkedin_contact_url")),
             "segment": segment_of(get(r, "segment")), "org_group": None, "priority": rank,
             "image_filename": clean(get(r, "image_filename")), "extra": None,
+            "city": clean(get(r, "city")), "province": clean(get(r, "province")), "country": clean(get(r, "country")),
         }))
     return list(accounts.values()), contacts
 
@@ -403,11 +410,16 @@ def upsert(conn, accounts: list[dict], contacts: list[dict]) -> dict:
                 if c.get("department") and c["department"] != existing.get("department") and \
                         DEPT_RANK.get(c["department_source"], 0) >= DEPT_RANK.get(existing.get("department_source"), 0):
                     changes.update({"department": c["department"], "department_source": c["department_source"]})
+                if c.get("location_source") and \
+                        LOC_RANK.get(c["location_source"], 0) >= LOC_RANK.get(existing.get("location_source"), 0):
+                    changes.update({"city": c.get("city"), "province": c.get("province"),
+                                    "country": c.get("country"), "location_source": c["location_source"]})
                 db.update(conn, "contacts", existing["id"], changes)
                 stats["contacts_updated" if changes else "contacts_unchanged"] += 1
             else:
                 row = {k: c.get(k) for k in (*CONTACT_FIELDS, "source_id", "name_norm", "account_id", "priority",
-                                             "image_filename", "department", "department_source")}
+                                             "image_filename", "department", "department_source", "city",
+                                             "province", "country", "location_source")}
                 row["extra"] = db.jdump(c.get("extra"))
                 db.insert(conn, "contacts", row)
                 stats["contacts_created"] += 1

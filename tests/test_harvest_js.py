@@ -171,3 +171,28 @@ def test_profile_extraction_new_layout(page, css):
     assert [e["title"] for e in exp[:3]] == ["Senior Buyer", "Project Manager", "Engineer"]
     assert exp[1]["company"] == exp[2]["company"] == "Beta Integrators"
     assert harvest.build_summary(headline, about).startswith("Senior Buyer at Acme Security")
+
+
+def test_profile_without_main_falls_back_to_body_but_footer_is_scrubbed(page):
+    """No <main> landmark (the real trigger for the reported bug): the extractor falls back to
+    document.body, sweeping in the global footer. Python-side cleanup must remove it before parsing."""
+    page.set_content(f"""
+      <header><a href="/feed"><img class="profile-displayphoto" src="{_img_data_url()}"></a></header>
+      <div><h1>Josslyn Abdull</h1><div>Elvey Group</div></div>
+      <footer><a href="/about">About</a> <a>Accessibility</a> <a>Talent Solutions</a> <a>Community Guidelines</a>
+        <a>Careers</a> <a>Marketing Solutions</a> <a>Privacy &amp; Terms</a> <a>Ad Choices</a>
+        <a>Advertising</a> <a>Sales Solutions</a> <a>Safety Center</a> LinkedIn Corporation © 2026</footer>
+    """)
+    data = page.evaluate(harvest.JS_PROFILE)
+    assert data["name"] == "Josslyn Abdull"
+    headline, about, exp = harvest.parse_profile(data)
+    assert about is None and exp == []
+    assert "Accessibility" not in (headline or "") and "Community Guidelines" not in (headline or "")
+
+
+def test_location_captured_alongside_headline(page):
+    page.set_content(PROFILE.format(img=_img_data_url(800, 600)).replace(
+        '<div class="text-body-medium">Senior Buyer at Acme Security</div>',
+        '<div class="text-body-medium">Senior Buyer at Acme Security</div><div>Johannesburg, Gauteng, South Africa</div>'))
+    data = page.evaluate(harvest.JS_PROFILE)
+    assert harvest.location_from(data) == "Johannesburg, Gauteng, South Africa"

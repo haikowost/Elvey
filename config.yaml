@@ -90,6 +90,9 @@ zoho:
     cell: Mobile
     role: Title
     department: Department     # standard Zoho field
+    city: Mailing_City          # standard Zoho field
+    province: Mailing_State     # standard Zoho field — Zoho's label is 'State', holds our 'province'
+    country: Mailing_Country    # standard Zoho field
     linkedin_contact_url: LinkedIn_URL
     linkedin_summary: LinkedIn_Summary
     segment: Segment

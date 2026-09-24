@@ -100,6 +100,8 @@ python -m src.zoho log
   - for customers, the account's rep, division, sellout, brand focus and allocation.
 
   You can also set the department and status (active / no longer at company / not relevant) with a note, or move the person to another account. People who left or aren't relevant are hidden unless you pick that status in the filter, and they're left out of the Zoho push list.
+* **Location.** When LinkedIn shows one, the top-card location line ('Johannesburg, Gauteng, South Africa') is split into city, province and country and stored on the contact (shown on the card as "from LinkedIn"). The consolidation workbook has no per-contact location, so this only ever comes from LinkedIn. In Zoho these map to the standard `Mailing_City` / `Mailing_State` / `Mailing_Country` fields — Zoho's own label for that field is "State", but it holds what we call the province.
+* **A fixed bug:** when a profile hadn't finished rendering a `<main>` landmark, the reader fell back to the whole page, which includes LinkedIn's footer links (Accessibility, Talent Solutions, Community Guidelines, ...). That footer could be mistaken for the profile's own About section and saved as the summary. It's now stripped before anything is read, and a profile that turns out to have nothing readable is queued for a retry instead of being marked done.
 * **Phone numbers** are standardised on ingest to international format:
   - South Africa: `+27 82 659 7188`;
   - other countries: `+267 71 729 638`.

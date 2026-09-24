@@ -85,6 +85,7 @@ def people_tree(conn, cfg) -> dict:
                          if c["moved_to_account_id"] else None),
             "contact_status": c["contact_status"], "status_note": c["status_note"],
             "previous_accounts": extra_c.get("previous_accounts") or [],
+            "city": c["city"], "province": c["province"], "country": c["country"],
             "face": f"/faces/{c['image_filename']}" if c["image_filename"] and c["image_status"] in ("downloaded", "manual") else None,
             "image_status": c["image_status"], "enrich_status": c["enrich_status"],
             "summary": c["linkedin_summary"], "experience": db.jload(c["linkedin_experience"], []),

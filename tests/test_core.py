@@ -1,7 +1,7 @@
 import csv
 import json
 
-from src import db, images, ingest
+from src import db, harvest, images, ingest
 from src.util import face_filename, norm_company, parse_face_filename, parse_money, slug, split_name
 
 
@@ -83,6 +83,22 @@ def test_ingest_flat_csv(cfg, conn, tmp_path):
     assert db.one(conn, "SELECT email FROM contacts WHERE full_name='Zoe Adams'")["email"] == "zoe@zeta.com"
 
 
+def test_flat_csv_location_beats_linkedin_guess(cfg, conn, tmp_path):
+    """A location known from the source data (a hypothetical future column) must never be
+    silently overwritten by a LinkedIn guess."""
+    p = tmp_path / "flat.csv"
+    p.write_text("Company,Contact Name,City,Province,Country,Rank\n"
+                 "Zeta (Pty) Ltd,Zoe Adams,Cape Town,Western Cape,South Africa,1\n", encoding="utf-8")
+    ingest.run(cfg, file=str(p))
+    zoe = db.one(conn, "SELECT * FROM contacts WHERE full_name='Zoe Adams'")
+    assert (zoe["city"], zoe["province"], zoe["country"], zoe["location_source"]) == \
+        ("Cape Town", "Western Cape", "South Africa", "database")
+    res = harvest.Result("done", profile_url="u", profile_name="Zoe Adams", location="Somewhere Else, Elsewhere")
+    harvest.apply_result(conn, cfg, zoe, res, need_face=False)
+    kept = db.one(conn, "SELECT city, location_source FROM contacts WHERE id=?", [zoe["id"]])
+    assert kept == {"city": "Cape Town", "location_source": "database"}  # unchanged
+
+
 # ------------------------------------------------------------------ images
 
 def test_images_match_every_face(cfg, conn):
@@ -123,7 +139,7 @@ def test_to_enrich_csv_order(cfg, loaded):
 
 # ------------------------------------------------------------------ phones, departments, migration
 
-from src.util import classify_department, format_phone, same_company  # noqa: E402
+from src.util import classify_department, format_phone, same_company, split_location  # noqa: E402
 
 
 def test_format_phone_real_world_shapes():
@@ -179,3 +195,11 @@ def test_old_database_is_upgraded(tmp_path):
     c = db.connect(path)
     row = db.one(c, "SELECT full_name, contact_status, employment_status, department FROM contacts")
     assert row == {"full_name": "Old Row", "contact_status": "active", "employment_status": "unknown", "department": None}
+
+
+def test_split_location():
+    assert split_location("Johannesburg, Gauteng, South Africa") == ("Johannesburg", "Gauteng", "South Africa")
+    assert split_location("Gaborone, Botswana") == ("Gaborone", None, "Botswana")
+    assert split_location("South Africa") == (None, None, "South Africa")
+    assert split_location("  Cape Town ,  Western Cape , South Africa ") == ("Cape Town", "Western Cape", "South Africa")
+    assert split_location(None) == (None, None, None) and split_location("") == (None, None, None)
