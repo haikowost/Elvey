@@ -148,3 +148,15 @@ def test_client_refresh_and_pagination():
     assert s.gets[-1][1].get("page_token") == "abc" and s.gets[-1][0].startswith("https://www.zohoapis.eu/crm/v3/")
     with pytest.raises(zoho.ZohoError):
         zoho.ZohoClient("", "", "", "com")
+
+
+def test_department_mapped_and_inactive_left_out(cfg, loaded, fake_zoho):
+    fake_zoho.FIELDS = {**fake_zoho.FIELDS, "Contacts": fake_zoho.FIELDS["Contacts"] + ["Department"]}
+    zoho.pull(loaded, cfg, fake_zoho, log=lambda *a: None)
+    d = zoho.compute_diff(loaded, cfg)
+    bob = diff_item(d, "contact", "Bob Jones")
+    dept = next(f for f in bob["fields"] if f["zoho_field"] == "Department")
+    assert dept["local_value"] == "Procurement" and dept["available"]
+    loaded.execute("UPDATE contacts SET contact_status='left' WHERE full_name='Bob Jones'")
+    loaded.commit()
+    assert "Bob Jones" not in {i["name"] for i in zoho.compute_diff(loaded, cfg)["contacts"]}

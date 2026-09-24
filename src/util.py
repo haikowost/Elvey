@@ -149,3 +149,139 @@ def as_int(value: Any) -> int | None:
         return int(float(value))
     except (TypeError, ValueError):
         return None
+
+
+# --------------------------------------------------------------------------- phone numbers
+
+_TWO_DIGIT_CC = {"20", "27", "30", "31", "32", "33", "34", "36", "39", "40", "41", "43", "44", "45", "46", "47", "48",
+                 "49", "51", "52", "53", "54", "55", "56", "57", "58", "60", "61", "62", "63", "64", "65", "66", "81",
+                 "82", "84", "86", "90", "91", "92", "93", "94", "95", "98"}
+
+
+def _group(digits: str) -> str:
+    """Groups of 3 from the left, with a final group of 4 when 3s would leave a lone digit
+    ('3916338' -> '391 6338', '71729638' -> '71 729 638')."""
+    n = len(digits)
+    if n <= 4:
+        return digits
+    if n % 3 == 1:  # 7, 10, 13 digits: …3 3 4
+        return " ".join([digits[i:i + 3] for i in range(0, n - 4, 3)] + [digits[-4:]])
+    first = n % 3 or 3
+    return " ".join([digits[:first]] + [digits[i:i + 3] for i in range(first, n, 3)])
+
+
+def format_phone(value) -> tuple[str | None, bool]:
+    """Standardise a phone number to international format.
+
+    South African numbers become '+27 82 659 7188'; other countries '+267 71 729 638'.
+    Returns (formatted, ok). ok=False means the input could not be understood and is returned trimmed.
+    Only the first number is kept when a cell holds several ('082 … / 011 …').
+    """
+    s = clean(value)
+    if not s:
+        return None, True
+    s = re.sub(r"\.0$", "", s.replace(" ", " "))          # Excel float artefacts: 647660619.0
+    s = re.split(r"\s*(?:/|;|,|\bor\b)\s*", s)[0].strip()      # first of several numbers
+    ext = ""
+    m = re.search(r"\s*(?:ext\.?|x|extension)\s*(\d{1,5})$", s, re.IGNORECASE)
+    if m:
+        ext, s = f" ext {m.group(1)}", s[: m.start()]
+    intl = s.lstrip().startswith(("+", "00", "(+"))
+    s = re.sub(r"\(\s*0\s*\)", "", s)                           # '+27 (0) 82 …'
+    digits = re.sub(r"\D", "", s)
+    if not digits or set(digits) == {"0"}:
+        return None, True
+    if intl and digits.startswith("00"):
+        digits = digits[2:]
+    if not intl:
+        if digits.startswith("27") and len(digits) == 11:
+            intl = True
+        elif digits.startswith("0") and len(digits) == 10:
+            digits, intl = "27" + digits[1:], True
+        elif len(digits) == 9 and not digits.startswith("0"):  # SA number whose leading 0 Excel dropped
+            digits, intl = "27" + digits, True
+        else:
+            return s.strip(), False
+    if digits.startswith("27"):
+        national = digits[2:].lstrip("0")
+        if len(national) != 9:
+            return "+27 " + national + ext, False
+        return f"+27 {national[:2]} {national[2:5]} {national[5:]}{ext}", True
+    cc_len = 1 if digits[0] in "17" else 2 if digits[:2] in _TWO_DIGIT_CC else 3
+    cc, rest = digits[:cc_len], digits[cc_len:].lstrip("0") if digits[:cc_len] != "39" else digits[cc_len:]
+    if len(rest) < 6:
+        return "+" + digits + ext, False
+    return f"+{cc} {_group(rest)}{ext}", True
+
+
+# --------------------------------------------------------------------------- departments
+
+# which department source may overwrite which (manual edits always win)
+DEPT_RANK = {None: 0, "email": 1, "role": 2, "linkedin": 3, "manual": 4}
+
+DEPARTMENTS = ("Management", "Sales", "Technical", "Projects", "Procurement", "Finance", "Marketing",
+               "Operations", "IT", "HR", "Admin")
+
+# Ordered: the first matching function wins, generic management titles last
+# ("Sales Director" -> Sales, "Managing Director" -> Management).
+_DEPT_RULES = [
+    ("Finance", r"financ|accountant|accounts (payable|receivable|department|clerk|manager)|creditors|debtors|"
+                r"bookkeep|\bcfo\b|treasur|billing|credit control|payroll|auditor|controller"),
+    ("Procurement", r"procure|buyer|buying|purchas|supply chain|sourcing|\bstores?\b|vendor manag"),
+    ("Sales", r"\bsales\b|pre-?sales|account manager|account executive|key account|business development|\bbdm\b|"
+              r"\bbd\b|channel manager|partner manager|agency manager|commercial manager|tender|estimator|"
+              r"quotations?|\bsdr\b|customer success"),
+    ("Marketing", r"marketing|\bbrand\b|communications|\bpr\b|digital|social media|content"),
+    ("HR", r"\bhr\b|human resources|people (and|&) culture|talent|recruit"),
+    ("IT", r"\bit\b|\bict\b|information technology|systems? admin|sysadmin|developer|software|\bcio\b|\bcto\b|"
+           r"devops|database|cyber"),
+    ("Projects", r"project|site manager|contracts manager|\bpmo\b"),
+    ("Technical", r"engineer|technician|technical|installer|integrat|solutions? architect|design|cctv|"
+                  r"security systems|commissioning|network|electrical|maintenance|\bfire\b|access control"),
+    ("Operations", r"operations|logistics|warehouse|dispatch|fleet|production|service delivery|control room|"
+                   r"security manager|risk"),
+    ("Admin", r"admin|reception|assistant|secretary|office manager|\bpa\b|coordinator|customer service|"
+              r"help ?desk|support"),
+    ("Management", r"\bceo\b|\bmd\b|managing director|director|owner|founder|general manager|\bgm\b|president|"
+                   r"partner|\bcoo\b|chairman|chief|head of|executive|principal|branch (cluster )?manager|"
+                   r"country manager|regional manager|\bmanager\b"),
+]
+_DEPT_COMPILED = [(d, re.compile(p, re.IGNORECASE)) for d, p in _DEPT_RULES]
+_EMAIL_DEPT = {"accounts": "Finance", "finance": "Finance", "creditors": "Finance", "debtors": "Finance",
+               "procurement": "Procurement", "purchasing": "Procurement", "buyer": "Procurement",
+               "sales": "Sales", "marketing": "Marketing", "hr": "HR", "admin": "Admin", "reception": "Admin",
+               "it": "IT", "support": "Technical", "technical": "Technical", "projects": "Projects"}
+
+
+def classify_department(*titles: str | None, email: str | None = None) -> str | None:
+    """Best-guess department from a job title / LinkedIn headline, else from a role mailbox (accounts@…)."""
+    for title in titles:
+        t = (title or "").strip()
+        if not t:
+            continue
+        t = t.split("|")[0].split(" at ")[0]  # 'Senior Buyer at Acme | …' -> 'Senior Buyer'
+        for dept, rx in _DEPT_COMPILED:
+            if rx.search(t):
+                return dept
+    local = (email or "").split("@")[0].lower()
+    return _EMAIL_DEPT.get(re.sub(r"[^a-z]", "", local))
+
+
+# --------------------------------------------------------------------------- companies
+
+def same_company(a: str | None, b: str | None) -> bool:
+    """Loose company match: 'Fidelity-ADT' ~ 'Fidelity ADT (Pty) Ltd' ~ 'Fidelity Services Group'."""
+    na, nb = norm_company(a), norm_company(b)
+    if not na or not nb:
+        return False
+    if na == nb or na in nb or nb in na:
+        return True
+    ta, tb = na.split(), nb.split()
+    if ta[0] == tb[0] and len(ta[0]) >= 4:
+        return True
+    try:
+        from rapidfuzz import fuzz
+
+        return fuzz.token_set_ratio(na, nb) >= 88
+    except ImportError:  # pragma: no cover
+        return False

@@ -32,7 +32,7 @@ from urllib.parse import quote
 from . import db
 from .config import load_config
 from .images import update_account_kyc_status
-from .util import face_filename, norm_company, norm_name
+from .util import DEPT_RANK, classify_department, face_filename, norm_company, norm_name, same_company
 
 try:
     from rapidfuzz import fuzz
@@ -70,7 +70,8 @@ class Result:
     experience: list[dict] = field(default_factory=list)
     photo: bytes | None = None       # JPEG bytes, already downscaled
     error: str | None = None
-    debug_text: str | None = None    # visible page text, kept when nothing could be read
+    debug_text: str | None = None    # visible page text (saved to data/debug when something went wrong)
+    match_how: str | None = None     # how the profile was found: stored url | name+company | name-only …
 
 
 class Driver(Protocol):
@@ -202,6 +203,45 @@ def parse_profile(data: dict, limit: int = 5) -> tuple[str | None, str | None, l
     return headline_from(data), about_from(data), experience
 
 
+def name_from_title(title: str | None) -> str | None:
+    """'(3) Bob Jones | LinkedIn' -> 'Bob Jones'."""
+    if not title or "linkedin" not in title.lower():
+        return None
+    name = re.sub(r"^\(\d+\)\s*", "", title).split(" | ")[0].split(" - ")[0].strip()
+    return name if name and name.lower() != "linkedin" else None
+
+
+def pick_candidate(cands: list[dict], contact: dict, company_in_query: bool) -> tuple[str | None, str]:
+    """Choose the search result that is this person. Returns (profile url, how it was matched)."""
+    first = norm_name(contact.get("first_name") or contact["full_name"].split()[0])
+    last = norm_name(contact.get("last_name") or "").split()
+    last = last[-1] if last else ""
+    company = norm_company(contact.get("company"))
+    co_token = next((t for t in company.split() if len(t) >= 3), company)
+    named = []
+    for c in cands:
+        text = norm_name(c.get("text"))
+        if first and first in text and (not last or last in text):
+            named.append(c)
+    if co_token:
+        for c in named:
+            if co_token in norm_company(c.get("text")):
+                return c["href"], "name+company"
+    if named and company_in_query:
+        return named[0]["href"], "name+search"   # LinkedIn matched the company somewhere on the profile
+    if len(named) == 1:
+        return named[0]["href"], "name-only"
+    return None, f"{len(named)} name match(es) among {len(cands)} result(s), none at {contact.get('company') or '?'}"
+
+
+def current_company(experience: list[dict], headline: str | None) -> str | None:
+    for e in experience:
+        if re.search(r"present", e.get("dates") or "", re.IGNORECASE) and e.get("company"):
+            return e["company"]
+    m = re.search(r"\bat\s+(.+?)(\s*[|,•·]|$)", headline or "", re.IGNORECASE)
+    return m.group(1).strip() if m else None
+
+
 def build_summary(headline: str | None, about: str | None, limit: int = 500) -> str | None:
     parts = [p.strip() for p in (headline, about) if p and p.strip()]
     if not parts:
@@ -267,23 +307,36 @@ async ([root, sel, maxPx, q]) => {
 }
 """
 
-JS_TOP_RESULT = """
-(lastName) => {
-  const main = document.querySelector('main') || document.body;
-  const links = [...main.querySelectorAll('a[href*="/in/"]')]
-    .filter(a => !a.closest('header') && /linkedin\\.com\\/in\\//.test(a.href));
-  if (!links.length) return null;
-  const want = (lastName || '').toLowerCase();
-  const pick = links.find(a => want && a.innerText.toLowerCase().includes(want)) || links[0];
-  const li = pick.closest('li');
-  if (li) li.setAttribute('data-kyc-top', '1');
-  return pick.href.split('?')[0];
+JS_RESULTS = """
+() => {
+  const root = document.querySelector('main') || document.body;
+  const seen = new Set(), out = [];
+  for (const a of root.querySelectorAll('a[href*="/in/"]')) {
+    if (a.closest('header') || !/linkedin\\.com\\/in\\//.test(a.href)) continue;
+    const href = a.href.split('?')[0];
+    if (seen.has(href)) continue;
+    seen.add(href);
+    const card = a.closest('li') || a.parentElement;
+    out.push({href, text: ((card && card.innerText) || a.innerText || '').slice(0, 600)});
+    if (out.length >= 10) break;
+  }
+  return out;
+}
+"""
+
+JS_MARK_RESULT = """
+(href) => {
+  const root = document.querySelector('main') || document.body;
+  const a = [...root.querySelectorAll('a[href*="/in/"]')].find(x => x.href.split('?')[0] === href);
+  const card = a && (a.closest('li') || a.parentElement);
+  if (card) card.setAttribute('data-kyc-top', '1');
+  return !!card;
 }
 """
 
 JS_PROFILE = """
 () => {
-  const main = document.querySelector('main');
+  const main = document.querySelector('main') || document.body;
   if (!main) return null;
   const txt = el => el ? el.innerText.trim() : '';
   const section = id => { const a = main.querySelector('#' + id); return a ? a.closest('section') : null; };
@@ -320,7 +373,7 @@ JS_PROFILE = """
     return {heading: h ? (lines(h)[0] || '') : '', lines: lines(sec).slice(0, 300)};
   }).filter(x => x.heading);
   return {name, headline, about, experience, topLines: lines(top).slice(0, 15), sections,
-          text: lines(main).slice(0, 600)};
+          text: lines(main).slice(0, 600), title: document.title};
 }
 """
 
@@ -421,35 +474,54 @@ class LinkedInDriver:
         resp = self.ctx.request.get(got["src"])  # canvas tainted: fetch with the session cookies instead
         return downscale_jpeg(resp.body(), px, q) if resp.ok else None
 
+    def _search(self, contact: dict) -> tuple[str | None, str, str]:
+        """Search 'name company', then 'name'. Returns (url, how matched, debug text)."""
+        name = contact["full_name"]
+        company = norm_company(contact.get("company"))
+        queries = [f"{name} {company}".strip()] + ([name] if company else [])
+        debug = []
+        for q in queries:
+            self._goto(f"https://www.linkedin.com/search/results/people/?keywords={quote(q)}")
+            cands = self.page.evaluate(JS_RESULTS) or []
+            debug.append(f"search: {q}\n" + "\n---\n".join(c["text"] for c in cands) or "(no results)")
+            url, how = pick_candidate(cands, contact, company_in_query=q != name)
+            if url:
+                return url, how, "\n".join(debug)
+            self._wait()
+        return None, how, "\n\n".join(debug)
+
     def fetch(self, contact: dict, need_face: bool) -> Result:
         url = contact.get("linkedin_profile_url") or contact.get("linkedin_contact_url")
-        search_photo = None
+        how, search_photo, search_debug = "stored url", None, ""
         if not url:
-            q = f"{contact['full_name']} {contact.get('company') or ''}".strip()
-            self._goto(f"https://www.linkedin.com/search/results/people/?keywords={quote(q)}")
-            url = self.page.evaluate(JS_TOP_RESULT, (contact.get("last_name") or "").split(" ")[-1])
+            url, how, search_debug = self._search(contact)
             if not url:
-                return Result("no_profile")
-            if need_face:  # photo inside the chosen result's own card (never another result's)
-                search_photo = self._capture('li[data-kyc-top="1"]')
+                return Result("no_profile", error=f"no matching LinkedIn search result ({how})", debug_text=search_debug)
+            if need_face and self.page.evaluate(JS_MARK_RESULT, url):  # the chosen result's own photo only
+                search_photo = self._capture('[data-kyc-top="1"]')
             self._wait()
         self._goto(url)
+        try:
+            self.page.wait_for_selector("h1", timeout=10000)
+        except Exception:
+            pass  # fall back to the tab title below
         for _ in range(4):  # Experience/About render lazily
             self.page.mouse.wheel(0, 1400)
             time.sleep(0.6)
         data = self.page.evaluate(JS_PROFILE) or {}
-        if not data.get("name"):
-            return Result("no_profile", profile_url=url)
+        page_text = f"url: {self.page.url}\ntitle: {data.get('title')}\n\n" + "\n".join(data.get("text") or [])
+        name = (data.get("name") or "").strip() or name_from_title(data.get("title"))
+        if not name:
+            return Result("no_profile", profile_url=url, error="profile page showed no name",
+                          debug_text=page_text + ("\n\n" + search_debug if search_debug else ""))
         photo = None
         if need_face:
             self.page.mouse.wheel(0, -10000)
+            time.sleep(0.5)
             photo = self._capture(None) or search_photo
         headline, about, experience = parse_profile(data, int(self.h.get("max_experience", 5)))
-        res = Result("done", profile_url=self.page.url.split("?")[0], profile_name=data["name"],
-                     headline=headline, about=about, experience=experience, photo=photo)
-        if not (headline or about or experience):
-            res.debug_text = "\n".join(data.get("text") or [])
-        return res
+        return Result("done", profile_url=self.page.url.split("?")[0], profile_name=name, headline=headline,
+                      about=about, experience=experience, photo=photo, match_how=how, debug_text=page_text)
 
     def close(self) -> None:
         try:
@@ -463,7 +535,7 @@ class LinkedInDriver:
 def queue(conn, cfg, limit: int | None = None, ids: list[int] | None = None, segment: str | None = None) -> list[dict]:
     max_attempts = (cfg.get("harvest") or {}).get("max_attempts", 2)
     where = ["(c.image_status = 'none' OR c.enrich_status = 'pending' OR (c.enrich_status = 'failed' AND c.enrich_attempts < ?))",
-             "c.enrich_status != 'no_profile'"]
+             "c.enrich_status != 'no_profile'", "c.contact_status = 'active'"]
     params: list = [max_attempts]
     if ids:
         where.append(f"c.id IN ({','.join('?' * len(ids))})")
@@ -483,13 +555,36 @@ def used_today(conn) -> int:
                         [date.today().isoformat()]).fetchone()[0]
 
 
+def save_debug(cfg, contact: dict, text: str | None, kind: str) -> None:
+    if not text:
+        return
+    dbg = cfg.data_dir / "debug"
+    dbg.mkdir(parents=True, exist_ok=True)
+    (dbg / f"{kind}_{contact['id']}.txt").write_text(f"contact: {contact['full_name']} ({contact.get('company')})\n"
+                                                    f"{text}", encoding="utf-8")
+
+
+def find_account(conn, company: str | None) -> int | None:
+    """Existing account for a company name LinkedIn reported (exact normalised name first, then loose)."""
+    if not company:
+        return None
+    exact = db.one(conn, "SELECT id FROM accounts WHERE name_norm = ?", [norm_company(company)])
+    if exact:
+        return exact["id"]
+    for a in db.rows(conn, "SELECT id, name FROM accounts ORDER BY rank IS NULL, rank, id"):
+        if same_company(a["name"], company):
+            return a["id"]
+    return None
+
+
 def apply_result(conn, cfg, contact: dict, res: Result, need_face: bool) -> str:
     """Write one harvest result to the DB (and the face to the KYC folder). Returns the log label."""
     h = cfg.get("harvest") or {}
     changes: dict = {"enrich_last_at": time.strftime("%Y-%m-%d %H:%M:%S")}
     label = res.status
     if res.status == "done" and res.profile_name and name_score(res.profile_name, contact["full_name"]) < NAME_MATCH_MIN:
-        res = Result("no_profile", error=f"top match was '{res.profile_name}'")
+        res = Result("no_profile", error=f"LinkedIn profile found was '{res.profile_name}', not this person",
+                     debug_text=res.debug_text)
         label = "no_profile"
     extra = db.jload(contact.get("extra"), {})
     if res.status == "done":
@@ -502,24 +597,35 @@ def apply_result(conn, cfg, contact: dict, res: Result, need_face: bool) -> str:
         if empty:
             # profile opened but nothing readable: retry later rather than calling it done
             changes.update({"enrich_status": "failed", "enrich_attempts": (contact.get("enrich_attempts") or 0) + 1,
-                            "enrich_error": "profile opened but no headline/About/Experience could be read"})
+                            "enrich_error": "profile opened but no headline/About/Experience could be read "
+                                            "(page text saved in data/debug)"})
             label = "empty"
-            if res.debug_text:
-                dbg = cfg.data_dir / "debug"
-                dbg.mkdir(parents=True, exist_ok=True)
-                (dbg / f"profile_{contact['id']}.txt").write_text(res.debug_text, encoding="utf-8")
+            save_debug(cfg, contact, res.debug_text, "profile")
         else:
             changes.update({"enrich_status": "done", "enrich_error": None})
         if not contact.get("linkedin_contact_url") and res.profile_url:
             changes["linkedin_contact_url"] = res.profile_url
-        if not contact.get("role"):
-            role = current_title(res.experience, res.headline)
-            if role:
-                changes["role"] = role[:100]
-                extra["role_status"] = "from LinkedIn"
+        title = current_title(res.experience, res.headline)
+        if not contact.get("role") and title:
+            changes["role"] = title[:100]
+            extra["role_status"] = "from LinkedIn"
+        # department from the LinkedIn title (beats the spreadsheet role, never a manual choice)
+        dept = classify_department(title, res.headline)
+        if dept and DEPT_RANK["linkedin"] >= DEPT_RANK.get(contact.get("department_source"), 0):
+            changes.update({"department": dept, "department_source": "linkedin"})
+        # still at this company? LinkedIn's current role decides
+        now_at = current_company(res.experience, res.headline)
+        changes["linkedin_current_company"] = now_at
+        if now_at and contact.get("company"):
+            if same_company(now_at, contact["company"]):
+                changes.update({"employment_status": "current", "moved_to_account_id": None})
+            else:
+                changes.update({"employment_status": "moved", "moved_to_account_id": find_account(conn, now_at)})
+                label += "/moved"
         company = norm_company(contact.get("company"))
         blob = norm_company(" ".join([res.headline or ""] + [e.get("company") or "" for e in res.experience]))
-        extra["match_confidence"] = "name+company" if company and company in blob else "name-only"
+        extra["match_confidence"] = "name+company" if (company and company in blob) or res.match_how == "name+company" \
+            else "name-only" if res.match_how in (None, "name-only") else res.match_how
         changes["extra"] = db.jdump(extra)
         if need_face:
             if res.photo:
@@ -537,9 +643,11 @@ def apply_result(conn, cfg, contact: dict, res: Result, need_face: bool) -> str:
         changes.update({"enrich_status": "no_profile", "enrich_error": res.error})
         if need_face:
             changes["image_status"] = "no_photo"
+        save_debug(cfg, contact, (res.error or "") + "\n\n" + (res.debug_text or ""), "no_profile")
     else:
         changes.update({"enrich_status": "failed", "enrich_error": (res.error or "")[:500],
                         "enrich_attempts": (contact.get("enrich_attempts") or 0) + 1})
+        save_debug(cfg, contact, (res.error or "") + "\n\n" + (res.debug_text or ""), "failed")
     with conn:
         db.update(conn, "contacts", contact["id"], changes)
         conn.execute("INSERT INTO harvest_log(contact_id, day, result, detail) VALUES (?,?,?,?)",
@@ -594,6 +702,60 @@ def run(conn, cfg, driver_factory, limit: int | None = None, cap: int | None = N
     return stats
 
 
+RETRY_SQL = """UPDATE contacts SET enrich_status = 'pending', enrich_attempts = 0, enrich_error = NULL
+               WHERE contact_status = 'active' AND (
+                     enrich_status IN ('no_profile', 'failed')
+                  OR (enrich_status = 'done' AND coalesce(linkedin_summary, '') = ''
+                      AND coalesce(linkedin_experience, '') IN ('', '[]')))"""
+
+
+def report(conn, n: int) -> None:
+    for r in db.rows(conn, """SELECT c.*, a.name AS company FROM contacts c LEFT JOIN accounts a ON a.id = c.account_id
+                              WHERE c.enrich_last_at IS NOT NULL ORDER BY c.enrich_last_at DESC LIMIT ?""", [n]):
+        exp = db.jload(r["linkedin_experience"], [])
+        print(f"#{r['id']} {r['full_name']} ({r['company'] or '-'})  [{r['enrich_status']}] face={r['image_status']}")
+        print(f"    role: {r['role'] or '-'}   department: {r['department'] or '-'}   "
+              f"employment: {r['employment_status']}" + (f" -> now at {r['linkedin_current_company']}"
+                                                         if r["employment_status"] == "moved" else ""))
+        print(f"    summary: {(r['linkedin_summary'] or '(none)')[:160]}")
+        print(f"    work history: {len(exp)} role(s)" + "".join(
+            f"\n      - {e.get('title')} @ {e.get('company') or '?'} ({e.get('dates')})" for e in exp[:3]))
+        if r["enrich_error"]:
+            print(f"    note: {r['enrich_error']}")
+
+
+def diagnose(conn, cfg, who: str, driver_factory, log=print) -> Path | None:
+    """Look one person up and print exactly what was read. Writes nothing to the DB."""
+    c = db.one(conn, """SELECT c.*, a.name AS company FROM contacts c LEFT JOIN accounts a ON a.id = c.account_id
+                        WHERE c.id = ? OR lower(c.full_name) LIKE ? ORDER BY c.priority IS NULL, c.priority LIMIT 1""",
+               [int(who) if who.isdigit() else -1, f"%{who.lower()}%"])
+    if not c:
+        log(f"No contact matches '{who}'.")
+        return None
+    log(f"Diagnosing #{c['id']} {c['full_name']} ({c.get('company')}) …")
+    driver = driver_factory()
+    try:
+        res = driver.fetch(c, need_face=False)
+    finally:
+        driver.close()
+    with conn:
+        conn.execute("INSERT INTO harvest_log(contact_id, day, result, detail) VALUES (?,?,?,?)",
+                     [c["id"], date.today().isoformat(), "diagnose", res.status])
+    log(f"  result:     {res.status}  {res.error or ''}")
+    log(f"  matched by: {res.match_how}   profile: {res.profile_url}   name on page: {res.profile_name}")
+    log(f"  headline:   {res.headline}")
+    log(f"  about:      {(res.about or '')[:300]}")
+    log(f"  current company: {current_company(res.experience, res.headline)}")
+    for e in res.experience:
+        log(f"  role:       {e}")
+    dbg = cfg.data_dir / "debug"
+    dbg.mkdir(parents=True, exist_ok=True)
+    path = dbg / f"diagnose_{c['id']}.txt"
+    path.write_text(res.debug_text or "(no page text)", encoding="utf-8")
+    log(f"  page text saved to {path}")
+    return path
+
+
 def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--limit", type=int, help="max contacts this run")
@@ -602,9 +764,10 @@ def main(argv: list[str] | None = None) -> None:
     ap.add_argument("--ids", help="comma-separated contact ids")
     ap.add_argument("--segment", choices=["customer", "competitor", "internal"])
     ap.add_argument("--dry-run", action="store_true", help="print the queue only")
-    ap.add_argument("--retry-empty", action="store_true",
-                    help="re-queue contacts marked done whose summary and work history came back empty")
+    ap.add_argument("--retry", "--retry-empty", dest="retry", action="store_true",
+                    help="re-queue everyone without a summary yet (no profile found, failed, or came back empty)")
     ap.add_argument("--report", type=int, metavar="N", help="show what was stored for the last N harvested contacts")
+    ap.add_argument("--diagnose", metavar="NAME_OR_ID", help="look up one person and print what was read (no DB writes)")
     ap.add_argument("--headless", action="store_true", help="not recommended (LinkedIn is stricter)")
     ap.add_argument("--config")
     args = ap.parse_args(argv)
@@ -612,26 +775,19 @@ def main(argv: list[str] | None = None) -> None:
     conn = db.connect(cfg.db_path)
     ids = [int(x) for x in args.ids.split(",")] if args.ids else None
     limit = 5 if args.test else args.limit
-    if args.retry_empty:
+    factory = lambda: LinkedInDriver(cfg, headless=args.headless)  # noqa: E731
+    if args.report:
+        report(conn, args.report)
+        return
+    if args.diagnose:
+        diagnose(conn, cfg, args.diagnose, factory)
+        return
+    if args.retry:
         with conn:
-            n = conn.execute("""UPDATE contacts SET enrich_status = 'pending', enrich_attempts = 0, enrich_error = NULL
-                                WHERE enrich_status = 'done' AND coalesce(linkedin_summary, '') = ''
-                                  AND coalesce(linkedin_experience, '') IN ('', '[]')""").rowcount
-        print(f"Re-queued {n} contact(s) with an empty LinkedIn summary and work history.")
+            n = conn.execute(RETRY_SQL).rowcount
+        print(f"Re-queued {n} contact(s) that have no LinkedIn summary yet.")
         if not (args.test or args.limit):
             return
-    if args.report:
-        for r in db.rows(conn, """SELECT c.id, c.full_name, c.enrich_status, c.enrich_error, c.image_status, c.role,
-                                         c.linkedin_summary, c.linkedin_experience, c.enrich_last_at
-                                  FROM contacts c WHERE c.enrich_last_at IS NOT NULL
-                                  ORDER BY c.enrich_last_at DESC LIMIT ?""", [args.report]):
-            exp = db.jload(r["linkedin_experience"], [])
-            print(f"#{r['id']} {r['full_name']}  [{r['enrich_status']}] face={r['image_status']}  role={r['role'] or '-'}")
-            print(f"    summary: {(r['linkedin_summary'] or '(none)')[:160]}")
-            print(f"    work history: {len(exp)} role(s)" + "".join(f"\n      - {e.get('title')} @ {e.get('company') or '?'} ({e.get('dates')})" for e in exp[:3]))
-            if r["enrich_error"]:
-                print(f"    note: {r['enrich_error']}")
-        return
     if args.dry_run:
         rows = queue(conn, cfg, limit or 50, ids, args.segment)
         for r in rows:
@@ -639,7 +795,7 @@ def main(argv: list[str] | None = None) -> None:
                   f"  face={'need' if r['image_status'] == 'none' else r['image_status']}  summary={r['enrich_status']}")
         print(f"\n{len(rows)} shown · used today: {used_today(conn)}/{(cfg.get('harvest') or {}).get('daily_cap', 40)}")
         return
-    stats = run(conn, cfg, lambda: LinkedInDriver(cfg, headless=args.headless), limit, args.cap, ids, args.segment)
+    stats = run(conn, cfg, factory, limit, args.cap, ids, args.segment)
     print(json.dumps(stats, indent=2))
 
 

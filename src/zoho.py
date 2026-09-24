@@ -37,7 +37,7 @@ ACCOUNTS_HOSTS = {
 }
 MODULE = {"account": "Accounts", "contact": "Contacts"}
 # Zoho standard field lengths (custom single-line = 255).
-MAX_LEN = {"First_Name": 40, "Last_Name": 80, "Title": 100, "Email": 100, "Phone": 50, "Mobile": 30,
+MAX_LEN = {"First_Name": 40, "Last_Name": 80, "Title": 100, "Email": 100, "Phone": 50, "Mobile": 30, "Department": 50,
            "Account_Name": 200}
 NUMERIC = {"Latest_Sellout", "Rank"}
 PHONE = {"Phone", "Mobile"}
@@ -314,7 +314,9 @@ def compute_diff(conn, cfg) -> dict:
         c_by_name.setdefault(norm_name(full), []).append((zid, acct))
 
     contacts = []
+    # people who left / aren't relevant are only shown if they are already linked to a Zoho record
     for c in db.rows(conn, """SELECT c.*, a.name AS company FROM contacts c LEFT JOIN accounts a ON a.id = c.account_id
+                              WHERE c.contact_status = 'active' OR c.zoho_contact_id IS NOT NULL
                               ORDER BY c.priority IS NULL, c.priority, c.full_name"""):
         zid, how = None, None
         zacct = local_to_zoho_acct.get(c["account_id"])

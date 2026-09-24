@@ -1,3 +1,5 @@
+import json
+
 from fastapi.testclient import TestClient
 
 from src import dashboard
@@ -15,7 +17,7 @@ def test_dashboard_endpoints(cfg, loaded):
     anna = next(p for p in acme["people"] if p["name"] == "Anna Smith")
     assert anna["face"] == "/faces/CUST__Anna_Smith.jpg"
     assert c.get(anna["face"]).headers["content-type"] == "image/jpeg"
-    assert anna["company"] == "Acme Security (Pty) Ltd" and anna["mobile"] == "082 000 0001" and "enriched_at" in anna
+    assert anna["company"] == "Acme Security (Pty) Ltd" and anna["mobile"] == "+27 82 000 0001" and "enriched_at" in anna
     assert c.get("/faces/..%2Fconsolidated.xlsx").status_code == 404
     assert {g["title"] for g in tree["competitor"]} == {"Duxbury", "Reditron"}
 
@@ -30,3 +32,38 @@ def test_dashboard_endpoints(cfg, loaded):
     r = c.post("/api/zoho/push", json={"selections": [{"entity": "contact", "local_id": item["local_id"]}], "live": True})
     assert r.status_code in (400, 403)  # no creds / latch closed — never writes
     assert c.get("/api/zoho/log").json() == []
+
+
+def test_contact_card_edits(cfg, loaded):
+    c = TestClient(dashboard.create_app(cfg))
+    bob = next(p for g in c.get("/api/people").json()["customer"] for p in g["people"] if p["name"] == "Bob Jones")
+
+    r = c.post(f"/api/contacts/{bob['id']}", json={"department": "Finance", "contact_status": "not_relevant",
+                                                   "status_note": "accounts only"})
+    assert r.status_code == 200 and r.json()["contact"]["department_source"] == "manual"
+    assert c.post(f"/api/contacts/{bob['id']}", json={"department": "Astrology"}).status_code == 400
+    assert c.post(f"/api/contacts/{bob['id']}", json={"contact_status": "gone"}).status_code == 400
+
+    # LinkedIn flagged a move: accept it -> re-allocated, old account remembered, active again
+    beta = next(a for a in c.get("/api/accounts").json() if a["name"] == "Beta Integrators")
+    loaded.execute("UPDATE contacts SET employment_status='moved', linkedin_current_company='Beta Integrators', "
+                   "moved_to_account_id=? WHERE id=?", [beta["id"], bob["id"]])
+    loaded.commit()
+    moved = c.post(f"/api/contacts/{bob['id']}", json={"move_to_account_id": beta["id"]}).json()["contact"]
+    assert moved["account_id"] == beta["id"] and moved["employment_status"] == "current" and moved["contact_status"] == "active"
+    assert json.loads(moved["extra"])["previous_accounts"][0]["name"] == "Acme Security (Pty) Ltd"
+
+    # new employer not in the DB yet -> create it
+    made = c.post(f"/api/contacts/{bob['id']}", json={"create_account": "Zeta Security"}).json()["contact"]
+    assert any(a["name"] == "Zeta Security" and a["id"] == made["account_id"] for a in c.get("/api/accounts").json())
+
+    # LinkedIn wrong -> keep
+    loaded.execute("UPDATE contacts SET employment_status='moved', linkedin_current_company='Nope' WHERE id=?", [bob["id"]])
+    loaded.commit()
+    kept = c.post(f"/api/contacts/{bob['id']}", json={"keep_account": True}).json()["contact"]
+    assert kept["employment_status"] == "current" and kept["account_id"] == made["account_id"]
+
+    tree = c.get("/api/people").json()
+    bob2 = next(p for g in tree["customer"] for p in g["people"] if p["name"] == "Bob Jones")
+    assert bob2["company"] == "Zeta Security" and len(bob2["previous_accounts"]) == 2
+    assert "departments" in c.get("/api/stats").json()

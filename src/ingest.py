@@ -19,8 +19,8 @@ from typing import Any, Iterable
 
 from . import db
 from .config import load_config
-from .util import (as_int, clean, linkedin_url, norm_company, norm_name, parse_face_filename,
-                   parse_money, segment_of, split_name)
+from .util import (DEPT_RANK, as_int, classify_department, clean, format_phone, linkedin_url, norm_company, norm_name,
+                   parse_face_filename, parse_money, segment_of, split_name)
 
 # Flat-file header aliases (normalised: lowercase, non-alnum removed).
 FLAT_ALIASES: dict[str, list[str]] = {
@@ -84,6 +84,27 @@ def read_workbook(path: Path) -> dict[str, list[dict]]:
 
     wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
     return {ws.title: _sheet_rows(ws) for ws in wb.worksheets if not ws.title.lower().startswith("read me")}
+
+
+def finish_contact(c: dict) -> dict:
+    """Standardise phones and derive the department; raw phone kept in extra when it changed."""
+    extra = dict(c.get("extra") or {})
+    for f in ("tel", "cell"):
+        raw = c.get(f)
+        std, ok = format_phone(raw)
+        if raw and std != str(raw).strip():
+            extra[f"{f}_raw"] = str(raw).strip()
+        if not ok:
+            extra[f"{f}_unparsed"] = True
+        c[f] = std
+    dept = classify_department(c.get("role"))
+    source = "role" if dept else None
+    if not dept:
+        dept = classify_department(None, email=c.get("email"))
+        source = "email" if dept else None
+    c["department"], c["department_source"] = dept, source
+    c["extra"] = extra or None
+    return c
 
 
 # --------------------------------------------------------------------------- relational
@@ -159,7 +180,7 @@ def load_relational(sheets: dict[str, list[dict]], cfg: dict, all_rows: bool = F
             if rep:
                 role = role or clean(rep.get("role"))
                 org_group = clean(rep.get("branch")) or clean(rep.get("cluster"))
-        contacts.append({
+        contacts.append(finish_contact({
             "source_id": cid, "account_source_id": aid, "full_name": full_name,
             "first_name": first, "last_name": last or None, "role": role,
             "email": (clean(c.get("email")) or "").lower() or None,
@@ -170,7 +191,7 @@ def load_relational(sheets: dict[str, list[dict]], cfg: dict, all_rows: bool = F
             "image_filename": clean(c.get("image_filename")),
             "extra": _compact({"category": clean(c.get("category")), "role_status": clean(c.get("role_status")),
                                "src": clean(c.get("src"))}),
-        })
+        }))
         wanted_accounts.add(aid)
 
     # ---- accounts in scope
@@ -260,7 +281,7 @@ def load_flat(rows: list[dict], cfg: dict, all_rows: bool = False) -> tuple[list
         first, last = clean(get(r, "first_name")), clean(get(r, "last_name"))
         if not first:
             first, last = split_name(full)
-        contacts.append({
+        contacts.append(finish_contact({
             "source_id": None, "account_source_id": key, "full_name": full, "first_name": first,
             "last_name": last or None, "role": clean(get(r, "role")),
             "email": (clean(get(r, "email")) or "").lower() or None,
@@ -268,7 +289,7 @@ def load_flat(rows: list[dict], cfg: dict, all_rows: bool = False) -> tuple[list
             "linkedin_contact_url": linkedin_url(get(r, "linkedin_contact_url")),
             "segment": segment_of(get(r, "segment")), "org_group": None, "priority": rank,
             "image_filename": clean(get(r, "image_filename")), "extra": None,
-        })
+        }))
     return list(accounts.values()), contacts
 
 
@@ -379,10 +400,14 @@ def upsert(conn, accounts: list[dict], contacts: list[dict]) -> dict:
                     changes["source_id"] = c["source_id"]
                 if c.get("image_filename") and not existing.get("image_filename"):
                     changes["image_filename"] = c["image_filename"]
+                if c.get("department") and c["department"] != existing.get("department") and \
+                        DEPT_RANK.get(c["department_source"], 0) >= DEPT_RANK.get(existing.get("department_source"), 0):
+                    changes.update({"department": c["department"], "department_source": c["department_source"]})
                 db.update(conn, "contacts", existing["id"], changes)
                 stats["contacts_updated" if changes else "contacts_unchanged"] += 1
             else:
-                row = {k: c.get(k) for k in (*CONTACT_FIELDS, "source_id", "name_norm", "account_id", "priority", "image_filename")}
+                row = {k: c.get(k) for k in (*CONTACT_FIELDS, "source_id", "name_norm", "account_id", "priority",
+                                             "image_filename", "department", "department_source")}
                 row["extra"] = db.jdump(c.get("extra"))
                 db.insert(conn, "contacts", row)
                 stats["contacts_created"] += 1

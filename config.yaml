@@ -56,6 +56,8 @@ harvest:
 dashboard:
   host: 127.0.0.1
   port: 8765
+  # Departments the sales team works with; others get a "not sales" tag (nothing is hidden).
+  relevant_departments: [Management, Sales, Technical, Projects, Procurement]
 
 zoho:
   api_version: v3
@@ -87,6 +89,7 @@ zoho:
     tel: Phone
     cell: Mobile
     role: Title
+    department: Department     # standard Zoho field
     linkedin_contact_url: LinkedIn_URL
     linkedin_summary: LinkedIn_Summary
     segment: Segment

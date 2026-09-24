@@ -25,6 +25,11 @@ nav button.on, .chip.on { background: var(--accent); color: var(--accent-ink); b
 .stats { margin-left: auto; color: var(--muted); font-size: 12px; }
 main { padding: 16px 20px 60px; max-width: 1400px; margin: 0 auto; }
 .bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+select { padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--ink); font: inherit; }
+.warnbox { background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 8px; padding: 8px 10px; margin: 8px 0; font-size: 13px; }
+.cc-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 6px; }
+.tag.dept { border-color: var(--accent); color: var(--accent); }
+.tag.off { border-color: var(--comp); color: var(--comp); }
 input[type=search] { padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--ink); min-width: 240px; font: inherit; }
 .btn { border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink); padding: 7px 14px; border-radius: 8px; cursor: pointer; font: inherit; }
 .btn.ghost { background: transparent; color: var(--accent); }
@@ -89,6 +94,14 @@ dialog pre { white-space: pre-wrap; font-size: 12px; max-height: 55vh; overflow:
     <div class="bar">
       <span id="branches"></span>
       <input type="search" id="q" placeholder="Search name, company, role, rep…">
+      <select id="fdept" title="Department"><option value="">All departments</option></select>
+      <select id="fstatus" title="Status">
+        <option value="active">Active contacts</option>
+        <option value="review">Needs review (moved per LinkedIn)</option>
+        <option value="left">No longer at company</option>
+        <option value="not_relevant">Not relevant</option>
+        <option value="all">Everyone</option>
+      </select>
       <button class="chip" id="expand">Expand all</button>
     </div>
     <div id="tree"></div>
@@ -157,6 +170,16 @@ async function loadStats() {
   const faces = Object.entries(cov).filter(([k]) => k !== 'by_priority').reduce((a, [, v]) => a + (v.faces || 0), 0);
   const summ = Object.entries(cov).filter(([k]) => k !== 'by_priority').reduce((a, [, v]) => a + (v.summaries || 0), 0);
   $('#stats').textContent = `${s.accounts} accounts · ${s.contacts} contacts · ${faces} faces · ${summ} LinkedIn summaries`;
+  T.departments = s.departments || [];
+  T.relevant = new Set(s.relevant_departments || []);
+  $('#fdept').innerHTML = '<option value="">All departments</option><option value="__none">Department unknown</option>' +
+    T.departments.map(d => `<option>${esc(d)}</option>`).join('');
+}
+function statusOk(p, f) {
+  if (f === 'all') return true;
+  if (f === 'review') return p.contact_status === 'active' && p.employment_status === 'moved';
+  if (f === 'active') return p.contact_status === 'active';
+  return p.contact_status === f;
 }
 
 // ---------------------------------------------------------------- People Tree
@@ -165,7 +188,7 @@ const BR = [['competitor', 'Competitors'], ['internal', 'Internal'], ['customer'
 
 async function loadTree() {
   T.data = await api('/api/people');
-  $('#branches').innerHTML = BR.map(([k, l]) => `<button class="chip ${k === T.branch ? 'on' : ''}" data-b="${k}">${l} (${T.data[k].reduce((a, g) => a + g.people.length, 0)})</button>`).join(' ');
+  $('#branches').innerHTML = BR.map(([k, l]) => `<button class="chip ${k === T.branch ? 'on' : ''}" data-b="${k}">${l} (${T.data[k].reduce((a, g) => a + g.people.filter(p => p.contact_status === 'active').length, 0)})</button>`).join(' ');
   document.querySelectorAll('[data-b]').forEach(b => b.onclick = () => { T.branch = b.dataset.b; loadTreeRender(); });
   loadTreeRender();
 }
@@ -176,11 +199,15 @@ function loadTreeRender() {
   let html = '', shown = 0;
   groups.forEach((g, gi) => {
     const gText = [g.title, g.division, g.rep, g.brand_focus].join(' ').toLowerCase();
-    const people = g.people.filter(p => !q || gText.includes(q) || [p.name, p.role, p.email, p.summary].join(' ').toLowerCase().includes(q));
+    const fd = $('#fdept').value, fs = $('#fstatus').value;
+    const people = g.people.filter(p => statusOk(p, fs)
+      && (!fd || (fd === '__none' ? !p.department : p.department === fd))
+      && (!q || gText.includes(q) || [p.name, p.role, p.email, p.summary, p.department, p.now_at].join(' ').toLowerCase().includes(q)));
     if (!people.length) return;
     const key = T.branch + ':' + g.title;
     const byDefault = T.expandAll || (T.branch !== 'customer') || gi < 8;
-    const open = !!q || (T.override.has(key) ? T.override.get(key) : byDefault);
+    const filtering = !!q || $('#fdept').value || $('#fstatus').value !== 'active';
+    const open = filtering || (T.override.has(key) ? T.override.get(key) : byDefault);
     shown += people.length;
     const meta = [g.division, g.rep && 'Rep: ' + g.rep, money(g.sellout), g.brand_focus && 'Brands: ' + g.brand_focus, g.allocation].filter(Boolean).map(esc).join(' · ');
     html += `<div class="group seg-${g.segment} ${open ? '' : 'closed'}" data-key="${esc(key)}">
@@ -202,10 +229,15 @@ function card(p) {
     : `<div class="face" style="background:hsl(${hue(p.name)} 45% 45%)">${esc(initials(p.name))}</div>`;
   const exp = (p.experience || []).slice(0, 3).map(e => `${esc(e.title)}${e.company ? ' @ ' + esc(e.company) : ''} <span class="muted">${esc(e.dates || '')}</span>`).join('<br>');
   const flags = [p.image_status === 'no_photo' && 'no LinkedIn photo', p.enrich_status === 'no_profile' && 'no LinkedIn profile',
-                 p.match_confidence === 'name-only' && 'LinkedIn match by name only – verify'].filter(Boolean);
+                 p.match_confidence === 'name-only' && 'LinkedIn match by name only – verify',
+                 p.employment_status === 'moved' && p.contact_status === 'active' && `LinkedIn: now at ${p.now_at}`,
+                 p.contact_status === 'left' && 'no longer at company', p.contact_status === 'not_relevant' && 'not relevant'].filter(Boolean);
+  const tags = [p.department && `<span class="tag dept">${esc(p.department)}</span>`,
+                p.department && T.relevant && T.relevant.size && !T.relevant.has(p.department) && '<span class="tag off">not sales</span>'].filter(Boolean).join('');
   return `<div class="card" data-pid="${p.id}" title="Open contact card">${face}<div style="min-width:0">
     <div class="n">${esc(p.name)} ${p.linkedin ? `<a href="${esc(p.linkedin)}" target="_blank" rel="noopener" data-stop>in</a>` : ''}</div>
     <div class="r">${esc(p.role || 'role pending')}</div>
+    ${tags ? `<div class="x">${tags}</div>` : ''}
     ${p.summary ? `<div class="s" title="${esc(p.summary)}">${esc(p.summary)}</div>` : ''}
     ${exp ? `<div class="x">${exp}</div>` : ''}
     <div class="x">${[p.email, p.cell].filter(Boolean).map(esc).join(' · ')}</div>
@@ -235,6 +267,16 @@ function contactCard(id) {
       <div>${esc(p.role || 'Role not known yet')}${p.role_status === 'from LinkedIn' ? ' <span class="muted">(from LinkedIn)</span>' : ''}</div>
       <div class="muted">${esc(p.company || '')}${g && g.segment ? ' · ' + esc({competitor: 'Competitor', internal: 'Internal', customer: 'Customer'}[g.segment]) : ''}</div>
     </div></div>
+    ${p.employment_status === 'moved' && p.contact_status === 'active' ? `<div class="warnbox">
+      <b>LinkedIn says ${esc(p.name.split(' ')[0])} now works at ${esc(p.now_at || '?')}</b>, not ${esc(p.company || 'this account')}.
+      <div class="cc-actions">
+        ${p.moved_to ? `<button class="btn" data-act="move" data-acc="${p.moved_to.id}">Move to ${esc(p.moved_to.name)}</button>`
+                     : (p.now_at ? `<button class="btn" data-act="create">Add ${esc(p.now_at)} as an account and move</button>` : '')}
+        <button class="btn ghost" data-act="left">Mark as no longer at ${esc(p.company || 'company')}</button>
+        <button class="btn ghost" data-act="keep">LinkedIn is wrong – keep</button>
+      </div></div>` : ''}
+    ${p.contact_status !== 'active' ? `<div class="warnbox">Marked <b>${p.contact_status === 'left' ? 'no longer at company' : 'not relevant'}</b>${p.status_note ? ': ' + esc(p.status_note) : ''}.
+      <div class="cc-actions"><button class="btn ghost" data-act="reactivate">Make active again</button></div></div>` : ''}
     <dl class="cc-grid">
       ${row('Email', p.email && `<a href="mailto:${esc(p.email)}">${esc(p.email)}</a>`)}
       ${row('Mobile', p.mobile && `<a href="tel:${esc(p.mobile)}">${esc(p.mobile)}</a>`)}
@@ -250,14 +292,64 @@ function contactCard(id) {
       ${row('KYC', esc([p.face ? 'photo ✓' : (p.image_status === 'no_photo' ? 'no LinkedIn photo' : 'no photo yet'), status,
                         p.match_confidence === 'name-only' ? 'matched by name only – please verify' : ''].filter(Boolean).join(' · ')))}
       ${row('In Zoho', p.zoho ? 'yes' : 'not yet')}
+      ${row('Department', p.department ? esc(p.department) + ` <span class="muted">(${esc({manual: 'set by you', linkedin: 'from LinkedIn title', role: 'from job title', email: 'from email address'}[p.department_source] || p.department_source || '')})</span>` : '<span class="muted">unknown</span>')}
+      ${row('Previously at', (p.previous_accounts || []).map(a => esc(a.name) + (a.until ? ' <span class="muted">(until ' + esc(a.until) + ')</span>' : '')).join(', '))}
     </dl>
     <h4>LinkedIn summary</h4>
     <div>${p.summary ? esc(p.summary) : '<span class="muted">None yet.</span>'}</div>
     <h4>Work history</h4>
     ${exp ? `<ol>${exp}</ol>` : '<span class="muted">None yet.</span>'}
     ${p.enrich_error ? `<p class="muted" style="margin-top:12px">Note: ${esc(p.enrich_error)}</p>` : ''}
+    <h4>Edit</h4>
+    <div class="cc-actions">
+      <label>Department <select id="ccdept"><option value="">— unknown —</option>${(T.departments || []).map(d => `<option ${d === p.department ? 'selected' : ''}>${esc(d)}</option>`).join('')}</select></label>
+      <label>Status <select id="ccstatus">
+        <option value="active" ${p.contact_status === 'active' ? 'selected' : ''}>Active</option>
+        <option value="left" ${p.contact_status === 'left' ? 'selected' : ''}>No longer at company</option>
+        <option value="not_relevant" ${p.contact_status === 'not_relevant' ? 'selected' : ''}>Not relevant</option></select></label>
+      <input type="search" id="ccnote" placeholder="Note (optional)" value="${esc(p.status_note || '')}">
+      <button class="btn" data-act="save">Save</button>
+    </div>
+    <div class="cc-actions">
+      <input type="search" id="ccmove" list="ccaccounts" placeholder="Move to another account…" style="min-width:260px">
+      <datalist id="ccaccounts"></datalist>
+      <button class="btn ghost" data-act="moveto">Move</button>
+    </div>
+    <p class="muted" id="ccmsg"></p>
     ${p.enriched_at ? `<p class="muted">Last LinkedIn look-up: ${esc(p.enriched_at)}</p>` : ''}`;
-  $('#contact').showModal();
+  if (!$('#contact').open) $('#contact').showModal();
+  loadAccounts().then(list => {
+    $('#ccaccounts').innerHTML = list.filter(a => a.id !== p.account_id).map(a => `<option value="${esc(a.name)}">`).join('');
+  });
+  document.querySelectorAll('#ccbody [data-act]').forEach(b => b.onclick = async () => {
+    const act = b.dataset.act;
+    const body = act === 'move' ? { move_to_account_id: +b.dataset.acc }
+      : act === 'create' ? { create_account: p.now_at }
+      : act === 'left' ? { contact_status: 'left', status_note: p.now_at ? 'LinkedIn: now at ' + p.now_at : null }
+      : act === 'keep' ? { keep_account: true }
+      : act === 'reactivate' ? { contact_status: 'active' }
+      : act === 'save' ? { department: $('#ccdept').value, contact_status: $('#ccstatus').value, status_note: $('#ccnote').value }
+      : null;
+    let payload = body;
+    if (act === 'moveto') {
+      const name = $('#ccmove').value.trim();
+      const acc = (await loadAccounts()).find(a => a.name.toLowerCase() === name.toLowerCase());
+      if (!name) return;
+      if (!acc && !confirm(`"${name}" is not an existing account. Create it and move ${p.name} there?`)) return;
+      payload = acc ? { move_to_account_id: acc.id } : { create_account: name };
+    }
+    try {
+      await api('/api/contacts/' + p.id, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      T.accounts = null;
+      await loadTree();
+      contactCard(p.id);
+      $('#ccmsg').textContent = 'Saved.';
+    } catch (e) { $('#ccmsg').textContent = 'Could not save: ' + e.message; }
+  });
+}
+async function loadAccounts() {
+  if (!T.accounts) T.accounts = await api('/api/accounts');
+  return T.accounts;
 }
 $('#tree').addEventListener('click', ev => {
   if (ev.target.closest('[data-stop]')) return;
@@ -267,6 +359,8 @@ $('#tree').addEventListener('click', ev => {
 $('#ccclose').onclick = () => $('#contact').close();
 $('#contact').addEventListener('click', ev => { if (ev.target.id === 'contact') $('#contact').close(); });
 $('#q').oninput = () => loadTreeRender();
+$('#fdept').onchange = () => loadTreeRender();
+$('#fstatus').onchange = () => loadTreeRender();
 $('#expand').onclick = () => { T.expandAll = !T.expandAll; T.override.clear(); $('#expand').textContent = T.expandAll ? 'Collapse' : 'Expand all'; loadTreeRender(); };
 
 // ---------------------------------------------------------------- Zoho review-and-select

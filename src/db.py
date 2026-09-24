@@ -9,12 +9,35 @@ from typing import Any, Iterable
 SCHEMA = Path(__file__).with_name("schema.sql")
 
 
+# Columns added after the first release: existing databases are upgraded in place on connect.
+MIGRATIONS = {
+    "contacts": [
+        ("department", "TEXT"), ("department_source", "TEXT"),
+        ("employment_status", "TEXT NOT NULL DEFAULT 'unknown'"), ("linkedin_current_company", "TEXT"),
+        ("moved_to_account_id", "INTEGER REFERENCES accounts(id)"),
+        ("contact_status", "TEXT NOT NULL DEFAULT 'active'"), ("status_note", "TEXT"),
+    ],
+}
+
+
+def _migrate(conn: sqlite3.Connection) -> None:
+    for table, cols in MIGRATIONS.items():
+        have = {r[1] for r in conn.execute(f"PRAGMA table_info({table})")}
+        for name, decl in cols:
+            if name not in have:
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN {name} {decl}")
+    conn.commit()
+
+
 def connect(db_path: str | Path) -> sqlite3.Connection:
     conn = sqlite3.connect(str(db_path), timeout=30, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     conn.execute("PRAGMA journal_mode = WAL")
+    # tables first (new DBs get every column), then upgrade older DBs, then indexes on new columns
     conn.executescript(SCHEMA.read_text(encoding="utf-8"))
+    _migrate(conn)
+    conn.execute("CREATE INDEX IF NOT EXISTS ix_contacts_status ON contacts(contact_status)")
     return conn
 
 

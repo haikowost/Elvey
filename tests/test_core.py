@@ -47,7 +47,7 @@ def test_ingest_relational_counts_and_mapping(cfg, conn):
     people = {r["full_name"]: r for r in db.rows(conn, "SELECT * FROM contacts")}
     assert s["contacts"] == len(people) == 6  # Bob deduped, Jaco merged, Dan out of scope
     bob = people["Bob Jones"]
-    assert bob["role"] == "Buyer" and bob["cell"] == "083 111 2222" and bob["priority"] == 2
+    assert bob["role"] == "Buyer" and bob["cell"] == "+27 83 111 2222" and bob["priority"] == 2
     assert bob["linkedin_contact_url"] == "https://www.linkedin.com/in/bobjones"
     assert people["Anna Smith"]["email"] == "anna@acme.co.za" and people["Anna Smith"]["linkedin_contact_url"] is None
     jaco = people["Jaco Moolman"]
@@ -119,3 +119,63 @@ def test_to_enrich_csv_order(cfg, loaded):
     bob = next(r for r in rows if r["full_name"] == "Bob Jones")
     assert bob["needs_face"] == "1" and bob["target_filename"] == "CUST__Bob_Jones.jpg"
     assert images.coverage(loaded)["customer"]["faces"] == 2
+
+
+# ------------------------------------------------------------------ phones, departments, migration
+
+from src.util import classify_department, format_phone, same_company  # noqa: E402
+
+
+def test_format_phone_real_world_shapes():
+    cases = {
+        "082 664 6770": "+27 82 664 6770", "073-023-7765": "+27 73 023 7765", "+27 (0) 82 905 8966": "+27 82 905 8966",
+        "219138030": "+27 21 913 8030",   # Excel dropped the leading 0
+        "647660619.0": "+27 64 766 0619", "(082) 436 7663": "+27 82 436 7663", "061.543.6584": "+27 61 543 6584",
+        "+27 83 787 5384": "+27 83 787 5384", "+27118887251": "+27 11 888 7251",
+        "+267-391-6338": "+267 391 6338", "+260-211-264-544": "+260 211 264 544", "+264811277731": "+264 811 277 731",
+        "082 111 2222 / 011 222 3333": "+27 82 111 2222", "011 401 6700 ext 204": "+27 11 401 6700 ext 204",
+    }
+    for raw, want in cases.items():
+        assert format_phone(raw) == (want, True), raw
+    assert format_phone("0.0") == (None, True) and format_phone(None) == (None, True)
+    assert format_phone("12345") == ("12345", False)
+
+
+def test_classify_department():
+    assert classify_department("Account Manager") == "Sales"
+    assert classify_department("Sales Director") == "Sales"
+    assert classify_department("Managing Director") == "Management"
+    assert classify_department("Accounts Payable Clerk") == "Finance"
+    assert classify_department("Senior Buyer at Acme | Procurement") == "Procurement"
+    assert classify_department("CCTV Technician") == "Technical"
+    assert classify_department(None, email="accounts@acme.co.za") == "Finance"
+    assert classify_department("", email="bob@acme.co.za") is None
+    assert same_company("Fidelity-ADT", "Fidelity ADT (Pty) Ltd") and not same_company("Acme", "Beta Integrators")
+
+
+def test_ingest_standardises_phones_and_departments(cfg, conn):
+    ingest.run(cfg)
+    anna = db.one(conn, "SELECT * FROM contacts WHERE full_name='Anna Smith'")
+    assert anna["cell"] == "+27 82 000 0001" and json.loads(anna["extra"])["cell_raw"] == "082 000 0001"
+    assert anna["department"] == "Management" and anna["department_source"] == "role"  # CEO
+    bob = db.one(conn, "SELECT * FROM contacts WHERE full_name='Bob Jones'")
+    assert bob["department"] == "Procurement"  # Buyer
+    conn.execute("UPDATE contacts SET department='Finance', department_source='manual' WHERE id=?", [bob["id"]])
+    conn.commit()
+    ingest.run(cfg)
+    assert db.one(conn, "SELECT department FROM contacts WHERE id=?", [bob["id"]])["department"] == "Finance"
+
+
+def test_old_database_is_upgraded(tmp_path):
+    """A database made before the department/status columns existed gains them on connect, data kept."""
+    path = tmp_path / "old.db"
+    c = db.connect(path)
+    c.execute("INSERT INTO contacts(full_name, name_norm) VALUES ('Old Row', 'old row')")
+    c.execute("DROP INDEX ix_contacts_status")
+    for col, _ in db.MIGRATIONS["contacts"]:
+        c.execute(f"ALTER TABLE contacts DROP COLUMN {col}")
+    c.commit()
+    c.close()
+    c = db.connect(path)
+    row = db.one(c, "SELECT full_name, contact_status, employment_status, department FROM contacts")
+    assert row == {"full_name": "Old Row", "contact_status": "active", "employment_status": "unknown", "department": None}

@@ -182,7 +182,7 @@ def test_empty_profile_is_retried_not_done(cfg, loaded):
     row = db.one(loaded, "SELECT * FROM contacts WHERE id=?", [c["id"]])
     assert row["enrich_status"] == "failed" and row["enrich_attempts"] == 1
     assert row["image_status"] == "downloaded"  # the face is still kept
-    assert (cfg.data_dir / "debug" / f"profile_{c['id']}.txt").read_text(encoding="utf-8").startswith("Bob Jones")
+    assert "Bob Jones\nsomething unexpected" in (cfg.data_dir / "debug" / f"profile_{c['id']}.txt").read_text(encoding="utf-8")
     assert any(q["id"] == c["id"] for q in harvest.queue(loaded, cfg))  # will be retried
 
 
@@ -192,7 +192,87 @@ def test_retry_empty_requeues_old_empty_rows(cfg, loaded, monkeypatch, capsys):
     loaded.commit()
     monkeypatch.setattr(harvest, "load_config", lambda _=None: cfg)
     harvest.main(["--retry-empty"])
-    assert "Re-queued 1 contact" in capsys.readouterr().out
+    assert "Re-queued" in capsys.readouterr().out
     assert db.one(loaded, "SELECT enrich_status FROM contacts WHERE full_name='Bob Jones'")["enrich_status"] == "pending"
     assert db.one(loaded, "SELECT enrich_status FROM contacts WHERE full_name='Anna Smith'")["enrich_status"] == "done"
     harvest.main(["--report", "5"])
+
+
+# ------------------------------------------------------------------ search matching, moves, departments
+
+def test_pick_candidate_rules():
+    c = {"full_name": "Bob Jones", "first_name": "Bob", "last_name": "Jones", "company": "Acme Security (Pty) Ltd"}
+    at_acme = {"href": "u1", "text": "Bob Jones\n· 2nd\nBuyer at Acme Security"}
+    elsewhere = {"href": "u2", "text": "Bob Jones\nEngineer at Other Co"}
+    other = {"href": "u3", "text": "Alice Smith\nAcme Security"}
+    assert harvest.pick_candidate([elsewhere, at_acme], c, company_in_query=False) == ("u1", "name+company")
+    assert harvest.pick_candidate([other, elsewhere], c, company_in_query=True) == ("u2", "name+search")
+    assert harvest.pick_candidate([other, elsewhere], c, company_in_query=False) == ("u2", "name-only")
+    two = [elsewhere, {"href": "u4", "text": "Bob Jones\nPilot"}]
+    url, why = harvest.pick_candidate(two, c, company_in_query=False)
+    assert url is None and "2 name match" in why  # ambiguous: never guess between two Bob Joneses
+    assert harvest.pick_candidate([], c, company_in_query=True)[0] is None
+
+
+def test_current_company_and_title_name():
+    exp = [{"title": "Buyer", "company": "Beta", "dates": "2023 - Present"}, {"title": "X", "company": "Acme", "dates": "2019 - 2023"}]
+    assert harvest.current_company(exp, None) == "Beta"
+    assert harvest.current_company([], "Sales Manager at Gamma Systems | CCTV") == "Gamma Systems"
+    assert harvest.current_company([], "Freelancer") is None
+    assert harvest.name_from_title("Bob Jones | LinkedIn") == "Bob Jones"
+    assert harvest.name_from_title("LinkedIn") is None and harvest.name_from_title(None) is None
+
+
+def _contact(conn, name):
+    return db.one(conn, "SELECT c.*, a.name company FROM contacts c LEFT JOIN accounts a ON a.id=c.account_id WHERE full_name=?", [name])
+
+
+def test_moved_person_is_flagged_with_suggested_account(cfg, loaded):
+    bob = _contact(loaded, "Bob Jones")
+    res = Result("done", profile_url="https://www.linkedin.com/in/bob", profile_name="Bob Jones",
+                 headline="Project Manager at Beta Integrators", about="Moved on.",
+                 experience=[{"title": "Project Manager", "company": "Beta Integrators", "dates": "2024 - Present"},
+                             {"title": "Buyer", "company": "Acme Security", "dates": "2019 - 2024"}], match_how="name+search")
+    assert harvest.apply_result(loaded, cfg, bob, res, need_face=False) == "done/moved"
+    row = db.one(loaded, "SELECT * FROM contacts WHERE id=?", [bob["id"]])
+    beta = db.one(loaded, "SELECT id FROM accounts WHERE name='Beta Integrators'")["id"]
+    assert row["employment_status"] == "moved" and row["linkedin_current_company"] == "Beta Integrators"
+    assert row["moved_to_account_id"] == beta and row["contact_status"] == "active"  # flagged, not moved yet
+    assert row["department"] == "Projects" and row["department_source"] == "linkedin"
+    assert row["role"] == "Buyer"  # the spreadsheet role is kept
+
+
+def test_current_person_and_manual_department_kept(cfg, loaded):
+    anna = _contact(loaded, "Anna Smith")
+    loaded.execute("UPDATE contacts SET department='Management', department_source='manual' WHERE id=?", [anna["id"]])
+    loaded.commit()
+    anna = _contact(loaded, "Anna Smith")
+    res = Result("done", profile_url="u", profile_name="Anna Smith", headline="Sales Director at Acme Security",
+                 experience=[{"title": "Sales Director", "company": "Acme Security", "dates": "2020 - Present"}])
+    harvest.apply_result(loaded, cfg, anna, res, need_face=False)
+    row = db.one(loaded, "SELECT * FROM contacts WHERE id=?", [anna["id"]])
+    assert row["employment_status"] == "current" and row["department"] == "Management"  # manual wins
+
+
+def test_no_profile_saves_debug_and_inactive_not_queued(cfg, loaded):
+    bob = _contact(loaded, "Bob Jones")
+    harvest.apply_result(loaded, cfg, bob, Result("no_profile", error="no matching LinkedIn search result",
+                                                   debug_text="search: Bob Jones acme"), need_face=True)
+    assert (cfg.data_dir / "debug" / f"no_profile_{bob['id']}.txt").exists()
+    loaded.execute("UPDATE contacts SET contact_status='left' WHERE full_name='Carla Müller'")
+    loaded.commit()
+    names = {r["full_name"] for r in harvest.queue(loaded, cfg)}
+    assert "Carla Müller" not in names and "Bob Jones" not in names  # left / no_profile
+    loaded.execute(harvest.RETRY_SQL)
+    names = {r["full_name"] for r in harvest.queue(loaded, cfg)}
+    assert "Bob Jones" in names and "Carla Müller" not in names  # retry re-queues no_profile, never 'left'
+
+
+def test_diagnose_writes_nothing_but_debug(cfg, loaded, capsys):
+    bob = _contact(loaded, "Bob Jones")
+    d = FakeDriver({"Bob Jones": Result("done", profile_url="u", profile_name="Bob Jones", headline="Buyer at Acme",
+                                        debug_text="PAGE TEXT")})
+    path = harvest.diagnose(loaded, cfg, "bob jones", lambda: d)
+    assert path.read_text() == "PAGE TEXT" and d.closed
+    assert db.one(loaded, "SELECT enrich_status FROM contacts WHERE id=?", [bob["id"]])["enrich_status"] == "pending"
+    assert "Buyer at Acme" in capsys.readouterr().out

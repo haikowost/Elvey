@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import argparse
 import threading
+import time
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
@@ -14,7 +15,10 @@ from pydantic import BaseModel
 
 from . import db, zoho
 from .config import load_config
-from .images import coverage
+from .images import coverage, update_account_kyc_status
+from .util import DEPARTMENTS, norm_company
+
+CONTACT_STATUSES = ("active", "left", "not_relevant")
 
 STATIC = Path(__file__).with_name("static")
 BRANCH_ORDER = ("competitor", "internal", "customer")
@@ -25,6 +29,15 @@ class Selection(BaseModel):
     local_id: int
     fields: list[str] | None = None
     photo: bool | None = None
+
+
+class ContactUpdate(BaseModel):
+    department: str | None = None          # one of util.DEPARTMENTS, or "" to clear
+    contact_status: str | None = None      # active | left | not_relevant
+    status_note: str | None = None
+    move_to_account_id: int | None = None  # re-allocate to an existing account
+    create_account: str | None = None      # re-allocate to a new account with this name
+    keep_account: bool | None = None       # LinkedIn "moved" flag is wrong: keep them where they are
 
 
 class PushRequest(BaseModel):
@@ -66,6 +79,12 @@ def people_tree(conn, cfg) -> dict:
             "tel": c["tel"], "mobile": c["cell"], "company": a.get("name"), "segment": seg,
             "role_status": extra_c.get("role_status"), "enrich_error": c["enrich_error"],
             "enriched_at": c["enrich_last_at"],
+            "account_id": c["account_id"], "department": c["department"], "department_source": c["department_source"],
+            "employment_status": c["employment_status"], "now_at": c["linkedin_current_company"],
+            "moved_to": ({"id": c["moved_to_account_id"], "name": (accounts.get(c["moved_to_account_id"]) or {}).get("name")}
+                         if c["moved_to_account_id"] else None),
+            "contact_status": c["contact_status"], "status_note": c["status_note"],
+            "previous_accounts": extra_c.get("previous_accounts") or [],
             "face": f"/faces/{c['image_filename']}" if c["image_filename"] and c["image_status"] in ("downloaded", "manual") else None,
             "image_status": c["image_status"], "enrich_status": c["enrich_status"],
             "summary": c["linkedin_summary"], "experience": db.jload(c["linkedin_experience"], []),
@@ -79,6 +98,52 @@ def people_tree(conn, cfg) -> dict:
     for seg in out:
         out[seg].sort(key=lambda g: (g["rank"] is None, g["rank"] or 0, -(g["sellout"] or 0), g["title"]))
     return out
+
+
+def edit_contact(conn, contact_id: int, req: dict) -> dict:
+    """Apply a manual edit from the contact card. Manual department choices are never overwritten."""
+    c = db.one(conn, "SELECT * FROM contacts WHERE id = ?", [contact_id])
+    if not c:
+        raise ValueError("contact not found")
+    changes: dict = {}
+    extra = db.jload(c["extra"], {})
+    if "department" in req:
+        dept = req["department"] or None
+        if dept and dept not in DEPARTMENTS:
+            raise ValueError(f"unknown department '{dept}'")
+        changes.update({"department": dept, "department_source": "manual" if dept else None})
+    if "contact_status" in req:
+        if req["contact_status"] not in CONTACT_STATUSES:
+            raise ValueError(f"unknown status '{req['contact_status']}'")
+        changes["contact_status"] = req["contact_status"]
+    if "status_note" in req:
+        changes["status_note"] = req["status_note"] or None
+    target = None
+    if req.get("create_account"):
+        name = req["create_account"].strip()
+        existing = db.one(conn, "SELECT id FROM accounts WHERE name_norm = ?", [norm_company(name)])
+        target = existing["id"] if existing else db.insert(conn, "accounts", {
+            "name": name, "name_norm": norm_company(name), "segment": "customer", "source": "linkedin"})
+    elif req.get("move_to_account_id"):
+        target = req["move_to_account_id"]
+    if target and target != c["account_id"]:
+        acct = db.one(conn, "SELECT id, name, segment FROM accounts WHERE id = ?", [target])
+        if not acct:
+            raise ValueError("account not found")
+        old = db.one(conn, "SELECT id, name FROM accounts WHERE id = ?", [c["account_id"]]) if c["account_id"] else None
+        if old:
+            extra.setdefault("previous_accounts", []).append(
+                {"id": old["id"], "name": old["name"], "until": time.strftime("%Y-%m-%d")})
+        changes.update({"account_id": acct["id"], "segment": acct["segment"], "employment_status": "current",
+                        "moved_to_account_id": None, "contact_status": "active"})
+    if req.get("keep_account"):
+        extra["move_dismissed"] = c["linkedin_current_company"]
+        changes.update({"employment_status": "current", "moved_to_account_id": None})
+    changes["extra"] = db.jdump(extra)
+    with conn:
+        db.update(conn, "contacts", contact_id, changes)
+        update_account_kyc_status(conn)
+    return db.one(conn, "SELECT * FROM contacts WHERE id = ?", [contact_id])
 
 
 def create_app(cfg=None) -> FastAPI:
@@ -117,7 +182,22 @@ def create_app(cfg=None) -> FastAPI:
             return {"accounts": q("SELECT count(*) FROM accounts"), "contacts": q("SELECT count(*) FROM contacts"),
                     "coverage": coverage(conn), "zoho_pulled_at": zoho.get_meta(conn, "zoho_pulled_at"),
                     "live_enabled": bool((cfg.get("zoho") or {}).get("live_enabled")),
+                    "departments": list(DEPARTMENTS),
+                    "relevant_departments": list((cfg.get("dashboard") or {}).get("relevant_departments") or []),
                     "last_ingest": (conn.execute("SELECT value FROM meta WHERE key='last_ingest'").fetchone() or [None])[0]}
+
+    @app.get("/api/accounts")
+    def accounts_list():
+        with lock:
+            return db.rows(conn, "SELECT id, name, segment, rank FROM accounts ORDER BY rank IS NULL, rank, name")
+
+    @app.post("/api/contacts/{contact_id}")
+    def update_contact(contact_id: int, req: ContactUpdate):
+        with lock:
+            try:
+                return {"ok": True, "contact": edit_contact(conn, contact_id, req.model_dump(exclude_none=True))}
+            except ValueError as e:
+                raise HTTPException(400, str(e))
 
     @app.get("/api/zoho/diff")
     def diff():

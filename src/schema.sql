@@ -52,6 +52,13 @@ CREATE TABLE IF NOT EXISTS contacts (
     linkedin_summary     TEXT,
     linkedin_experience  TEXT,               -- JSON list of {title, company, dates}
     linkedin_profile_url TEXT,               -- profile actually matched by the harvester
+    department           TEXT,               -- Management|Sales|Technical|Projects|Procurement|Finance|...
+    department_source    TEXT,               -- manual|role|linkedin|email
+    employment_status    TEXT NOT NULL DEFAULT 'unknown',  -- unknown|current|moved (per LinkedIn)
+    linkedin_current_company TEXT,           -- current employer according to LinkedIn
+    moved_to_account_id  INTEGER REFERENCES accounts(id), -- suggested account when they moved
+    contact_status       TEXT NOT NULL DEFAULT 'active',   -- active|left|not_relevant
+    status_note          TEXT,
     enrich_status        TEXT NOT NULL DEFAULT 'pending',  -- pending|done|no_profile|failed
     enrich_attempts      INTEGER NOT NULL DEFAULT 0,
     enrich_last_at       TEXT,

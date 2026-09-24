@@ -47,7 +47,8 @@ python -m src.images                 # match faces, write data/to_enrich.csv
 python -m src.dashboard              # http://127.0.0.1:8765  (People Tree + Zoho sync)
 python -m src.harvest --dry-run      # see the LinkedIn queue
 python -m src.harvest --test         # 5-contact test (browser opens; log in the first time)
-python -m src.harvest                # up to the daily cap (40); re-run tomorrow to continue
+python -m src.harvest --report 5     # check what the test captured
+python -m src.harvest                # full run: up to the daily cap (40); re-run each day to continue
 python -m src.images                 # refresh coverage / to_enrich after harvesting
 python -m src.zoho check             # auth + list of custom fields still missing in Zoho
 python -m src.zoho pull              # read Zoho into the local mirror (read-only)
@@ -75,8 +76,35 @@ python -m src.zoho log
   4. It saves the photo as `<Segment>__<First>_<Last>.jpg` in the KYC folder.
 * **The two Chrome download settings from the old approach are no longer needed.** Python writes the JPEG straight into the KYC folder. You only need those settings (allow multiple downloads for linkedin.com; Downloads → the KYC folder) if you capture faces by hand in your normal Chrome.
 * **Safety.** There is a daily cap (`harvest.daily_cap`, default 40) and random 4–9 s pacing. The run stops at once on a checkpoint, authwall or "commercial use limit" page. If the top match's name doesn't match the contact, the result is recorded as `no_profile` and nothing is saved. A match is flagged `name-only` when the company doesn't appear on the profile, so you can verify it on the card.
-* **Check what was captured** with `python -m src.harvest --report 5`: it prints the summary and roles stored for the last 5 people. If a profile opened but nothing could be read, the person is marked for a retry (not "done") and a text copy of the page is kept in `data/debug/`. `python -m src.harvest --retry-empty` re-queues anyone who was marked done with an empty summary and work history by an earlier version.
-* **Dashboard contact card:** click any person to see their full card: email, phone, LinkedIn link, the whole summary, all captured roles, KYC status and (for customers) the account's rep, division, sellout, brand focus and allocation.
+* **Finding the right profile.** The search tries "name + company" first, then the name alone. It only accepts a result that shows the right company, or the one clear name match. With several same-name results and no company match it records *no LinkedIn profile* rather than guess. The person's name is read from the page heading, falling back to the browser tab title.
+* **Check what was captured** with `python -m src.harvest --report 10`. It prints the role, department, employment status, summary and roles stored for the last 10 people.
+* **Debug copies.** Anything that didn't work (no profile, nothing readable, an error) leaves a text copy of what LinkedIn showed in `data/debug/`.
+* **Retry the misses** with `python -m src.harvest --retry`. It re-queues everyone without a summary yet: no profile found, failed, or came back empty. People marked *left* or *not relevant* are never re-queued.
+* **Diagnose one person** with `python -m src.harvest --diagnose "Josslyn Abdull"`. It looks them up, prints exactly what was read and saves the page text to `data/debug/diagnose_<id>.txt`, without changing the database. Send that file if something looks wrong.
+* **Departments** (Management, Sales, Technical, Projects, Procurement, Finance, Marketing, Operations, IT, HR, Admin) are guessed from the job title. Sources in order of preference:
+  1. a department you set by hand (never overwritten);
+  2. the current LinkedIn title;
+  3. the spreadsheet role;
+  4. a role mailbox such as `accounts@`.
+
+  `dashboard.relevant_departments` in `config.yaml` sets which departments count as sales-relevant. Others get a *not sales* tag.
+* **Moved on?** If a person's current LinkedIn role is at a different company, they're flagged *moved* with the new employer, and the matching account is suggested when there is one. Nothing is re-allocated automatically. Pick **Needs review** in the dashboard's status filter and decide per person:
+  - **Move to <new account>**, or add the new company as an account and move them there;
+  - **Mark as no longer at <company>**;
+  - **LinkedIn is wrong – keep**.
+
+  Past employers are kept on the card.
+* **Contact card.** Click any person to see:
+  - email, phone and LinkedIn;
+  - the full summary and roles, department, and KYC status;
+  - for customers, the account's rep, division, sellout, brand focus and allocation.
+
+  You can also set the department and status (active / no longer at company / not relevant) with a note, or move the person to another account. People who left or aren't relevant are hidden unless you pick that status in the filter, and they're left out of the Zoho push list.
+* **Phone numbers** are standardised on ingest to international format:
+  - South Africa: `+27 82 659 7188`;
+  - other countries: `+267 71 729 638`.
+
+  This also fixes numbers that lost their leading 0 in Excel. The original value is kept on the record, and anything that can't be parsed is left as entered and flagged.
 * **Misses are normal.** Expect roughly 80–90 % success for Elvey staff and larger competitors, and 10–30 % for small resellers. They are stored as `no_photo` / `no_profile` and not retried. Failures are retried up to `max_attempts` times.
 * The selectors live in `JS_TOP_RESULT` / `JS_PROFILE` / `PHOTO_SELECTOR` in `src/harvest.py`. `tests/test_harvest_js.py` runs them in real Chromium against mock markup. If LinkedIn changes its layout, update them there.
 
@@ -122,6 +150,19 @@ To add them: Setup → Customization → Modules and Fields → *module* → Sta
 * Credit-friendly behaviour: a 0.3 s pause between calls, and back-off on 429/5xx responses.
 
 **First live push:** run a dry run, review it, then set `live_enabled: true`.
+
+### The full LinkedIn run
+
+The harvester works through everyone who still needs a photo or a summary, best priority first: competitors and internal staff, then customers by rank. It stops at the daily cap, and each daily run carries on where the last one stopped.
+
+```powershell
+python -m src.harvest --retry      # once: re-queue the test people that came back without a profile
+python -m src.harvest              # up to 40 people; leave the window alone while it runs
+python -m src.images               # refresh coverage + KYC status
+python -m src.dashboard            # review: Needs review (moved), departments, cards
+```
+
+Repeat `python -m src.harvest` once a day. About 516 people at 40 a day is roughly two weeks of short runs. You can narrow a run with `--segment internal|competitor|customer` or `--limit 20`. Raising the cap with `--cap 60` is possible, but LinkedIn is more likely to show a security check at higher volumes.
 
 ## Growing past 500
 

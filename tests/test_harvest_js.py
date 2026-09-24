@@ -51,13 +51,26 @@ def page():
         browser.close()
 
 
-def test_search_top_result_and_card_photo(page):
+def test_search_candidates_mark_and_card_photo(page):
     page.set_content(SEARCH.format(img=_img_data_url()))
-    url = page.evaluate(harvest.JS_TOP_RESULT, "Jones")
-    assert url == "https://www.linkedin.com/in/bob-jones-123/"
-    got = page.evaluate(harvest.JS_CAPTURE, ['li[data-kyc-top="1"]', harvest.PHOTO_SELECTOR, 240, 0.85])
+    cands = page.evaluate(harvest.JS_RESULTS)
+    assert [c["href"] for c in cands] == ["https://www.linkedin.com/in/other-person/",
+                                          "https://www.linkedin.com/in/bob-jones-123/"]  # header 'me' link excluded
+    url, how = harvest.pick_candidate(cands, {"full_name": "Bob Jones", "first_name": "Bob", "last_name": "Jones",
+                                              "company": "Acme"}, company_in_query=True)
+    assert url == "https://www.linkedin.com/in/bob-jones-123/" and how == "name+search"
+    assert page.evaluate(harvest.JS_MARK_RESULT, url)
+    got = page.evaluate(harvest.JS_CAPTURE, ['[data-kyc-top="1"]', harvest.PHOTO_SELECTOR, 240, 0.85])
     raw = base64.b64decode(got["dataUrl"].split(",", 1)[1])
     assert Image.open(io.BytesIO(raw)).size == (240, 240)
+
+
+def test_profile_without_main_or_h1_uses_title(page):
+    page.set_content("<title>(3) Bob Jones | LinkedIn</title><div><section><h2>About</h2><p>Hi there.</p></section></div>")
+    data = page.evaluate(harvest.JS_PROFILE)
+    assert data["title"] == "(3) Bob Jones | LinkedIn" and not data["name"]
+    assert harvest.name_from_title(data["title"]) == "Bob Jones"
+    assert harvest.parse_profile(data)[1] == "Hi there."
 
 
 def test_profile_extraction(page):
