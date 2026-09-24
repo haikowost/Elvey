@@ -218,3 +218,23 @@ def test_headline_and_location_found_outside_h1s_own_container(page):
     assert headline == "Senior Buyer at Acme Security"
     assert exp == [{"title": "Senior Buyer", "company": "Acme Security", "dates": "Jan 2021 - Present"}]
     assert harvest.location_from(data) == "Johannesburg, Gauteng, South Africa"
+
+
+def test_photo_fallback_finds_unclassed_image_near_name(page):
+    """No recognisable class on the photo (hashed CSS) — the fallback must pick the roughly-square
+    image next to the name, not a decoy logo elsewhere on the page."""
+    page.set_content(f"""<main>
+      <img src="https://media.licdn.com/dms/image/logo-wide.png" width="300" height="60">
+      <div style="height:400px"></div>
+      <h1>Mikara Francis</h1>
+      <img class="zz-hash-8f2" src="{_img_data_url()}" width="200" height="200">
+    </main>""")
+    got = page.evaluate(harvest.JS_CAPTURE, [None, "img.no-such-class", 240, 0.85])
+    assert got and got["dataUrl"].startswith("data:image/jpeg;base64,")
+    raw = base64.b64decode(got["dataUrl"].split(",", 1)[1])
+    assert Image.open(io.BytesIO(raw)).size == (240, 240)
+
+
+def test_photo_fallback_returns_none_with_no_candidate(page):
+    page.set_content("<main><h1>Nobody</h1><img src='https://media.licdn.com/logo.png' width='300' height='40'></main>")
+    assert page.evaluate(harvest.JS_CAPTURE, [None, "img.no-such-class", 240, 0.85]) is None

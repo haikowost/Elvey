@@ -38,6 +38,7 @@ class ContactUpdate(BaseModel):
     move_to_account_id: int | None = None  # re-allocate to an existing account
     create_account: str | None = None      # re-allocate to a new account with this name
     keep_account: bool | None = None       # LinkedIn "moved" flag is wrong: keep them where they are
+    linkedin_url: str | None = None        # pin the exact profile when search can't find them; re-queues
 
 
 class PushRequest(BaseModel):
@@ -144,6 +145,8 @@ def edit_contact(conn, contact_id: int, req: dict) -> dict:
     with conn:
         db.update(conn, "contacts", contact_id, changes)
         update_account_kyc_status(conn)
+    if req.get("linkedin_url"):
+        harvest.set_manual_url(conn, contact_id, req["linkedin_url"])
     return db.one(conn, "SELECT * FROM contacts WHERE id = ?", [contact_id])
 
 

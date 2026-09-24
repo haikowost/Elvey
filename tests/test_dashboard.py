@@ -84,3 +84,19 @@ def test_verify_endpoints(cfg, loaded):
     fixed = c.post("/api/verify").json()
     assert fixed["requeued"] == [bob["id"]]
     assert db.one(loaded, "SELECT enrich_status FROM contacts WHERE id=?", [bob["id"]])["enrich_status"] == "pending"
+
+
+def test_contact_card_set_linkedin_url(cfg, loaded):
+    c = TestClient(dashboard.create_app(cfg))
+    bob = next(p for g in c.get("/api/people").json()["customer"] for p in g["people"] if p["name"] == "Bob Jones")
+    loaded.execute("UPDATE contacts SET enrich_status='no_profile', linkedin_summary=NULL WHERE id=?", [bob["id"]])
+    loaded.commit()
+
+    r = c.post(f"/api/contacts/{bob['id']}", json={"linkedin_url": "https://www.linkedin.com/in/marie-deysel-1503a53a/"})
+    assert r.status_code == 200
+    contact = r.json()["contact"]
+    assert contact["linkedin_contact_url"] == "https://www.linkedin.com/in/marie-deysel-1503a53a/"
+    assert contact["enrich_status"] == "pending"
+
+    bad = c.post(f"/api/contacts/{bob['id']}", json={"linkedin_url": "not a url"})
+    assert bad.status_code == 400

@@ -426,3 +426,64 @@ def test_verify_cli_reports_and_fixes(cfg, loaded, monkeypatch, capsys):
     out = capsys.readouterr().out
     assert "Re-queued 1" in out
     assert db.one(loaded, "SELECT enrich_status FROM contacts WHERE id=?", [bob["id"]])["enrich_status"] == "pending"
+
+
+# ------------------------------------------------------------------ manual URL override, unsure matches
+
+def test_set_manual_url_pins_profile_and_requeues(cfg, loaded):
+    bob = _contact(loaded, "Bob Jones")
+    loaded.execute("UPDATE contacts SET enrich_status='done', linkedin_summary='old junk', "
+                   "linkedin_experience='[]', employment_status='moved', "
+                   "moved_to_account_id=1, linkedin_current_company='Somewhere' WHERE id=?", [bob["id"]])
+    loaded.commit()
+    row = harvest.set_manual_url(loaded, bob["id"], "https://www.linkedin.com/in/bob-jones-real/")
+    assert row["linkedin_contact_url"] == "https://www.linkedin.com/in/bob-jones-real/"
+    assert row["enrich_status"] == "pending" and row["linkedin_summary"] is None
+    assert row["employment_status"] == "unknown" and row["moved_to_account_id"] is None
+
+    # a bad URL is rejected and nothing is touched
+    with pytest.raises(ValueError):
+        harvest.set_manual_url(loaded, bob["id"], "not a url")
+    unchanged = db.one(loaded, "SELECT linkedin_contact_url FROM contacts WHERE id=?", [bob["id"]])
+    assert unchanged["linkedin_contact_url"] == "https://www.linkedin.com/in/bob-jones-real/"
+
+
+def test_set_manual_url_is_never_overwritten_by_search(cfg, loaded):
+    """Once pinned, fetch() must use the stored URL directly instead of searching."""
+    bob = _contact(loaded, "Bob Jones")
+    harvest.set_manual_url(loaded, bob["id"], "https://www.linkedin.com/in/bob-jones-real/")
+    bob = _contact(loaded, "Bob Jones")
+    d = FakeDriver({"Bob Jones": good("Bob Jones")})
+    harvest.run(loaded, cfg, lambda: d, ids=[bob["id"]], cap=99, sleep=lambda s: None, log=lambda *a: None)
+    assert ("Bob Jones", True) in d.seen  # fetch() was called; a real driver would use the stored URL, not search
+
+
+def test_find_contact_by_id_or_name(cfg, loaded):
+    bob = _contact(loaded, "Bob Jones")
+    assert harvest.find_contact(loaded, str(bob["id"]))["full_name"] == "Bob Jones"
+    assert harvest.find_contact(loaded, "bob jon")["full_name"] == "Bob Jones"
+    assert harvest.find_contact(loaded, "nobody at all") is None
+
+
+def test_set_url_cli(cfg, loaded, monkeypatch, capsys):
+    monkeypatch.setattr(harvest, "load_config", lambda _=None: cfg)
+    harvest.main(["--set-url", "Bob Jones", "https://www.linkedin.com/in/bob-jones-real/"])
+    out = capsys.readouterr().out
+    assert "Bob Jones" in out and "Re-queued" in out
+    row = db.one(loaded, "SELECT linkedin_contact_url FROM contacts WHERE full_name='Bob Jones'")
+    assert row["linkedin_contact_url"] == "https://www.linkedin.com/in/bob-jones-real/"
+
+    harvest.main(["--set-url", "Bob Jones", "not-a-url"])
+    assert "Not set" in capsys.readouterr().out
+
+    harvest.main(["--set-url", "Nobody Here", "https://www.linkedin.com/in/x/"])
+    assert "No contact matches" in capsys.readouterr().out
+
+
+def test_verify_flags_unsure_name_only_matches(cfg, loaded):
+    bob = _contact(loaded, "Bob Jones")
+    _mark_done(loaded, bob["id"], linkedin_summary="A summary.", role="Buyer", linkedin_experience="[]",
+              extra=db.jdump({"match_confidence": "name-only"}))
+    rep = harvest.verify(loaded, cfg, fix=True)
+    assert {e["id"] for e in rep["unsure_match"]} == {bob["id"]}
+    assert bob["id"] not in rep["requeued"]  # never auto-fixed — needs --set-url or a human decision

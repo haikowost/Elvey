@@ -128,6 +128,29 @@ python -m src.zoho log
 
 > **LinkedIn ToS:** LinkedIn's User Agreement restricts automated access. Keep this modest, interactive and owner-run: your own account, small daily volumes, for Elvey's own KYC. Stop if LinkedIn warns you.
 
+## Correcting a specific person
+
+Sometimes our own search just can't find the right profile (an unusual name, a very common one,
+a profile that doesn't show up in search). You saw this happen and reported it directly — that's
+the fastest fix there is:
+
+```powershell
+python -m src.harvest --set-url "Marie Deysel" "https://www.linkedin.com/in/marie-deysel-1503a53a/"
+```
+
+This pins the exact profile for that person. Search is skipped for them from then on — a URL you
+give is never second-guessed by a later automated match — and they're queued for the next harvest
+run. The same thing is available on the contact card in the dashboard: paste the URL and click
+"Set as their exact profile & re-queue". A wrong or malformed URL is rejected outright; nothing is
+touched.
+
+**What gets flagged for you instead of guessed automatically:** a contact matched by name only,
+with nothing on the profile confirming the company, shows "matched by name only — please verify"
+on its card and in `--verify`'s `unsure_match` list. Two different contacts pointing at the same
+LinkedIn profile are flagged the same way. Neither is ever auto-corrected — that needs a person to
+look at the actual page — but everything else (footer pollution, a result marked done with nothing
+usable) is fixed automatically so bulk runs don't need babysitting.
+
 ## Zoho CRM
 
 **Org.** Pentagon Distributors (South Africa, Enterprise edition). The team logs in at `crm.zoho.com`, so the datacenter is **`ZOHO_DC=com`** (accounts: `accounts.zoho.com`, API: `www.zohoapis.com`). This is the default in `.env.example`.

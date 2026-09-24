@@ -32,8 +32,8 @@ from urllib.parse import quote
 from . import db
 from .config import load_config
 from .images import update_account_kyc_status
-from .util import (DEPT_RANK, LOC_RANK, classify_department, face_filename, norm_company, norm_name, same_company,
-                   split_location)
+from .util import (DEPT_RANK, LOC_RANK, classify_department, face_filename, linkedin_url, norm_company, norm_name,
+                   same_company, split_location)
 
 try:
     from rapidfuzz import fuzz
@@ -340,7 +340,22 @@ JS_CAPTURE = """
 async ([root, sel, maxPx, q]) => {
   const scope = root ? document.querySelector(root) : (document.querySelector('main') || document.body);
   if (!scope) return null;
-  const img = scope.querySelector(sel);
+  let img = scope.querySelector(sel);
+  if (!img) {
+    // Class-name selectors miss whenever LinkedIn's hashed classes don't match ours (the same
+    // failure mode fixed for headline/experience). Fall back to whichever <img> is roughly
+    // square (a profile photo crop) and sits closest to the name heading — layout-independent,
+    // and specific enough to skip company logos and connection-card thumbnails elsewhere.
+    const h1 = scope.querySelector('h1');
+    const h1y = h1 ? h1.getBoundingClientRect().top : 0;
+    const cands = [...scope.querySelectorAll('img')].map(im => {
+      const r = im.getBoundingClientRect();
+      return {im, r, ratio: r.width && r.height ? r.width / r.height : 0};
+    }).filter(c => c.r.width >= 40 && c.r.height >= 40 && c.ratio >= 0.7 && c.ratio <= 1.4 &&
+                   !/ghost|static\\.licdn\\.com\\/aero/.test(c.im.src));
+    cands.sort((a, b) => Math.abs(a.r.top - h1y) - Math.abs(b.r.top - h1y));
+    img = cands.length ? cands[0].im : null;
+  }
   if (!img) return null;
   if (!img.complete) await new Promise(r => { img.onload = r; img.onerror = r; setTimeout(r, 3000); });
   const w = img.naturalWidth, h = img.naturalHeight;
@@ -581,6 +596,31 @@ class LinkedInDriver:
             self._pw.stop()
 
 
+def find_contact(conn, who: str) -> dict | None:
+    """A contact by id, or the best name match — used by --diagnose and --set-url."""
+    return db.one(conn, """SELECT c.*, a.name AS company FROM contacts c LEFT JOIN accounts a ON a.id = c.account_id
+                           WHERE c.id = ? OR lower(c.full_name) LIKE ?
+                           ORDER BY c.priority IS NULL, c.priority LIMIT 1""",
+                 [int(who) if who.isdigit() else -1, f"%{who.lower()}%"])
+
+
+def set_manual_url(conn, contact_id: int, url: str) -> dict:
+    """Pin the exact LinkedIn profile for a contact our own search can't reliably find (the
+    Marie Deysel / James Grobbelaar case). Search is skipped for this contact from now on — a
+    URL you provide is never second-guessed by a later automated match. Clears any bad prior
+    result and re-queues for the next harvest run."""
+    url = linkedin_url(url)
+    if not url:
+        raise ValueError("that doesn't look like a linkedin.com/in/... URL")
+    with conn:
+        db.update(conn, "contacts", contact_id, {
+            "linkedin_contact_url": url, "linkedin_profile_url": None, "linkedin_summary": None,
+            "linkedin_experience": None, "linkedin_current_company": None, "employment_status": "unknown",
+            "moved_to_account_id": None, "enrich_status": "pending", "enrich_attempts": 0, "enrich_error": None,
+        })
+    return db.one(conn, "SELECT * FROM contacts WHERE id = ?", [contact_id])
+
+
 # --------------------------------------------------------------------------- run loop (driver-agnostic)
 
 def queue(conn, cfg, limit: int | None = None, ids: list[int] | None = None, segment: str | None = None) -> list[dict]:
@@ -698,6 +738,7 @@ def apply_result(conn, cfg, contact: dict, res: Result, need_face: bool) -> str:
             else:
                 changes["image_status"] = "no_photo"
                 label = f"{label}/no_photo"
+                save_debug(cfg, contact, res.debug_text, "no_photo")
     elif res.status == "no_profile":
         changes.update({"enrich_status": "no_profile", "enrich_error": res.error})
         if need_face:
@@ -769,7 +810,7 @@ RETRY_SQL = """UPDATE contacts SET enrich_status = 'pending', enrich_attempts = 
 
 
 VERIFY_CHECKS = ("footer_polluted", "empty_but_marked_done", "partial", "stuck_unknown_employment",
-                "duplicate_profile_url")
+                "duplicate_profile_url", "unsure_match")
 
 
 def verify(conn, cfg, fix: bool = True) -> dict:
@@ -786,9 +827,14 @@ def verify(conn, cfg, fix: bool = True) -> dict:
                                 was never set to current/moved; usually clears itself after a retry.
       duplicate_profile_url  — two different contacts point at the same LinkedIn profile: a likely
                                 mismatch that needs a person to look at it, never auto-fixed.
+      unsure_match            — matched by name alone, with no company confirmation on the profile:
+                                plausibly right, but not confirmed. Never auto-fixed; correct it with
+                                --set-url once you've checked, or leave it — it's still usable data.
 
     With fix=True (the default), footer_polluted and empty_but_marked_done rows have their bad
     summary/experience cleared and are set back to 'pending' so the next harvest run retries them.
+    Everything else here needs a person: fix it with --set-url NAME URL (or the dashboard contact
+    card), which pins the exact profile and skips search for that person from then on.
     """
     report: dict = {k: [] for k in VERIFY_CHECKS}
     rows = db.rows(conn, """SELECT c.*, a.name AS company FROM contacts c LEFT JOIN accounts a ON a.id = c.account_id
@@ -809,6 +855,8 @@ def verify(conn, cfg, fix: bool = True) -> dict:
             report["partial"].append(entry)
         if r["employment_status"] == "unknown" and (r["role"] or exp):
             report["stuck_unknown_employment"].append(entry)
+        if db.jload(r["extra"], {}).get("match_confidence") == "name-only":
+            report["unsure_match"].append(entry)
         if r["linkedin_profile_url"]:
             seen_urls.setdefault(r["linkedin_profile_url"], []).append(entry)
     report["duplicate_profile_url"] = [{"url": u, "contacts": es} for u, es in seen_urls.items() if len(es) > 1]
@@ -827,7 +875,8 @@ def print_verify_report(report: dict) -> None:
              "empty_but_marked_done": "Marked done but nothing usable was captured",
              "partial": "Summary captured, but role/work history is missing",
              "stuck_unknown_employment": "Employment status never resolved despite having data",
-             "duplicate_profile_url": "Two contacts point at the same LinkedIn profile"}
+             "duplicate_profile_url": "Two contacts point at the same LinkedIn profile",
+             "unsure_match": "Matched by name only — not confirmed, worth a quick check"}
     total = sum(len(report[k]) for k in VERIFY_CHECKS)
     if not total:
         print("Nothing to flag — everyone already harvested looks complete.")
@@ -870,9 +919,7 @@ def report(conn, n: int) -> None:
 
 def diagnose(conn, cfg, who: str, driver_factory, log=print) -> Path | None:
     """Look one person up and print exactly what was read. Writes nothing to the DB."""
-    c = db.one(conn, """SELECT c.*, a.name AS company FROM contacts c LEFT JOIN accounts a ON a.id = c.account_id
-                        WHERE c.id = ? OR lower(c.full_name) LIKE ? ORDER BY c.priority IS NULL, c.priority LIMIT 1""",
-               [int(who) if who.isdigit() else -1, f"%{who.lower()}%"])
+    c = find_contact(conn, who)
     if not c:
         log(f"No contact matches '{who}'.")
         return None
@@ -912,6 +959,9 @@ def main(argv: list[str] | None = None) -> None:
                     help="re-queue everyone without a summary yet (no profile found, failed, or came back empty)")
     ap.add_argument("--report", type=int, metavar="N", help="show what was stored for the last N harvested contacts")
     ap.add_argument("--diagnose", metavar="NAME_OR_ID", help="look up one person and print what was read (no DB writes)")
+    ap.add_argument("--set-url", nargs=2, metavar=("NAME_OR_ID", "URL"),
+                    help="pin the exact LinkedIn profile for a contact our search can't find — skips search for "
+                        "them from now on and re-queues them for the next harvest run")
     ap.add_argument("--verify", action="store_true",
                     help="self-check everyone already harvested for bad/incomplete data and re-queue what's fixable "
                         "(also runs automatically, quietly, at the start of every normal run)")
@@ -929,6 +979,19 @@ def main(argv: list[str] | None = None) -> None:
         return
     if args.diagnose:
         diagnose(conn, cfg, args.diagnose, factory)
+        return
+    if args.set_url:
+        who, url = args.set_url
+        c = find_contact(conn, who)
+        if not c:
+            print(f"No contact matches '{who}'.")
+            return
+        try:
+            set_manual_url(conn, c["id"], url)
+        except ValueError as e:
+            print(f"Not set: {e}")
+            return
+        print(f"#{c['id']} {c['full_name']} -> {url}\nRe-queued — run a normal harvest to pick them up.")
         return
     if args.verify:
         rep = verify(conn, cfg, fix=not args.no_fix)

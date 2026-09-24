@@ -302,6 +302,8 @@ function contactCard(id) {
     <h4>Work history</h4>
     ${exp ? `<ol>${exp}</ol>` : '<span class="muted">None yet.</span>'}
     ${p.enrich_error ? `<p class="muted" style="margin-top:12px">Note: ${esc(p.enrich_error)}</p>` : ''}
+    ${p.match_confidence === 'name-only' ? `<div class="warnbox">Matched by name only — not confirmed against ${esc(p.company || 'their company')}. Worth a quick check before relying on it.</div>` : ''}
+    ${p.enrich_status === 'no_profile' ? `<div class="warnbox">Our search couldn't find their profile. If you know it, paste the URL below.</div>` : ''}
     <h4>Edit</h4>
     <div class="cc-actions">
       <label>Department <select id="ccdept"><option value="">— unknown —</option>${(T.departments || []).map(d => `<option ${d === p.department ? 'selected' : ''}>${esc(d)}</option>`).join('')}</select></label>
@@ -316,6 +318,10 @@ function contactCard(id) {
       <input type="search" id="ccmove" list="ccaccounts" placeholder="Move to another account…" style="min-width:260px">
       <datalist id="ccaccounts"></datalist>
       <button class="btn ghost" data-act="moveto">Move</button>
+    </div>
+    <div class="cc-actions">
+      <input type="search" id="cclinkedin" placeholder="Correct LinkedIn profile URL…" value="${esc(p.linkedin && p.linkedin.includes('/in/') ? p.linkedin : '')}" style="min-width:320px">
+      <button class="btn ghost" data-act="seturl">Set as their exact profile &amp; re-queue</button>
     </div>
     <p class="muted" id="ccmsg"></p>
     ${p.enriched_at ? `<p class="muted">Last LinkedIn look-up: ${esc(p.enriched_at)}</p>` : ''}`;
@@ -340,12 +346,17 @@ function contactCard(id) {
       if (!acc && !confirm(`"${name}" is not an existing account. Create it and move ${p.name} there?`)) return;
       payload = acc ? { move_to_account_id: acc.id } : { create_account: name };
     }
+    if (act === 'seturl') {
+      const url = $('#cclinkedin').value.trim();
+      if (!url) return;
+      payload = { linkedin_url: url };
+    }
     try {
       await api('/api/contacts/' + p.id, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       T.accounts = null;
       await loadTree();
       contactCard(p.id);
-      $('#ccmsg').textContent = 'Saved.';
+      $('#ccmsg').textContent = act === 'seturl' ? 'Set — re-queued for the next harvest run.' : 'Saved.';
     } catch (e) { $('#ccmsg').textContent = 'Could not save: ' + e.message; }
   });
 }
