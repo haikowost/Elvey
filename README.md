@@ -67,7 +67,7 @@ python -m src.zoho log
 
 ## LinkedIn harvester
 
-* Playwright opens a **visible** Chromium window with its own persistent profile (`data/chrome-profile`). The first run pauses so you can log into LinkedIn by hand. No credentials are ever stored or typed by code. This profile is separate from your everyday Chrome profile, because Chrome can't share a profile directory while it's open.
+* Playwright opens a **visible** Chromium window with its own persistent profile (`data/chrome-profile`). The first run pauses so you can log into LinkedIn by hand. LinkedIn usually asks a new browser to verify it's you (a code by email/SMS or a puzzle): complete that in the same window and press Enter in the terminal once you can see your feed. The harvester waits and never navigates away from that page. The login is remembered after that. No credentials are ever stored or typed by code. This profile is separate from your everyday Chrome profile, because Chrome can't share a profile directory while it's open.
 * For each contact it does the following:
   1. It opens the stored LinkedIn URL. If there isn't one, it searches `"<Name> <Company>"` and takes the top result that contains the surname.
   2. On the profile it reads the headline and About section (the summary is capped at about 500 characters) and the first 3–5 Experience entries (title, company, dates).

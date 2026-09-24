@@ -76,3 +76,42 @@ def test_profile_extraction(page):
 def test_no_photo_returns_none(page):
     page.set_content("<main><h1>Nobody</h1><img class='ghost-person' src='https://static.licdn.com/aero/ghost.svg'></main>")
     assert page.evaluate(harvest.JS_CAPTURE, [None, harvest.PHOTO_SELECTOR, 240, 0.85]) is None
+
+
+def test_login_waits_through_security_check(page):
+    """Reproduces LinkedIn redirecting the feed to /checkpoint/ mid-load after a fresh log-in."""
+    state = {"verified": False}
+
+    def handler(route):
+        url = route.request.url
+        if "/feed" in url and not state["verified"]:
+            route.fulfill(content_type="text/html",
+                          body="<script>location.replace('https://www.linkedin.com/checkpoint/challenge/abc')</script>")
+        elif "/feed" in url:
+            route.fulfill(content_type="text/html", body="<main>Your feed</main>")
+        else:
+            route.fulfill(content_type="text/html", body="<main>Let's do a quick security check</main>")
+
+    page.route("https://www.linkedin.com/**", handler)
+    prompts = []
+
+    def human(msg):  # the person finishes the check in the window, which lands on the feed
+        prompts.append(msg)
+        state["verified"] = True
+        harvest.navigate(page, harvest.FEED_URL)
+        return ""
+
+    harvest.ensure_login(page, prompt=human, interactive=True)
+    assert "/feed" in page.url and len(prompts) == 1 and "security check" in prompts[0]
+    page.unroute("https://www.linkedin.com/**")
+
+
+def test_login_not_interactive_stops_cleanly(page):
+    page.route("https://www.linkedin.com/**", lambda r: r.fulfill(
+        content_type="text/html", body="<script>location.replace('https://www.linkedin.com/login')</script>"
+        if "/feed" in r.request.url else "<main>Sign in</main>"))
+    with pytest.raises(harvest.StopHarvest, match="not logged in"):
+        harvest.ensure_login(page, interactive=False)
+    with pytest.raises(harvest.StopHarvest, match="cancelled"):
+        harvest.ensure_login(page, prompt=lambda m: "q", interactive=True)
+    page.unroute("https://www.linkedin.com/**")

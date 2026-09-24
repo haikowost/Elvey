@@ -1,4 +1,6 @@
 import io
+
+import pytest
 import json
 
 from PIL import Image
@@ -111,3 +113,52 @@ def test_failures_retry_then_give_up(cfg, loaded):
     assert bob["enrich_status"] == "failed" and bob["enrich_attempts"] == 2 and "boom" in bob["enrich_error"]
     # still needs a face, so it stays queued for the face only if attempts allow -> max_attempts=2 reached
     assert all(r["full_name"] != name or r["image_status"] == "none" for r in harvest.queue(loaded, cfg))
+
+
+def test_login_failure_is_a_clean_stop(cfg, loaded):
+    def factory():
+        raise StopHarvest("login cancelled")
+    stats = harvest.run(loaded, cfg, factory, sleep=lambda s: None, log=lambda *a: None)
+    assert stats == {"processed": 0, "stopped": "login cancelled"}
+
+
+class RedirectingPage:
+    """Mimics the real failure: goto() interrupted by LinkedIn's redirect to a security check."""
+
+    def __init__(self):
+        self.url, self.waited = "about:blank", False
+
+    def goto(self, url, **kw):
+        self.url = "https://www.linkedin.com/checkpoint/challenge/AQF"
+        raise RuntimeError('Page.goto: Navigation to "https://www.linkedin.com/feed/" is interrupted by another '
+                           'navigation to "https://www.linkedin.com/checkpoint/challenge/AQF"')
+
+    def wait_for_load_state(self, *a, **kw):
+        self.waited = True
+
+
+def test_redirect_to_security_check_waits_for_the_human(monkeypatch):
+    monkeypatch.setattr(harvest.time, "sleep", lambda s: None)
+    page = RedirectingPage()
+    harvest.navigate(page, harvest.FEED_URL)  # used to crash here
+    assert page.waited and harvest.on_sign_in_page(page.url)
+
+    page2 = RedirectingPage()
+    prompts = []
+
+    def human(msg):  # finishes the check in the browser, which lands on the feed
+        prompts.append(msg)
+        page2.url = "https://www.linkedin.com/feed/"
+        return ""
+
+    harvest.ensure_login(page2, prompt=human)
+    assert page2.url.endswith("/feed/") and len(prompts) == 1 and "security check" in prompts[0]
+
+    with pytest.raises(harvest.StopHarvest, match="cancelled"):
+        harvest.ensure_login(RedirectingPage(), prompt=lambda m: "q")
+
+    class Other(RedirectingPage):
+        def goto(self, url, **kw):
+            raise RuntimeError("net::ERR_NAME_NOT_RESOLVED")
+    with pytest.raises(RuntimeError):
+        harvest.navigate(Other(), harvest.FEED_URL)

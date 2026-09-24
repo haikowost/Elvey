@@ -218,6 +218,51 @@ JS_PROFILE = """
 """
 
 
+FEED_URL = "https://www.linkedin.com/feed/"
+SIGN_IN_MARKERS = ("/login", "/uas/", "/authwall", "/signup", "/checkpoint/", "/challenge")
+
+
+def navigate(page, url: str) -> None:
+    """page.goto that tolerates LinkedIn redirecting mid-load (e.g. to a security check)."""
+    try:
+        page.goto(url, wait_until="domcontentloaded", timeout=45000)
+    except Exception as e:  # playwright Error: 'interrupted by another navigation'
+        if "interrupted by another navigation" not in str(e):
+            raise
+        page.wait_for_load_state("domcontentloaded", timeout=45000)
+
+
+def on_sign_in_page(url: str) -> bool:
+    return any(m in url for m in SIGN_IN_MARKERS)
+
+
+def ensure_login(page, prompt=input, interactive: bool = True, max_rounds: int = 10) -> None:
+    """Make sure the persistent profile is logged in. The human does the log-in and any LinkedIn
+    security check in the browser window; this only waits and never navigates away from them."""
+    navigate(page, FEED_URL)
+    time.sleep(2)
+    for _ in range(max_rounds):
+        if "/feed" in page.url and not on_sign_in_page(page.url):
+            return
+        if not interactive:
+            raise StopHarvest("not logged in to LinkedIn — run `python -m src.harvest --test` in a terminal once and log in")
+        if on_sign_in_page(page.url):
+            msg = ("\n>>> In the browser window: log into LinkedIn and complete any security check\n"
+                   "    (code by email/SMS, puzzle, etc.). When you can see your LinkedIn feed, press Enter here\n"
+                   "    (or type q + Enter to quit)… ")
+        else:
+            msg = "\n>>> Press Enter once you can see your LinkedIn feed in the browser window (q to quit)… "
+        if prompt(msg).strip().lower() == "q":
+            raise StopHarvest("login cancelled")
+        time.sleep(1)
+        if not on_sign_in_page(page.url) and "/feed" not in page.url:
+            navigate(page, FEED_URL)  # logged in but somewhere else: go to the feed to confirm
+            time.sleep(2)
+        elif on_sign_in_page(page.url):
+            print("    Still on a LinkedIn sign-in / security page — finish it in the browser first.")
+    raise StopHarvest("still not logged in to LinkedIn")
+
+
 class LinkedInDriver:
     def __init__(self, cfg, headless: bool = False):
         from playwright.sync_api import sync_playwright
@@ -233,28 +278,31 @@ class LinkedInDriver:
             launch["executable_path"] = self.h["executable_path"]
         self.ctx = self._pw.chromium.launch_persistent_context(str(profile), **launch)
         self.page = self.ctx.pages[0] if self.ctx.pages else self.ctx.new_page()
-        self._ensure_login()
+        try:
+            self._ensure_login()
+        except StopHarvest:
+            self.close()
+            raise
+        except Exception as e:  # e.g. the browser window was closed during login
+            self.close()
+            raise StopHarvest(f"browser problem during LinkedIn login: {str(e).splitlines()[0][:200]}") from e
 
     def _wait(self, lo: float = 1.5, hi: float = 3.0) -> None:
         time.sleep(random.uniform(lo, hi))
 
+    def _nav(self, url: str) -> None:
+        navigate(self.page, url)
+
     def _goto(self, url: str) -> None:
-        self.page.goto(url, wait_until="domcontentloaded", timeout=45000)
+        self._nav(url)
         time.sleep(float(self.h.get("render_wait_s", 3)))
         reason = is_stop_page(self.page.url, self.page.inner_text("body")[:20000])
         if reason:
             raise StopHarvest(reason)
 
-    def _ensure_login(self) -> None:
-        self.page.goto("https://www.linkedin.com/feed/", wait_until="domcontentloaded", timeout=45000)
-        time.sleep(2)
-        if any(k in self.page.url for k in ("/login", "/uas/", "/authwall", "/signup")) or "/feed" not in self.page.url:
-            if not sys.stdin.isatty():
-                raise StopHarvest("not logged in to LinkedIn — run interactively once and log in")
-            input("\n>>> Log into LinkedIn in the browser window, then press Enter here… ")
-            self.page.goto("https://www.linkedin.com/feed/", wait_until="domcontentloaded", timeout=45000)
-            if "/feed" not in self.page.url:
-                raise StopHarvest("still not logged in")
+    def _ensure_login(self, prompt=input, interactive: bool | None = None) -> None:
+        interactive = sys.stdin.isatty() if interactive is None else interactive
+        ensure_login(self.page, prompt, interactive)
 
     def _capture(self, root: str | None) -> bytes | None:
         px, q = int(self.h.get("image_px", 240)), float(self.h.get("jpeg_quality", 0.85))
@@ -392,7 +440,11 @@ def run(conn, cfg, driver_factory, limit: int | None = None, cap: int | None = N
         log("Nothing to enrich.")
         return {"processed": 0}
     stats: dict = {"processed": 0}
-    driver = driver_factory()
+    try:
+        driver = driver_factory()
+    except StopHarvest as e:
+        log(f"STOPPED before starting: {e}")
+        return {**stats, "stopped": str(e)}
     try:
         for n, c in enumerate(todo, 1):
             need_face = c["image_status"] == "none"
