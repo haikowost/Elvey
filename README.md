@@ -128,21 +128,36 @@ python -m src.zoho log
 
 > **LinkedIn ToS:** LinkedIn's User Agreement restricts automated access. Keep this modest, interactive and owner-run: your own account, small daily volumes, for Elvey's own KYC. Stop if LinkedIn warns you.
 
-## Correcting a specific person
+## Correcting a specific person (the Corrections chat)
 
-Sometimes our own search just can't find the right profile (an unusual name, a very common one,
-a profile that doesn't show up in search). You saw this happen and reported it directly — that's
-the fastest fix there is:
+The dashboard's **Corrections** tab is the fastest way to work through the handful of people each
+harvest run couldn't resolve on its own: a search that found nobody, a match by name only, or two
+people pointing at the same LinkedIn profile — worst-blocked first. It shows one person at a time
+with the reason, a one-click LinkedIn search link, and a plain-text box. Type the correction and
+press Enter; it applies immediately and moves to the next one:
+
+- paste a LinkedIn profile URL to pin their exact profile (skips search for them from then on);
+- `left`, `resigned`, `no longer there` — marks no longer at the company;
+- `not relevant` — marks not relevant;
+- `active`, `keep`, `that's right` — confirms them, or undoes a flagged move if LinkedIn was wrong;
+- a department name, or `department: sales`;
+- `now at <company>` / `moved to <company>` — re-allocates to that account, or offers to add it;
+- `skip` moves on without changing anything; `stop` pauses.
+
+This is a small parser over the same fields the contact card already writes — not a live AI chat,
+nothing new to configure, no external call. If it doesn't understand a line it says so and asks
+for one of the above rather than guessing. The same queue and logic are behind
+`python -m src.harvest --verify` and `--set-url`, so the two never disagree.
+
+**The CLI equivalent**, useful when you already know exactly what you want to fix without opening
+the dashboard:
 
 ```powershell
 python -m src.harvest --set-url "Marie Deysel" "https://www.linkedin.com/in/marie-deysel-1503a53a/"
 ```
 
-This pins the exact profile for that person. Search is skipped for them from then on — a URL you
-give is never second-guessed by a later automated match — and they're queued for the next harvest
-run. The same thing is available on the contact card in the dashboard: paste the URL and click
-"Set as their exact profile & re-queue". A wrong or malformed URL is rejected outright; nothing is
-touched.
+Same effect as typing the URL into the chat or the contact card: pins the exact profile, re-queues
+for the next harvest run. A wrong or malformed URL is rejected outright; nothing is touched.
 
 **What gets flagged for you instead of guessed automatically:** a contact matched by name only,
 with nothing on the profile confirming the company, shows "matched by name only — please verify"

@@ -13,7 +13,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from pydantic import BaseModel
 
-from . import db, harvest, zoho
+from . import chat, db, harvest, zoho
 from .config import load_config
 from .images import coverage, update_account_kyc_status
 from .util import DEPARTMENTS, norm_company
@@ -39,6 +39,11 @@ class ContactUpdate(BaseModel):
     create_account: str | None = None      # re-allocate to a new account with this name
     keep_account: bool | None = None       # LinkedIn "moved" flag is wrong: keep them where they are
     linkedin_url: str | None = None        # pin the exact profile when search can't find them; re-queues
+
+
+class ChatMessage(BaseModel):
+    contact_id: int
+    message: str
 
 
 class PushRequest(BaseModel):
@@ -215,6 +220,28 @@ def create_app(cfg=None) -> FastAPI:
     def verify_report():
         with lock:
             return harvest.verify(conn, cfg, fix=False)
+
+    @app.get("/api/chat/queue")
+    def chat_queue():
+        with lock:
+            return chat.build_queue(conn, cfg)
+
+    @app.post("/api/chat")
+    def chat_message(req: ChatMessage):
+        with lock:
+            contact = db.one(conn, "SELECT c.*, a.name AS company FROM contacts c "
+                                   "LEFT JOIN accounts a ON a.id = c.account_id WHERE c.id = ?", [req.contact_id])
+            if not contact:
+                raise HTTPException(404, "contact not found")
+            accounts = db.rows(conn, "SELECT id, name FROM accounts")
+            result = chat.parse_correction(req.message, contact, accounts)
+            applied = None
+            if result.action == "apply":
+                try:
+                    applied = edit_contact(conn, req.contact_id, {k: v for k, v in result.payload.items() if v is not None})
+                except ValueError as e:
+                    return {"action": "unclear", "reply": f"Couldn't apply that: {e}", "contact": None}
+            return {"action": result.action, "reply": result.reply, "contact": applied}
 
     @app.post("/api/verify")
     def verify_and_fix():

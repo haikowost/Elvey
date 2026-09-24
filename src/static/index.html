@@ -27,6 +27,14 @@ main { padding: 16px 20px 60px; max-width: 1400px; margin: 0 auto; }
 .bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
 select { padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--ink); font: inherit; }
 .warnbox { background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 8px; padding: 8px 10px; margin: 8px 0; font-size: 13px; }
+#chatlog { display: flex; flex-direction: column; gap: 10px; max-width: 760px; margin: 14px 0; }
+.bubble { padding: 10px 14px; border-radius: 12px; max-width: 88%; font-size: 14px; line-height: 1.4; }
+.bubble.bot { background: var(--panel); border: 1px solid var(--line); align-self: flex-start; }
+.bubble.bot.flag { background: var(--warn-bg); border-color: var(--warn-line); }
+.bubble.user { background: var(--accent); color: var(--accent-ink); align-self: flex-end; }
+.bubble .n { font-weight: 650; margin-bottom: 2px; }
+.bubble .r { color: var(--muted); font-size: 12px; }
+.bubble.done { opacity: .8; }
 .cc-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 6px; }
 .tag.dept { border-color: var(--accent); color: var(--accent); }
 .tag.off { border-color: var(--comp); color: var(--comp); }
@@ -84,6 +92,7 @@ dialog pre { white-space: pre-wrap; font-size: 12px; max-height: 55vh; overflow:
   <h1>Elvey KYC</h1>
   <nav>
     <button data-view="tree" class="on">People Tree</button>
+    <button data-view="chat">Corrections<span id="chatbadge" class="tag hidden" style="margin-left:5px"></span></button>
     <button data-view="zoho">Zoho sync</button>
   </nav>
   <div class="stats" id="stats"></div>
@@ -134,6 +143,20 @@ dialog pre { white-space: pre-wrap; font-size: 12px; max-height: 55vh; overflow:
     <h3>Sync log</h3>
     <div id="zlog" class="muted"></div>
   </section>
+
+  <section id="view-chat" class="hidden">
+    <p class="muted">Everyone the automated harvest couldn't resolve on its own, worst first — a search that found
+      nobody, a match by name only, or two people pointing at the same LinkedIn profile. Type the correction in
+      plain English for whoever's shown; the reply says what was applied. "skip" moves on without changing anything,
+      "stop" pauses here.</p>
+    <div id="chatlog"></div>
+    <div id="chatinput" class="bar hidden">
+      <a id="chatsearch" href="#" target="_blank" rel="noopener" class="btn ghost">Search LinkedIn for them</a>
+      <input type="search" id="chatbox" placeholder="e.g. a LinkedIn URL, 'left', 'finance', 'now at Beta Integrators', 'skip'…" style="flex:1;min-width:260px">
+      <button class="btn" id="chatsend">Send</button>
+      <button class="btn ghost" id="chatskip">Skip</button>
+    </div>
+  </section>
 </main>
 
 <dialog id="dlg">
@@ -162,7 +185,9 @@ document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
   document.querySelectorAll('nav button').forEach(x => x.classList.toggle('on', x === b));
   $('#view-tree').classList.toggle('hidden', b.dataset.view !== 'tree');
   $('#view-zoho').classList.toggle('hidden', b.dataset.view !== 'zoho');
+  $('#view-chat').classList.toggle('hidden', b.dataset.view !== 'chat');
   if (b.dataset.view === 'zoho' && !Z.diff) loadDiff();
+  if (b.dataset.view === 'chat' && !Chat.queue) loadChat();
 });
 
 async function loadStats() {
@@ -522,6 +547,63 @@ async function loadVerify() {
     await loadVerify(); await loadTree();
   };
 }
+// ---------------------------------------------------------------- Corrections chat
+const Chat = { queue: null, i: 0, stopped: false };
+
+function chatBubble(cls, html) {
+  const div = document.createElement('div');
+  div.className = 'bubble ' + cls;
+  div.innerHTML = html;
+  $('#chatlog').appendChild(div);
+  div.scrollIntoView({ block: 'end', behavior: 'smooth' });
+  return div;
+}
+function chatCurrent() { return Chat.queue && Chat.queue[Chat.i]; }
+async function loadChat() {
+  $('#chatlog').innerHTML = '';
+  Chat.queue = await api('/api/chat/queue');
+  Chat.i = 0; Chat.stopped = false;
+  $('#chatbadge').classList.toggle('hidden', !Chat.queue.length);
+  $('#chatbadge').textContent = Chat.queue.length;
+  chatBubble('bot', Chat.queue.length
+    ? `<b>${Chat.queue.length}</b> to look at. Let's go one at a time.`
+    : `Nothing needs a human right now — everyone harvested so far looks resolved.`);
+  chatShowCurrent();
+}
+function chatShowCurrent() {
+  const p = chatCurrent();
+  $('#chatinput').classList.toggle('hidden', !p || Chat.stopped);
+  if (!p) { if (!Chat.stopped && Chat.queue.length) chatBubble('bot', `That's everyone — nice work.`); return; }
+  const exp = (p.experience || []).slice(0, 2).map(e => `${esc(e.title)}${e.company ? ' @ ' + esc(e.company) : ''}`).join(', ');
+  chatBubble('bot flag', `<div class="n">${esc(p.name)}${p.company ? ' — ' + esc(p.company) : ''}</div>
+    <div class="r">${esc(p.reason)}</div>
+    ${p.linkedin ? `<div class="r">Stored profile: <a href="${esc(p.linkedin)}" target="_blank" rel="noopener">${esc(p.linkedin)}</a></div>` : ''}
+    ${exp ? `<div class="r">${exp}</div>` : ''}`);
+  $('#chatsearch').href = 'https://www.linkedin.com/search/results/people/?keywords=' +
+    encodeURIComponent(p.name + ' ' + (p.company || ''));
+  $('#chatbox').value = ''; $('#chatbox').focus();
+}
+async function chatSend(message) {
+  const p = chatCurrent();
+  if (!p || !message.trim()) return;
+  chatBubble('user', esc(message));
+  const res = await api('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ contact_id: p.id, message }) });
+  chatBubble('bot done', esc(res.reply));
+  if (res.action === 'stop') { Chat.stopped = true; chatShowCurrent(); return; }
+  if (res.action === 'apply' || res.action === 'skip') {
+    Chat.queue.splice(Chat.i, 1);
+    $('#chatbadge').textContent = Chat.queue.length;
+    $('#chatbadge').classList.toggle('hidden', !Chat.queue.length);
+    if (res.action === 'apply') { loadTree(); loadVerify(); }
+    chatShowCurrent();
+  }
+  // 'unclear': leave them as the current item, just re-show the input
+}
+$('#chatsend').onclick = () => chatSend($('#chatbox').value);
+$('#chatbox').addEventListener('keydown', e => { if (e.key === 'Enter') chatSend($('#chatbox').value); });
+$('#chatskip').onclick = () => chatSend('skip');
+
 loadStats(); loadTree(); loadVerify();
 </script>
 </body>

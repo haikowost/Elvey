@@ -100,3 +100,39 @@ def test_contact_card_set_linkedin_url(cfg, loaded):
 
     bad = c.post(f"/api/contacts/{bob['id']}", json={"linkedin_url": "not a url"})
     assert bad.status_code == 400
+
+
+def test_chat_queue_and_correction_flow(cfg, loaded):
+    c = TestClient(dashboard.create_app(cfg))
+    bob = next(p for g in c.get("/api/people").json()["customer"] for p in g["people"] if p["name"] == "Bob Jones")
+    loaded.execute("UPDATE contacts SET enrich_status='no_profile' WHERE id=?", [bob["id"]])
+    loaded.commit()
+
+    queue = c.get("/api/chat/queue").json()
+    assert queue and queue[0]["id"] == bob["id"] and "couldn't find" in queue[0]["reason"]
+
+    r = c.post("/api/chat", json={"contact_id": bob["id"], "message": "https://www.linkedin.com/in/bob-real/"})
+    body = r.json()
+    assert body["action"] == "apply" and "Re-queued" in body["reply"]
+    assert body["contact"]["linkedin_contact_url"] == "https://www.linkedin.com/in/bob-real/"
+    assert body["contact"]["enrich_status"] == "pending"
+
+    # resolved — no longer in the queue
+    assert bob["id"] not in {q["id"] for q in c.get("/api/chat/queue").json()}
+
+    r2 = c.post("/api/chat", json={"contact_id": bob["id"], "message": "skip"})
+    assert r2.json() == {"action": "skip", "reply": f"Skipped Bob Jones.", "contact": None}
+
+    r3 = c.post("/api/chat", json={"contact_id": bob["id"], "message": "not relevant"})
+    assert r3.json()["contact"]["contact_status"] == "not_relevant"
+
+    assert c.post("/api/chat", json={"contact_id": 999999, "message": "left"}).status_code == 404
+
+
+def test_chat_accepts_unknown_department_gracefully(cfg, loaded):
+    c = TestClient(dashboard.create_app(cfg))
+    bob = next(p for g in c.get("/api/people").json()["customer"] for p in g["people"] if p["name"] == "Bob Jones")
+    r = c.post("/api/chat", json={"contact_id": bob["id"], "message": "gibberish nonsense"})
+    body = r.json()
+    assert body["action"] == "unclear" and body["contact"] is None
+    assert db.one(loaded, "SELECT contact_status FROM contacts WHERE id=?", [bob["id"]])["contact_status"] == "active"
