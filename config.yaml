@@ -17,9 +17,8 @@ inputs:
   #   flat:       one CSV/xlsx sheet, one row per contact with company columns
   #               (headers are matched via column_aliases below).
   # 'auto' picks relational when the dim_contacts sheet exists.
-  # The Drive copy is a Google Sheet (.gsheet is only a shortcut file and cannot be read).
-  # Export it once: open it -> File -> Download -> Microsoft Excel (.xlsx), save next to it.
-  workbook: 'G:\.shortcut-targets-by-id\1ZYeE9cZf8VERsTP7Nq1jHVFXJvUgzThq\Elveygroup portfolio expert\Sales\Elvey_Consolidated_Relational_Database_20260924.xlsx'
+  # Must be the .xlsx (a .gsheet file is only a Google Sheets shortcut and cannot be read).
+  workbook: 'G:\.shortcut-targets-by-id\1ZYeE9cZf8VERsTP7Nq1jHVFXJvUgzThq\Elveygroup portfolio expert\Sales\Elvey Consolidated Relational Database 20260924.xlsx'
   format: auto
   sheet: null            # flat format only: sheet name (default = first sheet)
 
