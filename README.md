@@ -35,7 +35,7 @@ copy .env.example .env             # then fill in the Zoho values (see "Zoho" be
 Edit `config.yaml`:
 
 * `paths.kyc_folder` is the `Elvey KYC — People` Drive folder. It is already set to the brief's path.
-* `inputs.workbook` is the consolidation output. The current build is **`Elvey Consolidated Relational Database 20260924.xlsx`**. Point this at wherever Drive syncs it on `G:`. Its sheets are `dim_accounts`, `dim_contacts`, `dim_reps`, `fact_sellout`, `view_top50_projects` and `view_top500_contacts`, and ingest reads them directly. A single flat CSV/xlsx (one row per contact) also works: headers are matched by alias (`Company`, `Contact Name`, `E-mail`, `Mobile`, `FY26 Sellout`, …).
+* `inputs.workbook` is the consolidation output. The current build is **`Elvey Consolidated Relational Database 20260924.xlsx`**. It lives in the Drive `Sales` folder; `config.yaml` already points at it. Use the `.xlsx` file, not a `.gsheet` shortcut. Its sheets are `dim_accounts`, `dim_contacts`, `dim_reps`, `fact_sellout`, `view_top50_projects` and `view_top500_contacts`, and ingest reads them directly. A single flat CSV/xlsx (one row per contact) also works: headers are matched by alias (`Company`, `Contact Name`, `E-mail`, `Mobile`, `FY26 Sellout`, …).
 
 You can also override paths through env vars: `KYC_FOLDER`, `KYC_WORKBOOK`, `KYC_DB`.
 
@@ -82,7 +82,7 @@ python -m src.zoho log
 
 ## Zoho CRM
 
-**Org.** Pentagon Distributors (South Africa, Enterprise edition). Confirm the datacenter by checking the domain you log in on: `crm.zoho.com` → `ZOHO_DC=com`, `crm.zoho.eu` → `eu`, and so on.
+**Org.** Pentagon Distributors (South Africa, Enterprise edition). The team logs in at `crm.zoho.com`, so the datacenter is **`ZOHO_DC=com`** (accounts: `accounts.zoho.com`, API: `www.zohoapis.com`). This is the default in `.env.example`.
 
 **Credentials.** Create them at https://api-console.zoho.com → *Self Client*.
 
