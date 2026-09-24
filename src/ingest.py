@@ -412,6 +412,10 @@ def summary(conn) -> dict:
 
 def run(cfg, file: str | None = None, all_rows: bool = False) -> dict:
     path = Path(file) if file else cfg.path("inputs", "workbook")
+    if path and path.suffix.lower() == ".gsheet":
+        raise SystemExit(f"{path.name} is a Google Sheets shortcut, not a spreadsheet file.\n"
+                         "Open it in Drive -> File -> Download -> Microsoft Excel (.xlsx), save it in the same folder, "
+                         "and point inputs.workbook at the .xlsx.")
     if not path or not path.exists():
         raise SystemExit(f"Input not found: {path}\nSet inputs.workbook in config.yaml (or KYC_WORKBOOK / --file).")
     fmt = (cfg.get("inputs") or {}).get("format", "auto")
