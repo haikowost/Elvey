@@ -162,3 +162,37 @@ def test_redirect_to_security_check_waits_for_the_human(monkeypatch):
             raise RuntimeError("net::ERR_NAME_NOT_RESOLVED")
     with pytest.raises(RuntimeError):
         harvest.navigate(Other(), harvest.FEED_URL)
+
+
+def test_parse_profile_from_page_text_only():
+    """No <section> headings at all: fall back to the page's visible text."""
+    text = ["Bob Jones", "· 2nd", "Senior Buyer at Acme", "About", "Buys cameras.", "…see more", "Experience",
+            "Senior Buyer", "Acme · Full-time", "2021 - Present · 3 yrs", "Education", "Wits", "2010 - 2014"]
+    headline, about, exp = harvest.parse_profile({"name": "Bob Jones", "topLines": text[:3], "text": text})
+    assert headline == "Senior Buyer at Acme" and about == "Buys cameras."
+    assert exp == [{"title": "Senior Buyer", "company": "Acme", "dates": "2021 - Present"}]
+
+
+def test_empty_profile_is_retried_not_done(cfg, loaded):
+    name = "Bob Jones"
+    c = db.one(loaded, "SELECT c.*, a.name company FROM contacts c LEFT JOIN accounts a ON a.id=c.account_id WHERE full_name=?", [name])
+    res = Result("done", profile_url="https://www.linkedin.com/in/bob", profile_name=name, photo=jpeg(),
+                 debug_text="Bob Jones\nsomething unexpected")
+    assert harvest.apply_result(loaded, cfg, c, res, need_face=True) == "empty"
+    row = db.one(loaded, "SELECT * FROM contacts WHERE id=?", [c["id"]])
+    assert row["enrich_status"] == "failed" and row["enrich_attempts"] == 1
+    assert row["image_status"] == "downloaded"  # the face is still kept
+    assert (cfg.data_dir / "debug" / f"profile_{c['id']}.txt").read_text(encoding="utf-8").startswith("Bob Jones")
+    assert any(q["id"] == c["id"] for q in harvest.queue(loaded, cfg))  # will be retried
+
+
+def test_retry_empty_requeues_old_empty_rows(cfg, loaded, monkeypatch, capsys):
+    loaded.execute("UPDATE contacts SET enrich_status='done' WHERE full_name IN ('Anna Smith','Bob Jones')")
+    loaded.execute("UPDATE contacts SET linkedin_summary='kept' WHERE full_name='Anna Smith'")
+    loaded.commit()
+    monkeypatch.setattr(harvest, "load_config", lambda _=None: cfg)
+    harvest.main(["--retry-empty"])
+    assert "Re-queued 1 contact" in capsys.readouterr().out
+    assert db.one(loaded, "SELECT enrich_status FROM contacts WHERE full_name='Bob Jones'")["enrich_status"] == "pending"
+    assert db.one(loaded, "SELECT enrich_status FROM contacts WHERE full_name='Anna Smith'")["enrich_status"] == "done"
+    harvest.main(["--report", "5"])

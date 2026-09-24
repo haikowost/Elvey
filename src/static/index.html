@@ -61,6 +61,16 @@ tr.row { cursor: pointer; } tr.row:hover { background: var(--bg); }
 dialog { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); color: var(--ink); max-width: 900px; width: 92vw; max-height: 85vh; }
 dialog pre { white-space: pre-wrap; font-size: 12px; max-height: 55vh; overflow: auto; background: var(--bg); padding: 10px; border-radius: 8px; }
 .hidden { display: none !important; }
+.card { cursor: pointer; } .card:hover { border-color: var(--accent); }
+.cc-head { display: flex; gap: 16px; align-items: center; margin-bottom: 12px; }
+.cc-head .face { width: 96px; height: 96px; font-size: 30px; }
+.cc-head h3 { margin: 0 0 2px; font-size: 18px; }
+.cc-grid { display: grid; grid-template-columns: 140px 1fr; gap: 4px 12px; font-size: 13px; margin: 8px 0 14px; }
+.cc-grid dt { color: var(--muted); } .cc-grid dd { margin: 0; overflow-wrap: anywhere; }
+.cc h4 { margin: 14px 0 6px; font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.cc ol { margin: 0; padding-left: 18px; } .cc li { margin-bottom: 4px; }
+.cc a { color: var(--accent); }
+@media (max-width: 640px) { .cc-grid { grid-template-columns: 1fr; } .cc-grid dt { margin-top: 6px; } }
 @media (max-width: 640px) { main { padding: 12px 16px 60px; } input[type=search] { min-width: 0; width: 100%; } }
 </style>
 </head>
@@ -119,6 +129,10 @@ dialog pre { white-space: pre-wrap; font-size: 12px; max-height: 55vh; overflow:
     <button class="btn ghost" id="dlgclose">Close</button>
     <button class="btn danger hidden" id="dlggo">Confirm LIVE push</button>
   </div>
+</dialog>
+
+<dialog id="contact"><div class="cc" id="ccbody"></div>
+  <div class="bar" style="justify-content:flex-end;margin-top:12px"><button class="btn ghost" id="ccclose">Close</button></div>
 </dialog>
 
 <script>
@@ -189,8 +203,8 @@ function card(p) {
   const exp = (p.experience || []).slice(0, 3).map(e => `${esc(e.title)}${e.company ? ' @ ' + esc(e.company) : ''} <span class="muted">${esc(e.dates || '')}</span>`).join('<br>');
   const flags = [p.image_status === 'no_photo' && 'no LinkedIn photo', p.enrich_status === 'no_profile' && 'no LinkedIn profile',
                  p.match_confidence === 'name-only' && 'LinkedIn match by name only – verify'].filter(Boolean);
-  return `<div class="card">${face}<div style="min-width:0">
-    <div class="n">${esc(p.name)} ${p.linkedin ? `<a href="${esc(p.linkedin)}" target="_blank" rel="noopener">in</a>` : ''}</div>
+  return `<div class="card" data-pid="${p.id}" title="Open contact card">${face}<div style="min-width:0">
+    <div class="n">${esc(p.name)} ${p.linkedin ? `<a href="${esc(p.linkedin)}" target="_blank" rel="noopener" data-stop>in</a>` : ''}</div>
     <div class="r">${esc(p.role || 'role pending')}</div>
     ${p.summary ? `<div class="s" title="${esc(p.summary)}">${esc(p.summary)}</div>` : ''}
     ${exp ? `<div class="x">${exp}</div>` : ''}
@@ -198,6 +212,60 @@ function card(p) {
     ${flags.length ? `<div class="x">⚑ ${flags.map(esc).join(' · ')}</div>` : ''}
   </div></div>`;
 }
+function findPerson(id) {
+  for (const seg of Object.keys(T.data)) for (const g of T.data[seg]) {
+    const p = g.people.find(x => x.id === id);
+    if (p) return [p, g];
+  }
+  return [null, null];
+}
+function contactCard(id) {
+  const [p, g] = findPerson(id);
+  if (!p) return;
+  const face = p.face ? `<img class="face" src="${esc(p.face)}" alt="">`
+    : `<div class="face" style="background:hsl(${hue(p.name)} 45% 45%)">${esc(initials(p.name))}</div>`;
+  const row = (k, v) => v ? `<dt>${esc(k)}</dt><dd>${v}</dd>` : '';
+  const link = (href, text) => `<a href="${esc(href)}" target="_blank" rel="noopener">${esc(text)}</a>`;
+  const status = {done: 'LinkedIn summary captured', pending: 'not looked up on LinkedIn yet', no_profile: 'no LinkedIn profile found',
+                  failed: 'LinkedIn look-up did not work yet (will retry)'}[p.enrich_status] || p.enrich_status;
+  const exp = (p.experience || []).map(e => `<li><b>${esc(e.title)}</b>${e.company ? ' — ' + esc(e.company) : ''} <span class="muted">${esc(e.dates || '')}</span></li>`).join('');
+  $('#ccbody').innerHTML = `
+    <div class="cc-head">${face}<div>
+      <h3>${esc(p.name)}</h3>
+      <div>${esc(p.role || 'Role not known yet')}${p.role_status === 'from LinkedIn' ? ' <span class="muted">(from LinkedIn)</span>' : ''}</div>
+      <div class="muted">${esc(p.company || '')}${g && g.segment ? ' · ' + esc({competitor: 'Competitor', internal: 'Internal', customer: 'Customer'}[g.segment]) : ''}</div>
+    </div></div>
+    <dl class="cc-grid">
+      ${row('Email', p.email && `<a href="mailto:${esc(p.email)}">${esc(p.email)}</a>`)}
+      ${row('Mobile', p.mobile && `<a href="tel:${esc(p.mobile)}">${esc(p.mobile)}</a>`)}
+      ${row('Phone', p.tel && `<a href="tel:${esc(p.tel)}">${esc(p.tel)}</a>`)}
+      ${row('LinkedIn', p.linkedin && link(p.linkedin, 'Open profile'))}
+      ${g && g.segment === 'customer' ? row('Account', esc([g.title, g.rank ? '#' + g.rank : ''].filter(Boolean).join(' '))) : ''}
+      ${g && g.rep ? row('Elvey rep', esc(g.rep)) : ''}
+      ${g && g.division ? row('Division', esc(g.division)) : ''}
+      ${g && g.sellout ? row('Latest sellout', esc(money(g.sellout))) : ''}
+      ${g && g.brand_focus ? row('Brand focus', esc(g.brand_focus)) : ''}
+      ${g && g.allocation ? row('Allocation', esc(g.allocation)) : ''}
+      ${row('Priority', p.priority ? '#' + p.priority : '')}
+      ${row('KYC', esc([p.face ? 'photo ✓' : (p.image_status === 'no_photo' ? 'no LinkedIn photo' : 'no photo yet'), status,
+                        p.match_confidence === 'name-only' ? 'matched by name only – please verify' : ''].filter(Boolean).join(' · ')))}
+      ${row('In Zoho', p.zoho ? 'yes' : 'not yet')}
+    </dl>
+    <h4>LinkedIn summary</h4>
+    <div>${p.summary ? esc(p.summary) : '<span class="muted">None yet.</span>'}</div>
+    <h4>Work history</h4>
+    ${exp ? `<ol>${exp}</ol>` : '<span class="muted">None yet.</span>'}
+    ${p.enrich_error ? `<p class="muted" style="margin-top:12px">Note: ${esc(p.enrich_error)}</p>` : ''}
+    ${p.enriched_at ? `<p class="muted">Last LinkedIn look-up: ${esc(p.enriched_at)}</p>` : ''}`;
+  $('#contact').showModal();
+}
+$('#tree').addEventListener('click', ev => {
+  if (ev.target.closest('[data-stop]')) return;
+  const c = ev.target.closest('.card');
+  if (c) { ev.stopPropagation(); contactCard(+c.dataset.pid); }
+});
+$('#ccclose').onclick = () => $('#contact').close();
+$('#contact').addEventListener('click', ev => { if (ev.target.id === 'contact') $('#contact').close(); });
 $('#q').oninput = () => loadTreeRender();
 $('#expand').onclick = () => { T.expandAll = !T.expandAll; T.override.clear(); $('#expand').textContent = T.expandAll ? 'Collapse' : 'Expand all'; loadTreeRender(); };
 

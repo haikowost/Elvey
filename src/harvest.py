@@ -70,6 +70,7 @@ class Result:
     experience: list[dict] = field(default_factory=list)
     photo: bytes | None = None       # JPEG bytes, already downscaled
     error: str | None = None
+    debug_text: str | None = None    # visible page text, kept when nothing could be read
 
 
 class Driver(Protocol):
@@ -111,6 +112,94 @@ def parse_experience(entries: list[list[str]], limit: int = 5) -> list[dict]:
         if len(out) >= limit:
             break
     return out
+
+
+SECTION_HEADINGS = {"about", "activity", "experience", "education", "skills", "featured", "interests",
+                    "licenses & certifications", "volunteering", "recommendations", "languages", "projects",
+                    "honors & awards", "courses", "organizations", "publications", "services", "highlights",
+                    "people also viewed", "people you may know", "more profiles for you", "analytics", "resources",
+                    "causes", "patents", "test scores", "contact info"}
+_JUNK_LINE = re.compile(r"^(·\s*)?(1st|2nd|3rd\+?|3rd|he/him|she/her|they/them|he/they|she/they|verified|"
+                        r"contact info|message|connect|follow|more|open to|\d+\+? (connections|followers))\b",
+                        re.IGNORECASE)
+
+
+def _is_heading(line: str) -> bool:
+    return line.strip().lower() in SECTION_HEADINGS
+
+
+def section_lines(data: dict, heading: str) -> list[str]:
+    """Lines of the profile section titled `heading` (from <section> headings, else from the page text)."""
+    for sec in data.get("sections") or []:
+        if sec.get("heading", "").strip().lower() == heading:
+            return [l for l in sec.get("lines", [])[1:] if l.strip().lower() != heading]
+    text = data.get("text") or []
+    for i, l in enumerate(text):
+        if l.strip().lower() == heading:
+            out = []
+            for m in text[i + 1:]:
+                if _is_heading(m):
+                    break
+                out.append(m)
+            return out
+    return []
+
+
+def headline_from(data: dict) -> str | None:
+    if (data.get("headline") or "").strip():
+        return data["headline"].strip()
+    name = norm_name(data.get("name"))
+    for l in data.get("topLines") or []:
+        if norm_name(l) == name or _JUNK_LINE.match(l) or len(l) < 4 or l.startswith("·"):
+            continue
+        return l
+    return None
+
+
+def about_from(data: dict) -> str | None:
+    if (data.get("about") or "").strip():
+        text = data["about"]
+    else:
+        text = " ".join(section_lines(data, "about"))
+    text = re.sub(r"\s*(…|\.\.\.)?\s*see more\s*$", "", text.strip(), flags=re.IGNORECASE)
+    return text or None
+
+
+def experience_from_lines(lines: list[str], limit: int = 5) -> list[dict]:
+    """Experience from a flat list of visible lines (layout-independent fallback)."""
+    lines = [l for l in lines if not re.match(r"^(show all|see all|…?see more)\b", l, re.IGNORECASE)]
+    out, group, last = [], None, -1
+    for i, l in enumerate(lines):
+        m = DATE_RE.search(l)
+        if not m:
+            continue
+        block = lines[last + 1:i]
+        last = i
+        if not block:
+            continue
+        if len(block) >= 3 and (DURATION_RE.match(block[-2].split("·")[-1]) or
+                                (EMPLOYMENT_RE.search(block[-2]) and re.search(r"\d+\s*(yrs?|mos?)", block[-2]))):
+            group = block[-3]                       # [Company, 'Full-time · 6 yrs', Title]
+            title, company = block[-1], group
+        elif len(block) >= 2 and (EMPLOYMENT_RE.search(block[-1]) or group is None):
+            title, company, group = block[-2], block[-1], None   # [Title, 'Company · Full-time']
+        elif group:
+            title, company = block[-1], group       # next role inside the same company group
+        else:
+            title, company = block[-1], None
+        company = EMPLOYMENT_RE.sub("", company.split(" · ")[0]).strip(" ·") if company else None
+        out.append({"title": title, "company": company or None, "dates": m.group(0)})
+        if len(out) >= limit:
+            break
+    return out
+
+
+def parse_profile(data: dict, limit: int = 5) -> tuple[str | None, str | None, list[dict]]:
+    """(headline, about, experience) from the page data, trying the structured read first."""
+    experience = parse_experience(data.get("experience") or [], limit)
+    if not experience:
+        experience = experience_from_lines(section_lines(data, "experience"), limit)
+    return headline_from(data), about_from(data), experience
 
 
 def build_summary(headline: str | None, about: str | None, limit: int = 500) -> str | None:
@@ -213,7 +302,25 @@ JS_PROFILE = """
     });
     experience = items.map(li => spans(li)).filter(x => x.length);
   }
-  return {name, headline, about, experience};
+  // layout-independent fallbacks: section headings + visible text lines
+  const lines = el => {
+    const out = [];
+    for (let l of (el ? el.innerText : '').split('\\n').map(x => x.trim()).filter(Boolean)) {
+      l = l.replace(/\\s*(…|\\.\\.\\.)\\s*see more$/i, '');
+      const h = l.length / 2;   // screen-reader copy glued on: 'AboutAbout' -> 'About'
+      if (l.length > 1 && l.length % 2 === 0 && l.slice(0, h) === l.slice(h)) l = l.slice(0, h);
+      if (l && out[out.length - 1] !== l) out.push(l);   // or repeated on its own line
+    }
+    return out;
+  };
+  const h1 = main.querySelector('h1');
+  const top = h1 ? (h1.closest('section') || h1.parentElement) : null;
+  const sections = [...main.querySelectorAll('section')].map(sec => {
+    const h = sec.querySelector('h2, h3');
+    return {heading: h ? (lines(h)[0] || '') : '', lines: lines(sec).slice(0, 300)};
+  }).filter(x => x.heading);
+  return {name, headline, about, experience, topLines: lines(top).slice(0, 15), sections,
+          text: lines(main).slice(0, 600)};
 }
 """
 
@@ -337,10 +444,12 @@ class LinkedInDriver:
         if need_face:
             self.page.mouse.wheel(0, -10000)
             photo = self._capture(None) or search_photo
-        limit = int(self.h.get("max_experience", 5))
-        return Result("done", profile_url=self.page.url.split("?")[0], profile_name=data["name"],
-                      headline=data.get("headline"), about=data.get("about"),
-                      experience=parse_experience(data.get("experience") or [], limit), photo=photo)
+        headline, about, experience = parse_profile(data, int(self.h.get("max_experience", 5)))
+        res = Result("done", profile_url=self.page.url.split("?")[0], profile_name=data["name"],
+                     headline=headline, about=about, experience=experience, photo=photo)
+        if not (headline or about or experience):
+            res.debug_text = "\n".join(data.get("text") or [])
+        return res
 
     def close(self) -> None:
         try:
@@ -384,12 +493,23 @@ def apply_result(conn, cfg, contact: dict, res: Result, need_face: bool) -> str:
         label = "no_profile"
     extra = db.jload(contact.get("extra"), {})
     if res.status == "done":
+        empty = not (res.headline or res.about or res.experience)
         changes.update({
-            "enrich_status": "done", "enrich_error": None,
             "linkedin_summary": build_summary(res.headline, res.about, int(h.get("summary_chars", 500))),
             "linkedin_experience": db.jdump(res.experience),
             "linkedin_profile_url": res.profile_url,
         })
+        if empty:
+            # profile opened but nothing readable: retry later rather than calling it done
+            changes.update({"enrich_status": "failed", "enrich_attempts": (contact.get("enrich_attempts") or 0) + 1,
+                            "enrich_error": "profile opened but no headline/About/Experience could be read"})
+            label = "empty"
+            if res.debug_text:
+                dbg = cfg.data_dir / "debug"
+                dbg.mkdir(parents=True, exist_ok=True)
+                (dbg / f"profile_{contact['id']}.txt").write_text(res.debug_text, encoding="utf-8")
+        else:
+            changes.update({"enrich_status": "done", "enrich_error": None})
         if not contact.get("linkedin_contact_url") and res.profile_url:
             changes["linkedin_contact_url"] = res.profile_url
         if not contact.get("role"):
@@ -412,7 +532,7 @@ def apply_result(conn, cfg, contact: dict, res: Result, need_face: bool) -> str:
                 changes.update({"image_filename": fname, "image_status": "downloaded"})
             else:
                 changes["image_status"] = "no_photo"
-                label = "done/no_photo"
+                label = f"{label}/no_photo"
     elif res.status == "no_profile":
         changes.update({"enrich_status": "no_profile", "enrich_error": res.error})
         if need_face:
@@ -482,6 +602,9 @@ def main(argv: list[str] | None = None) -> None:
     ap.add_argument("--ids", help="comma-separated contact ids")
     ap.add_argument("--segment", choices=["customer", "competitor", "internal"])
     ap.add_argument("--dry-run", action="store_true", help="print the queue only")
+    ap.add_argument("--retry-empty", action="store_true",
+                    help="re-queue contacts marked done whose summary and work history came back empty")
+    ap.add_argument("--report", type=int, metavar="N", help="show what was stored for the last N harvested contacts")
     ap.add_argument("--headless", action="store_true", help="not recommended (LinkedIn is stricter)")
     ap.add_argument("--config")
     args = ap.parse_args(argv)
@@ -489,6 +612,26 @@ def main(argv: list[str] | None = None) -> None:
     conn = db.connect(cfg.db_path)
     ids = [int(x) for x in args.ids.split(",")] if args.ids else None
     limit = 5 if args.test else args.limit
+    if args.retry_empty:
+        with conn:
+            n = conn.execute("""UPDATE contacts SET enrich_status = 'pending', enrich_attempts = 0, enrich_error = NULL
+                                WHERE enrich_status = 'done' AND coalesce(linkedin_summary, '') = ''
+                                  AND coalesce(linkedin_experience, '') IN ('', '[]')""").rowcount
+        print(f"Re-queued {n} contact(s) with an empty LinkedIn summary and work history.")
+        if not (args.test or args.limit):
+            return
+    if args.report:
+        for r in db.rows(conn, """SELECT c.id, c.full_name, c.enrich_status, c.enrich_error, c.image_status, c.role,
+                                         c.linkedin_summary, c.linkedin_experience, c.enrich_last_at
+                                  FROM contacts c WHERE c.enrich_last_at IS NOT NULL
+                                  ORDER BY c.enrich_last_at DESC LIMIT ?""", [args.report]):
+            exp = db.jload(r["linkedin_experience"], [])
+            print(f"#{r['id']} {r['full_name']}  [{r['enrich_status']}] face={r['image_status']}  role={r['role'] or '-'}")
+            print(f"    summary: {(r['linkedin_summary'] or '(none)')[:160]}")
+            print(f"    work history: {len(exp)} role(s)" + "".join(f"\n      - {e.get('title')} @ {e.get('company') or '?'} ({e.get('dates')})" for e in exp[:3]))
+            if r["enrich_error"]:
+                print(f"    note: {r['enrich_error']}")
+        return
     if args.dry_run:
         rows = queue(conn, cfg, limit or 50, ids, args.segment)
         for r in rows:

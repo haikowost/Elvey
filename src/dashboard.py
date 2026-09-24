@@ -63,6 +63,9 @@ def people_tree(conn, cfg) -> dict:
         extra_c = db.jload(c["extra"], {})
         groups[key]["people"].append({
             "id": c["id"], "name": c["full_name"], "role": c["role"], "email": c["email"], "cell": c["cell"] or c["tel"],
+            "tel": c["tel"], "mobile": c["cell"], "company": a.get("name"), "segment": seg,
+            "role_status": extra_c.get("role_status"), "enrich_error": c["enrich_error"],
+            "enriched_at": c["enrich_last_at"],
             "face": f"/faces/{c['image_filename']}" if c["image_filename"] and c["image_status"] in ("downloaded", "manual") else None,
             "image_status": c["image_status"], "enrich_status": c["enrich_status"],
             "summary": c["linkedin_summary"], "experience": db.jload(c["linkedin_experience"], []),

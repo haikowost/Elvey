@@ -15,6 +15,7 @@ def test_dashboard_endpoints(cfg, loaded):
     anna = next(p for p in acme["people"] if p["name"] == "Anna Smith")
     assert anna["face"] == "/faces/CUST__Anna_Smith.jpg"
     assert c.get(anna["face"]).headers["content-type"] == "image/jpeg"
+    assert anna["company"] == "Acme Security (Pty) Ltd" and anna["mobile"] == "082 000 0001" and "enriched_at" in anna
     assert c.get("/faces/..%2Fconsolidated.xlsx").status_code == 404
     assert {g["title"] for g in tree["competitor"]} == {"Duxbury", "Reditron"}
 
