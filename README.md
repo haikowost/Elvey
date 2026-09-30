@@ -10,6 +10,31 @@ A local, resumable KYC tool for Elvey Group's Projects/Pentagon division. It:
 
 Everything lives in one SQLite file (`elvey_kyc.db`). Every command can be re-run safely.
 
+### v3 (2026-09-30): the cleaned Consolidated Sales Contacts sheet
+
+The authoritative source is now the **cleaned, hand-synced Consolidated Sales Contacts sheet**
+(`Elvey Consolidated Sales Contacts - CLEANED <date>.xlsx`, tab `Customers (import)`) — set its
+path in `config.yaml`'s `inputs.workbook`. It's a flat, one-row-per-contact sheet carrying the
+rep allocation directly (`AM`), a call-cadence `Category` (A weekly · B monthly · C ad-hoc ·
+D+ to triage), and `In Zoho` / `In MakDB` seed flags. What changed:
+
+- **Role now actually reaches the sheet from LinkedIn.** The sheet's placeholder for a
+  not-yet-looked-up role is the text `lookup pending (KYC app)` — a real (non-blank) string, so
+  the harvester used to treat it as "already has a role" and skip it. Roles are now tracked with
+  a `role_source` (`data` | `pending` | `linkedin` | `manual`): the harvester fills a role whose
+  source is blank/`pending`/a stale `linkedin` guess, and **never** overwrites a real spreadsheet
+  role (`data`) or a human edit (`manual`). This is the one specific gap this round closes.
+- **Allocation.** Every contact carries `allocated_rep` (the `AM` column) and `allocated`
+  (0 when `AM` is `Unallocated`, 1 otherwise). Unallocated rows are still ingested — nothing is
+  dropped — just flagged, so the dashboard can default to allocated-first and filter them out.
+- **Phones** are standardised to `+27 ## ### ####` on ingest (unchanged from v2, confirmed still
+  matches this sheet's existing format).
+- **Filters.** The People Tree has `Allocated rep` and `Category` filters alongside the existing
+  department/status ones, and every contact list sorts allocated contacts first within its group.
+- `In Zoho` / `In MakDB` are carried through as-is from the sheet (`contacts.in_zoho` /
+  `contacts.in_makdb`); whether a contact is *actually* linked in Zoho right now is still the
+  separate, live `zoho_contact_id` (shown as the "in Zoho" tag) that `src/zoho.py` maintains.
+
 ```
 config.yaml        paths, scope, caps, Zoho field mapping
 .env               Zoho credentials (copy .env.example; never committed)

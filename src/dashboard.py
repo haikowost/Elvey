@@ -96,11 +96,14 @@ def people_tree(conn, cfg) -> dict:
             "image_status": c["image_status"], "enrich_status": c["enrich_status"],
             "summary": c["linkedin_summary"], "experience": db.jload(c["linkedin_experience"], []),
             "linkedin": c["linkedin_profile_url"] or c["linkedin_contact_url"], "priority": c["priority"],
-            "match_confidence": extra_c.get("match_confidence"), "category": extra_c.get("category"),
+            "match_confidence": extra_c.get("match_confidence"), "category": c["category"] or extra_c.get("category"),
+            "allocated_rep": c["allocated_rep"], "allocated": bool(c["allocated"]),
+            "in_zoho": c["in_zoho"], "in_makdb": c["in_makdb"], "role_source": c["role_source"],
             "zoho": bool(c["zoho_contact_id"]),
         })
     out = {seg: [] for seg in BRANCH_ORDER}
     for g in groups.values():
+        g["people"].sort(key=lambda p: (not p["allocated"], p["priority"] is None, p["priority"] or 0, p["name"]))
         out[g["segment"]].append(g)
     for seg in out:
         out[seg].sort(key=lambda g: (g["rank"] is None, g["rank"] or 0, -(g["sellout"] or 0), g["title"]))
@@ -188,11 +191,18 @@ def create_app(cfg=None) -> FastAPI:
     def stats():
         with lock:
             q = lambda sql: conn.execute(sql).fetchone()[0]  # noqa: E731
+            reps = [r[0] for r in conn.execute(
+                "SELECT DISTINCT allocated_rep FROM contacts WHERE allocated_rep IS NOT NULL ORDER BY 1")]
+            cats = [r[0] for r in conn.execute(
+                "SELECT DISTINCT category FROM contacts WHERE category IS NOT NULL ORDER BY 1")]
             return {"accounts": q("SELECT count(*) FROM accounts"), "contacts": q("SELECT count(*) FROM contacts"),
                     "coverage": coverage(conn), "zoho_pulled_at": zoho.get_meta(conn, "zoho_pulled_at"),
                     "live_enabled": bool((cfg.get("zoho") or {}).get("live_enabled")),
                     "departments": list(DEPARTMENTS),
                     "relevant_departments": list((cfg.get("dashboard") or {}).get("relevant_departments") or []),
+                    "allocated": q("SELECT count(*) FROM contacts WHERE allocated = 1"),
+                    "unallocated": q("SELECT count(*) FROM contacts WHERE allocated = 0"),
+                    "reps": reps, "categories": cats,
                     "last_ingest": (conn.execute("SELECT value FROM meta WHERE key='last_ingest'").fetchone() or [None])[0]}
 
     @app.get("/api/accounts")

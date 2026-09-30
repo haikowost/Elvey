@@ -2,7 +2,7 @@ import csv
 import json
 
 from src import db, harvest, images, ingest
-from src.util import face_filename, norm_company, parse_face_filename, parse_money, slug, split_name
+from src.util import face_filename, norm_company, parse_face_filename, parse_money, resolve_role, slug, split_name, yn
 
 
 # ------------------------------------------------------------------ util
@@ -16,6 +16,18 @@ def test_naming_convention(cfg):
     assert parse_face_filename("Reditron__Gordon_Moore.jpg") == ("Reditron", "Gordon_Moore")
     assert parse_face_filename("random.jpg") is None
     assert split_name("Leandro da Cunha") == ("Leandro", "da Cunha")
+
+
+def test_resolve_role_and_yn():
+    assert resolve_role("lookup pending (KYC app)") == (None, "pending")
+    assert resolve_role("Lookup Pending") == (None, "pending")
+    assert resolve_role(None) == (None, "pending")
+    assert resolve_role("") == (None, "pending")
+    assert resolve_role("Buyer") == ("Buyer", "data")
+    assert yn("Y") == yn("yes") == yn("1") == "Y"
+    assert yn("N") == yn("no") == yn("0") == "N"
+    assert yn("Company only") == "Company only"
+    assert yn(None) is None and yn("") is None
 
 
 def test_parse_money_and_company():
@@ -83,6 +95,27 @@ def test_ingest_flat_csv(cfg, conn, tmp_path):
     assert db.one(conn, "SELECT email FROM contacts WHERE full_name='Zoe Adams'")["email"] == "zoe@zeta.com"
 
 
+def test_ingest_v3_cleaned_sales_contacts_sheet(cfg, conn, tmp_path):
+    """The v3 source: 'Ref, Full Name, Role, Region/Branch, ..., AM, Category, In Zoho, In MakDB'.
+    A real Role is kept and protected; the 'lookup pending (KYC app)' placeholder is not."""
+    p = tmp_path / "cleaned.csv"
+    p.write_text(
+        "Ref,Full Name,Role,Region/Branch,Cell number,Email Address,Company name,AM,Category,In Zoho,In MakDB,Sort\n"
+        "R001,Zoe Adams,Branch Manager,Gauteng,082 111 2222,zoe@zeta.com,Zeta (Pty) Ltd,SN,A,Y,Y,1\n"
+        "R002,Yan Li,lookup pending (KYC app),Gauteng,,,Zeta (Pty) Ltd,Unallocated,D,N,N,2\n",
+        encoding="utf-8")
+    ingest.run(cfg, file=str(p))
+    zoe = db.one(conn, "SELECT * FROM contacts WHERE full_name='Zoe Adams'")
+    assert zoe["role"] == "Branch Manager" and zoe["role_source"] == "data"
+    assert zoe["allocated_rep"] == "SN" and zoe["allocated"] == 1 and zoe["category"] == "A"
+    assert zoe["in_zoho"] == "Y" and zoe["in_makdb"] == "Y" and zoe["cell"] == "+27 82 111 2222"
+    assert zoe["source_id"] == "REF:R001"
+    yan = db.one(conn, "SELECT * FROM contacts WHERE full_name='Yan Li'")
+    assert yan["role"] is None and yan["role_source"] == "pending"  # placeholder text never stored as the role
+    assert yan["allocated_rep"] == "Unallocated" and yan["allocated"] == 0
+    assert yan["in_zoho"] == "N" and yan["in_makdb"] == "N"
+
+
 def test_flat_csv_location_beats_linkedin_guess(cfg, conn, tmp_path):
     """A location known from the source data (a hypothetical future column) must never be
     silently overwritten by a LinkedIn guess."""
@@ -97,6 +130,25 @@ def test_flat_csv_location_beats_linkedin_guess(cfg, conn, tmp_path):
     harvest.apply_result(conn, cfg, zoe, res, need_face=False)
     kept = db.one(conn, "SELECT city, location_source FROM contacts WHERE id=?", [zoe["id"]])
     assert kept == {"city": "Cape Town", "location_source": "database"}  # unchanged
+
+
+def test_harvest_fills_a_pending_role_but_never_a_spreadsheet_one(cfg, conn, tmp_path):
+    """The v3 fix: a sheet role of 'lookup pending (KYC app)' (role_source='pending') gets filled
+    from LinkedIn; a real spreadsheet role (role_source='data') is still never touched."""
+    p = tmp_path / "flat.csv"
+    p.write_text("Company,Contact Name,Role,Rank\n"
+                 "Zeta (Pty) Ltd,Zoe Adams,lookup pending (KYC app),1\n"
+                 "Zeta (Pty) Ltd,Yan Li,Technician,2\n", encoding="utf-8")
+    ingest.run(cfg, file=str(p))
+    zoe, yan = (db.one(conn, "SELECT * FROM contacts WHERE full_name=?", [n]) for n in ("Zoe Adams", "Yan Li"))
+    assert zoe["role"] is None and zoe["role_source"] == "pending"
+
+    for c, headline in ((zoe, "Branch Manager at Zeta"), (yan, "Senior Technician at Zeta")):
+        res = harvest.Result("done", profile_url="u", profile_name=c["full_name"], headline=headline, about="x")
+        harvest.apply_result(conn, cfg, c, res, need_face=False)
+    zoe2, yan2 = (db.one(conn, "SELECT * FROM contacts WHERE id=?", [c["id"]]) for c in (zoe, yan))
+    assert zoe2["role"] == "Branch Manager" and zoe2["role_source"] == "linkedin"  # pending -> filled
+    assert yan2["role"] == "Technician" and yan2["role_source"] == "data"          # spreadsheet role kept
 
 
 # ------------------------------------------------------------------ images

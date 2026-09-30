@@ -32,8 +32,8 @@ from urllib.parse import quote
 from . import db
 from .config import load_config
 from .images import update_account_kyc_status
-from .util import (DEPT_RANK, LOC_RANK, classify_department, face_filename, linkedin_url, norm_company, norm_name,
-                   same_company, split_location)
+from .util import (DEPT_RANK, LOC_RANK, ROLE_RANK, classify_department, face_filename, linkedin_url, norm_company,
+                   norm_name, same_company, split_location)
 
 try:
     from rapidfuzz import fuzz
@@ -702,8 +702,13 @@ def apply_result(conn, cfg, contact: dict, res: Result, need_face: bool) -> str:
         if not contact.get("linkedin_contact_url") and res.profile_url:
             changes["linkedin_contact_url"] = res.profile_url
         title = current_title(res.experience, res.headline)
-        if not contact.get("role") and title:
-            changes["role"] = title[:100]
+        # a spreadsheet role (role_source='data') or a human edit ('manual') is never overwritten;
+        # a blank/'pending' role (the sheet's "lookup pending (KYC app)" placeholder) or a stale
+        # LinkedIn-sourced role may be (re)filled — this is the fix for role not reaching the sheet.
+        if title and ROLE_RANK.get("linkedin", 0) >= ROLE_RANK.get(contact.get("role_source"), 0):
+            if contact.get("role") != title[:100]:
+                changes["role"] = title[:100]
+            changes["role_source"] = "linkedin"
             extra["role_status"] = "from LinkedIn"
         # department from the LinkedIn title (beats the spreadsheet role, never a manual choice)
         dept = classify_department(title, res.headline)

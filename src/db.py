@@ -17,6 +17,8 @@ MIGRATIONS = {
         ("moved_to_account_id", "INTEGER REFERENCES accounts(id)"),
         ("contact_status", "TEXT NOT NULL DEFAULT 'active'"), ("status_note", "TEXT"),
         ("city", "TEXT"), ("province", "TEXT"), ("country", "TEXT"), ("location_source", "TEXT"),
+        ("role_source", "TEXT"), ("allocated_rep", "TEXT"), ("allocated", "INTEGER NOT NULL DEFAULT 1"),
+        ("category", "TEXT"), ("in_zoho", "TEXT"), ("in_makdb", "TEXT"),
     ],
 }
 

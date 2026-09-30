@@ -39,6 +39,12 @@ CREATE TABLE IF NOT EXISTS contacts (
     first_name           TEXT,
     last_name            TEXT,
     role                 TEXT,
+    role_source          TEXT,               -- data|pending|linkedin|manual (pending/None may be filled by the harvester)
+    allocated_rep        TEXT,               -- the AM this contact is allocated to ('Unallocated' -> allocated=0)
+    allocated            INTEGER NOT NULL DEFAULT 1,
+    category             TEXT,               -- call cadence: A weekly, B monthly, C ad-hoc, D+ to triage
+    in_zoho              TEXT,               -- Y|N|Company only, from the source sheet; kept live thereafter
+    in_makdb             TEXT,               -- Y|N, from the source sheet
     email                TEXT,
     tel                  TEXT,
     cell                 TEXT,

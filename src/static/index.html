@@ -112,6 +112,8 @@ dialog pre { white-space: pre-wrap; font-size: 12px; max-height: 55vh; overflow:
         <option value="not_relevant">Not relevant</option>
         <option value="all">Everyone</option>
       </select>
+      <select id="frep" title="Allocated rep"><option value="">All reps</option><option value="__unalloc">Unallocated only</option></select>
+      <select id="fcat" title="Category"><option value="">All categories</option></select>
       <button class="chip" id="expand">Expand all</button>
     </div>
     <div id="tree"></div>
@@ -200,6 +202,10 @@ async function loadStats() {
   T.relevant = new Set(s.relevant_departments || []);
   $('#fdept').innerHTML = '<option value="">All departments</option><option value="__none">Department unknown</option>' +
     T.departments.map(d => `<option>${esc(d)}</option>`).join('');
+  $('#frep').innerHTML = '<option value="">All reps</option><option value="__unalloc">Unallocated only</option>' +
+    (s.reps || []).map(r => `<option>${esc(r)}</option>`).join('');
+  $('#fcat').innerHTML = '<option value="">All categories</option>' +
+    (s.categories || []).map(c => `<option>${esc(c)}</option>`).join('');
 }
 function statusOk(p, f) {
   if (f === 'all') return true;
@@ -225,14 +231,16 @@ function loadTreeRender() {
   let html = '', shown = 0;
   groups.forEach((g, gi) => {
     const gText = [g.title, g.division, g.rep, g.brand_focus].join(' ').toLowerCase();
-    const fd = $('#fdept').value, fs = $('#fstatus').value;
+    const fd = $('#fdept').value, fs = $('#fstatus').value, fr = $('#frep').value, fc = $('#fcat').value;
     const people = g.people.filter(p => statusOk(p, fs)
       && (!fd || (fd === '__none' ? !p.department : p.department === fd))
-      && (!q || gText.includes(q) || [p.name, p.role, p.email, p.summary, p.department, p.now_at].join(' ').toLowerCase().includes(q)));
+      && (!fr || (fr === '__unalloc' ? !p.allocated : p.allocated_rep === fr))
+      && (!fc || p.category === fc)
+      && (!q || gText.includes(q) || [p.name, p.role, p.email, p.summary, p.department, p.now_at, p.allocated_rep].join(' ').toLowerCase().includes(q)));
     if (!people.length) return;
     const key = T.branch + ':' + g.title;
     const byDefault = T.expandAll || (T.branch !== 'customer') || gi < 8;
-    const filtering = !!q || $('#fdept').value || $('#fstatus').value !== 'active';
+    const filtering = !!q || $('#fdept').value || $('#fstatus').value !== 'active' || fr || fc;
     const open = filtering || (T.override.has(key) ? T.override.get(key) : byDefault);
     shown += people.length;
     const meta = [g.division, g.rep && 'Rep: ' + g.rep, money(g.sellout), g.brand_focus && 'Brands: ' + g.brand_focus, g.allocation].filter(Boolean).map(esc).join(' · ');
@@ -259,7 +267,10 @@ function card(p) {
                  p.employment_status === 'moved' && p.contact_status === 'active' && `LinkedIn: now at ${p.now_at}`,
                  p.contact_status === 'left' && 'no longer at company', p.contact_status === 'not_relevant' && 'not relevant'].filter(Boolean);
   const tags = [p.department && `<span class="tag dept">${esc(p.department)}</span>`,
-                p.department && T.relevant && T.relevant.size && !T.relevant.has(p.department) && '<span class="tag off">not sales</span>'].filter(Boolean).join('');
+                p.department && T.relevant && T.relevant.size && !T.relevant.has(p.department) && '<span class="tag off">not sales</span>',
+                p.allocated_rep && `<span class="tag">${esc(p.allocated_rep)}</span>`,
+                !p.allocated && '<span class="tag off">Unallocated</span>',
+                p.category && `<span class="tag">Cat ${esc(p.category)}</span>`].filter(Boolean).join('');
   return `<div class="card" data-pid="${p.id}" title="Open contact card">${face}<div style="min-width:0">
     <div class="n">${esc(p.name)} ${p.linkedin ? `<a href="${esc(p.linkedin)}" target="_blank" rel="noopener" data-stop>in</a>` : ''}</div>
     <div class="r">${esc(p.role || 'role pending')}</div>
@@ -399,6 +410,8 @@ $('#contact').addEventListener('click', ev => { if (ev.target.id === 'contact') 
 $('#q').oninput = () => loadTreeRender();
 $('#fdept').onchange = () => loadTreeRender();
 $('#fstatus').onchange = () => loadTreeRender();
+$('#frep').onchange = () => loadTreeRender();
+$('#fcat').onchange = () => loadTreeRender();
 $('#expand').onclick = () => { T.expandAll = !T.expandAll; T.override.clear(); $('#expand').textContent = T.expandAll ? 'Collapse' : 'Expand all'; loadTreeRender(); };
 
 // ---------------------------------------------------------------- Zoho review-and-select

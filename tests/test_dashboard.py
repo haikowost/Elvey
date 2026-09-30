@@ -20,9 +20,12 @@ def test_dashboard_endpoints(cfg, loaded):
     assert anna["company"] == "Acme Security (Pty) Ltd" and anna["mobile"] == "+27 82 000 0001" and "enriched_at" in anna
     assert c.get("/faces/..%2Fconsolidated.xlsx").status_code == 404
     assert {g["title"] for g in tree["competitor"]} == {"Duxbury", "Reditron"}
+    # v3: rows without an AM/allocation column (this old relational fixture) count as allocated
+    assert anna["allocated"] is True and anna["allocated_rep"] is None
 
     stats = c.get("/api/stats").json()
     assert stats["contacts"] == 6 and stats["live_enabled"] is False
+    assert stats["allocated"] == 6 and stats["unallocated"] == 0 and stats["reps"] == [] and stats["categories"] == []
 
     d = c.get("/api/zoho/diff").json()
     assert d["pulled_at"] is None and d["summary"]["accounts"]["new"] >= 2

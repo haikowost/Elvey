@@ -11,22 +11,32 @@ paths:
   to_enrich_csv: data/to_enrich.csv
 
 inputs:
-  # Output of the Customer Data Consolidation task. Two layouts are supported:
-  #   relational: a workbook with dim_accounts / dim_contacts / dim_reps / fact_sellout /
-  #               view_top50_projects / view_top500_contacts sheets (the 2026-09-24 build).
-  #   flat:       one CSV/xlsx sheet, one row per contact with company columns
-  #               (headers are matched via column_aliases below).
-  # 'auto' picks relational when the dim_contacts sheet exists.
+  # v3 (2026-09-30): the authoritative source is the CLEANED, hand-synced Consolidated Sales
+  # Contacts sheet — 'Elvey Consolidated Sales Contacts - CLEANED <date>.xlsx', tab
+  # 'Customers (import)'. It is a flat, one-row-per-contact sheet (Ref, Full Name, Role,
+  # Region/Branch, Office Tel, Cell number, Email Address, Linkedin, Company name, ACCNO,
+  # Axis Partner, Milestone Partner, Installer Category, AM, Category, In Zoho, In MakDB,
+  # Cluster, Sort) and is already the curated contact base — nothing else needs top-N capping.
+  # Update the filename below to the latest CLEANED export each time it's re-synced.
+  #
+  # Two layouts are supported:
+  #   flat:       one CSV/xlsx sheet, one row per contact (this is the v3 format; headers are
+  #               matched via FLAT_ALIASES in src/ingest.py, so column order doesn't matter).
+  #   relational: the older Customer Data Consolidation workbook with dim_accounts /
+  #               dim_contacts / dim_reps / fact_sellout / view_top50_projects /
+  #               view_top500_contacts sheets — kept for backward compatibility only.
+  # 'auto' picks relational when a dim_contacts sheet exists, else flat.
   # Must be the .xlsx (a .gsheet file is only a Google Sheets shortcut and cannot be read).
-  workbook: 'G:\.shortcut-targets-by-id\1ZYeE9cZf8VERsTP7Nq1jHVFXJvUgzThq\Elveygroup portfolio expert\Sales\Elvey Consolidated Relational Database 20260924.xlsx'
+  workbook: 'G:\.shortcut-targets-by-id\1ZYeE9cZf8VERsTP7Nq1jHVFXJvUgzThq\Elveygroup portfolio expert\Sales\Elvey Consolidated Sales Contacts - CLEANED.xlsx'
   format: auto
-  sheet: null            # flat format only: sheet name (default = first sheet)
+  sheet: 'Customers (import)'   # flat format only: sheet name (default = first sheet)
 
 scope:
-  # How much of the consolidated DB to load. Set to null to load everything
-  # (e.g. all ~960 accounts / ~1,500 contacts) — nothing else is capped.
-  top_accounts: 50       # ranked accounts from view_top50_projects
-  top_contacts: 500      # ranked contacts from view_top500_contacts
+  # v3: the CLEANED sheet is already the full, curated contact base (allocated + Unallocated) —
+  # leave both null to load every row. The top_* caps only matter for the older relational
+  # workbook layout, where they select the ranked top-N accounts/contacts out of a much larger DB.
+  top_accounts: null     # ranked accounts from view_top50_projects (relational layout only)
+  top_contacts: null     # ranked contacts from view_top500_contacts (relational layout only)
   # Competitor + Internal contacts are always loaded (they are the other two branches).
   include_competitor_internal: true
   # Customers who already have a KYC face in the library are loaded even outside the top-N.
@@ -96,6 +106,8 @@ zoho:
     linkedin_contact_url: LinkedIn_URL
     linkedin_summary: LinkedIn_Summary
     segment: Segment
+    allocated_rep: Allocated_Rep
+    category: Category
   # Suggested data types when creating the custom fields in the Zoho UI.
   custom_field_types:
     Division: Single Line
@@ -110,3 +122,5 @@ zoho:
     LinkedIn_URL: URL
     LinkedIn_Summary: Multi Line (Large)
     Segment: Single Line
+    Allocated_Rep: Single Line
+    Category: Single Line

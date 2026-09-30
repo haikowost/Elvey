@@ -214,6 +214,36 @@ def format_phone(value) -> tuple[str | None, bool]:
     return f"+{cc} {_group(rest)}{ext}", True
 
 
+# --------------------------------------------------------------------------- role / allocation
+
+# which role source may overwrite which (a human-entered or spreadsheet role always wins)
+ROLE_RANK = {None: 0, "pending": 0, "linkedin": 1, "data": 2, "manual": 3}
+_ROLE_PENDING_RE = re.compile(r"lookup\s*pending", re.IGNORECASE)
+
+
+def resolve_role(raw: Any) -> tuple[str | None, str | None]:
+    """A sheet 'Role' cell: a real title -> (title, 'data'); the 'lookup pending (KYC app)'
+    placeholder, or a blank cell, -> (None, 'pending') so the LinkedIn harvester is free to fill
+    it. Never treat a placeholder string as if it were a real, protected role."""
+    s = clean(raw)
+    if not s or _ROLE_PENDING_RE.search(s):
+        return None, "pending"
+    return s, "data"
+
+
+def yn(value: Any) -> str | None:
+    """Normalise a Y/N-ish cell ('Y', 'yes', 'N', '0', 'Company only') to 'Y'/'N'/the original text."""
+    s = clean(value)
+    if not s:
+        return None
+    low = s.lower()
+    if low in ("y", "yes", "true", "1"):
+        return "Y"
+    if low in ("n", "no", "false", "0"):
+        return "N"
+    return s
+
+
 # --------------------------------------------------------------------------- departments
 
 # which department source may overwrite which (manual edits always win)

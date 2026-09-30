@@ -20,10 +20,11 @@ from typing import Any, Iterable
 from . import db
 from .config import load_config
 from .util import (DEPT_RANK, LOC_RANK, as_int, classify_department, clean, format_phone, linkedin_url, norm_company,
-                   norm_name, parse_face_filename, parse_money, segment_of, split_name)
+                   norm_name, parse_face_filename, parse_money, resolve_role, segment_of, split_name, yn)
 
 # Flat-file header aliases (normalised: lowercase, non-alnum removed).
 FLAT_ALIASES: dict[str, list[str]] = {
+    "ref": ["ref"],
     "company": ["company", "account", "accountname", "customer", "customername", "companyname"],
     "accno": ["accno", "accountno", "accountnumber", "accnum", "custno"],
     "full_name": ["fullname", "contactname", "name", "contact"],
@@ -31,12 +32,19 @@ FLAT_ALIASES: dict[str, list[str]] = {
     "last_name": ["lastname", "surname", "last"],
     "role": ["role", "title", "jobtitle", "position", "designation"],
     "email": ["email", "emailaddress", "mail"],
-    "tel": ["tel", "phone", "telephone", "officephone", "work"],
-    "cell": ["cell", "mobile", "cellphone", "mobilephone"],
+    "tel": ["tel", "phone", "telephone", "officephone", "work", "officetel"],
+    "cell": ["cell", "mobile", "cellphone", "mobilephone", "cellnumber"],
     "rep": ["rep", "am", "amcode", "accountmanager", "salesrep", "allocationproposed"],
+    "allocated_rep": ["am", "amcode", "accountmanager"],
+    "category": ["category"],
+    "in_zoho": ["inzoho"],
+    "in_makdb": ["inmakdb", "inmakedb"],
+    "axis_partner": ["axispartner"],
+    "milestone_partner": ["milestonepartner"],
+    "installer_category": ["installercategory"],
     "division": ["division"],
     "cluster": ["cluster"],
-    "branch": ["branch"],
+    "branch": ["branch", "regionbranch"],
     "latest_sellout": ["fy26sellout", "fy26", "sellout", "latestsellout", "fy25sellout"],
     "brand_focus": ["brandfocus", "brands", "brand"],
     "allocation": ["allocation", "allocationstatus"],
@@ -44,7 +52,7 @@ FLAT_ALIASES: dict[str, list[str]] = {
     "linkedin_contact_url": ["linkedinurl", "linkedin", "linkedincontacturl", "linkedinprofile"],
     "linkedin_company_url": ["linkedincompanyurl", "companylinkedin"],
     "segment": ["segment", "branchtype", "peopletreebranch"],
-    "rank": ["rank", "priority", "contactrank"],
+    "rank": ["rank", "priority", "contactrank", "sort"],
     "account_rank": ["accountrank"],
     "image_filename": ["imagefilename", "image", "face"],
     "city": ["city", "town"],
@@ -54,8 +62,9 @@ FLAT_ALIASES: dict[str, list[str]] = {
 
 ACCOUNT_FIELDS = ("name", "accno", "segment", "division", "cluster", "branch", "rep", "latest_sellout",
                   "brand_focus", "allocation", "kyc_status", "linkedin_company_url", "source")
-CONTACT_FIELDS = ("full_name", "first_name", "last_name", "role", "email", "tel", "cell",
-                  "linkedin_contact_url", "segment", "org_group")
+CONTACT_FIELDS = ("full_name", "first_name", "last_name", "role", "role_source", "email", "tel", "cell",
+                  "linkedin_contact_url", "segment", "org_group", "allocated_rep", "allocated", "category",
+                  "in_zoho", "in_makdb")
 AUTHORITATIVE = ("rank", "priority")  # ordering is owned by the source, None is allowed to clear
 
 
@@ -108,6 +117,7 @@ def finish_contact(c: dict) -> dict:
     c["department"], c["department_source"] = dept, source
     if c.get("city") or c.get("province") or c.get("country"):
         c["location_source"] = "database"
+    c.setdefault("allocated", 1)  # rows without an explicit AM/allocation column (old workbook, comp/int) count as allocated
     c["extra"] = extra or None
     return c
 
@@ -185,9 +195,10 @@ def load_relational(sheets: dict[str, list[dict]], cfg: dict, all_rows: bool = F
             if rep:
                 role = role or clean(rep.get("role"))
                 org_group = clean(rep.get("branch")) or clean(rep.get("cluster"))
+        role, role_source = resolve_role(role)
         contacts.append(finish_contact({
             "source_id": cid, "account_source_id": aid, "full_name": full_name,
-            "first_name": first, "last_name": last or None, "role": role,
+            "first_name": first, "last_name": last or None, "role": role, "role_source": role_source,
             "email": (clean(c.get("email")) or "").lower() or None,
             "tel": clean(c.get("tel")), "cell": clean(c.get("cell")),
             "linkedin_contact_url": linkedin_url(c.get("linkedin_url")),
@@ -284,17 +295,27 @@ def load_flat(rows: list[dict], cfg: dict, all_rows: bool = False) -> tuple[list
         acct["latest_sellout"] = acct.get("latest_sellout") or parse_money(get(r, "latest_sellout"))
         acct["linkedin_company_url"] = acct.get("linkedin_company_url") or linkedin_url(get(r, "linkedin_company_url"))
         acct["rank"] = acct.get("rank") or as_int(get(r, "account_rank"))
+        for f in ("axis_partner", "milestone_partner", "installer_category"):
+            v = clean(get(r, f))
+            if v:
+                acct["extra"][f] = acct["extra"].get(f) or v
         first, last = clean(get(r, "first_name")), clean(get(r, "last_name"))
         if not first:
             first, last = split_name(full)
+        role, role_source = resolve_role(get(r, "role"))
+        allocated_rep = clean(get(r, "allocated_rep"))
+        allocated = 0 if (not allocated_rep or allocated_rep.lower() == "unallocated") else 1
+        ref = clean(get(r, "ref"))
         contacts.append(finish_contact({
-            "source_id": None, "account_source_id": key, "full_name": full, "first_name": first,
-            "last_name": last or None, "role": clean(get(r, "role")),
+            "source_id": f"REF:{ref}" if ref else None, "account_source_id": key, "full_name": full,
+            "first_name": first, "last_name": last or None, "role": role, "role_source": role_source,
             "email": (clean(get(r, "email")) or "").lower() or None,
             "tel": clean(get(r, "tel")), "cell": clean(get(r, "cell")),
             "linkedin_contact_url": linkedin_url(get(r, "linkedin_contact_url")),
             "segment": segment_of(get(r, "segment")), "org_group": None, "priority": rank,
             "image_filename": clean(get(r, "image_filename")), "extra": None,
+            "allocated_rep": allocated_rep, "allocated": allocated, "category": clean(get(r, "category")),
+            "in_zoho": yn(get(r, "in_zoho")), "in_makdb": yn(get(r, "in_makdb")),
             "city": clean(get(r, "city")), "province": clean(get(r, "province")), "country": clean(get(r, "country")),
         }))
     return list(accounts.values()), contacts
@@ -333,6 +354,10 @@ def _fold(into: dict, other: dict) -> None:
         elif k in ("priority", "rank"):
             vals = [x for x in (into.get(k), v) if x is not None]
             into[k] = min(vals) if vals else None
+        elif k == "role_source":
+            continue  # travels with 'role' below, not filled on its own
+        elif k == "role" and into.get(k) in (None, "") and v not in (None, ""):
+            into["role"], into["role_source"] = v, other.get("role_source")
         elif into.get(k) in (None, "") and v not in (None, ""):
             into[k] = v
 
@@ -436,6 +461,13 @@ def summary(conn) -> dict:
         "with_email": q("SELECT count(*) FROM contacts WHERE email IS NOT NULL"),
         "with_linkedin_url": q("SELECT count(*) FROM contacts WHERE linkedin_contact_url IS NOT NULL"),
         "with_face": q("SELECT count(*) FROM contacts WHERE image_status IN ('downloaded','manual')"),
+        "allocated": q("SELECT count(*) FROM contacts WHERE allocated = 1"),
+        "unallocated": q("SELECT count(*) FROM contacts WHERE allocated = 0"),
+        "role_pending": q("SELECT count(*) FROM contacts WHERE role IS NULL"),
+        "in_zoho_y": q("SELECT count(*) FROM contacts WHERE in_zoho = 'Y'"),
+        "in_makdb_y": q("SELECT count(*) FROM contacts WHERE in_makdb = 'Y'"),
+        "by_category": dict(conn.execute(
+            "SELECT coalesce(category,'(none)'), count(*) FROM contacts GROUP BY 1 ORDER BY 2 DESC").fetchall()),
         "by_segment": dict(conn.execute("SELECT segment, count(*) FROM contacts GROUP BY segment").fetchall()),
         "by_division": dict(conn.execute(
             "SELECT coalesce(a.division,'(none)'), count(*) FROM contacts c LEFT JOIN accounts a ON a.id=c.account_id "
