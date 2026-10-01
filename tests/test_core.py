@@ -14,9 +14,18 @@ def test_naming_convention(cfg):
     assert face_filename("competitor", "Leandro da Cunha", "Duxbury", cfg) == "Duxbury__Leandro_da_Cunha.jpg"
     assert face_filename("customer", "Anton Bothma", "Fidelity", cfg) == "CUST__Anton_Bothma.jpg"
     assert face_filename("internal", "Robyn-Lee Grove", "Elvey", cfg) == "INT__Robyn_Lee_Grove.jpg"
+    assert face_filename("supplier", "Dan Dealer", "SubD Co", cfg) == "SUPP__Dan_Dealer.jpg"
     assert parse_face_filename("Reditron__Gordon_Moore.jpg") == ("Reditron", "Gordon_Moore")
     assert parse_face_filename("random.jpg") is None
     assert split_name("Leandro da Cunha") == ("Leandro", "da Cunha")
+
+
+def test_supplier_face_token_round_trips(cfg):
+    from src.util import token_segment
+    assert token_segment("SUPP", cfg) == "supplier"
+    assert token_segment("CUST", cfg) == "customer"
+    assert token_segment("INT", cfg) == "internal"
+    assert token_segment("Duxbury", cfg) == "competitor"
 
 
 def test_resolve_role_and_yn():

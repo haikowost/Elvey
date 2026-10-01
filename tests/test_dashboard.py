@@ -147,6 +147,30 @@ def test_contact_class_and_reports_to_edits(cfg, loaded):
     assert cleared2["reports_to_id"] is None
 
 
+def test_segment_override_pins_a_contact_to_one_role(cfg, loaded):
+    """v4 §1: a dual-role account's contacts normally inherit every role it carries (Acme is
+    customer+supplier) but segment_override pins one contact to a single tab instead."""
+    c = TestClient(dashboard.create_app(cfg))
+    anna = next(p for g in c.get("/api/people").json()["customer"] for p in g["people"] if p["name"] == "Anna Smith")
+    assert anna["segment_override"] is None
+
+    assert c.post(f"/api/contacts/{anna['id']}", json={"segment_override": "distributor"}).status_code == 400
+
+    r = c.post(f"/api/contacts/{anna['id']}", json={"segment_override": "supplier"})
+    assert r.status_code == 200 and r.json()["contact"]["segment_override"] == "supplier"
+    tree = c.get("/api/people").json()
+    assert not any(p["name"] == "Anna Smith" for g in tree["customer"] for p in g["people"])
+    assert any(p["name"] == "Anna Smith" for g in tree["supplier"] for p in g["people"])
+    # Bob, un-pinned, still inherits both roles
+    assert any(p["name"] == "Bob Jones" for g in tree["customer"] for p in g["people"])
+    assert any(p["name"] == "Bob Jones" for g in tree["supplier"] for p in g["people"])
+
+    cleared = c.post(f"/api/contacts/{anna['id']}", json={"segment_override": ""}).json()["contact"]
+    assert cleared["segment_override"] is None
+    tree2 = c.get("/api/people").json()
+    assert any(p["name"] == "Anna Smith" for g in tree2["customer"] for p in g["people"])
+
+
 def test_engaged_contacts_sort_first_within_their_group(cfg, loaded):
     c = TestClient(dashboard.create_app(cfg))
     acme = next(g for g in c.get("/api/people").json()["customer"] if g["title"] == "Acme Security (Pty) Ltd")

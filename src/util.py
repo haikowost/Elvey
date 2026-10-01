@@ -85,6 +85,8 @@ def segment_token(segment: str, company: str | None, cfg: dict | None = None) ->
         return seg_cfg.get("customer_token", "CUST")
     if segment == "internal":
         return seg_cfg.get("internal_token", "INT")
+    if segment == "supplier":
+        return seg_cfg.get("supplier_token", "SUPP")
     for acct, token in (seg_cfg.get("competitor_accounts") or {}).items():
         if norm_company(acct) == norm_company(company):
             return token
@@ -111,6 +113,8 @@ def token_segment(token: str, cfg: dict | None = None) -> str:
         return "customer"
     if t == seg_cfg.get("internal_token", "INT").upper():
         return "internal"
+    if t == seg_cfg.get("supplier_token", "SUPP").upper():
+        return "supplier"
     return "competitor"
 
 

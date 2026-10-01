@@ -206,9 +206,10 @@ Kept small and reviewable, same pattern as every round so far — nothing here s
    supplier, from the sheet-hint inference) now shows under both branch tabs with the same
    people, until `segment_override` starts splitting individuals. The Customers branch sorts
    `engaged` contacts first within each group; a one-click "Engaged & allocated only" toggle and a
-   classification filter are there for when contacts start actually getting classified (nothing
-   does yet — Qreg/Zoho activity isn't wired up — so this doesn't default to hiding everyone on
-   today's unclassified data).
+   classification filter are there, now backed by real data (§2's Zoho + Qreg activity import,
+   wired up after this phase shipped) covering roughly a fifth of the roster so far — left as a
+   toggle rather than an actual default since that coverage is still partial, not because nothing
+   is classified.
 3. ✅ **Analyze/BI view.** 13 named panels (`src/analyze.py`): branch, account role, allocation,
    category, classification, department, region/branch, sellout by division/rep, in Zoho/in
    MakDB coverage, role-source coverage, face+summary coverage. Most are clickable — each slice
@@ -237,7 +238,8 @@ Kept small and reviewable, same pattern as every round so far — nothing here s
    the DB, not a re-shaping of the Table view's own data. .xlsx, since that's the sheet's native
    format and "where formatting matters" per this section's original framing. Shown next to
    Export CSV whenever the Customers or Suppliers branch is open, for whatever's currently
-   filtered/selected there.
+   filtered/selected there. The section 5 Zoho-sync narrowing (below) was found missing in the
+   final pass and fixed alongside this phase's own work.
 6. **Suppliers go live** once real supplier data exists to ingest — schema's already there from
    phase 1, this is just "point ingest at the sheet."
 
@@ -261,3 +263,33 @@ start: `account_roles`, `segment_override`, `contact_class`, `reports_to_id` plu
 seed migration, and the Zoho/sheet/LinkedIn account-role precedence. Qreg's actual shape (what
 system, what export/API) still needs nailing down as the first concrete step inside phase 1 — not
 a blocker to starting, since manual classification covers the gap until it's wired up.
+
+## Final pass (2026-10-01): gaps found against this spec, and fixed
+
+With all five build phases shipped, a re-read of this document against the actual code caught a
+few places where something promised here had quietly been left half-built or had gone stale.
+Fixed in the same pass, not deferred:
+
+- **§1's `SUPP` face-filename token** was promised ("reserves the supplier role/token now") but
+  never actually added — `segment_token()`/`token_segment()` only knew `customer`/`internal`,
+  so a supplier contact would've fallen through to the competitor-style per-company token logic.
+  Added `segments.supplier_token` (default `SUPP`) to both functions.
+- **§1's `segment_override`** was readable (`_effective_roles()` already honoured it) but had no
+  way to ever get *set* — no API field, no UI. Added it to `ContactUpdate`/`edit_contact`
+  (validated against `ACCOUNT_ROLES`), surfaced it on `/api/people`, and added a "Role" picker to
+  the contact card that only appears when the account actually carries more than one role.
+- **§5's Zoho "select all shown" narrowing** (`contact_class='engaged' AND allocated=1`) was
+  written up as the one sanctioned change to the sync mechanism, but never implemented — the diff
+  item didn't even carry `contact_class`/`allocated`, and "select all" picked every new/changed
+  contact regardless. Added both fields to `compute_diff()`'s contact item and narrowed the
+  button's behaviour to match; it now reads "Select all shown (engaged & allocated)" for contacts.
+- **Build-phase 2's checklist entry** still read "nothing [is classified] yet — Qreg/Zoho activity
+  isn't wired up," which stopped being true once the Zoho/Qreg activity import shipped later in
+  the same day. Reworded to match what README already said correctly.
+- **The Table view's column list** was missing `face` (the spec's explicit field list includes a
+  face thumbnail) — dropped during phase 4 for being "dense, bulk-BI" without updating the spec to
+  match. Added back as an optional (not default-on) column.
+
+All verified with the existing pytest suite (129 passing, 8 new) plus a fresh end-to-end
+Playwright pass: the role picker's set/clear round-trip, and the Zoho screen's narrowed
+select-all actually excluding an unclassified contact.

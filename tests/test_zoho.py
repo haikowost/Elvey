@@ -32,6 +32,18 @@ def test_pull_is_read_only_and_diff_statuses(cfg, loaded, fake_zoho):
     assert diff_item(d, "contact", "Bob Jones")["status"] == "new"
 
 
+def test_diff_contacts_carry_contact_class_and_allocated(cfg, loaded, fake_zoho):
+    """v4 §5: 'select all shown' narrows to engaged+allocated contacts, which needs these two
+    fields on the diff item in the first place -- they weren't there before this fix."""
+    loaded.execute("UPDATE contacts SET contact_class='engaged' WHERE full_name='Anna Smith'")
+    loaded.commit()
+    d = zoho.compute_diff(loaded, cfg)
+    anna = diff_item(d, "contact", "Anna Smith")
+    assert anna["contact_class"] == "engaged" and anna["allocated"] is True
+    bob = diff_item(d, "contact", "Bob Jones")
+    assert bob["contact_class"] is None and bob["allocated"] is True
+
+
 def test_dry_run_writes_nothing(cfg, loaded, fake_zoho):
     zoho.pull(loaded, cfg, fake_zoho, log=lambda *a: None)
     sels = zoho.select(zoho.compute_diff(loaded, cfg), "pending")

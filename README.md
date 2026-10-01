@@ -72,8 +72,10 @@ Schema + data foundation for the rebuild in `V4-SPEC.md` — no UI yet, just the
   `elvey_org_chart.md`) is a one-time seed of Elvey's actual reporting line (EXCO down to branch
   level) — run `python -m src.orgchart seed` once to import it. Editable afterwards via `POST
   /api/contacts/{id}` (`"reports_to_id": <id>`, or `0` to clear).
-- **`contacts.segment_override`**: column exists (pins a contact to one role when it differs from
-  its account's); not yet read or written anywhere — lands with the People Tree role-tab work.
+- **`contacts.segment_override`**: pins a contact to one role when it differs from its account's.
+  Readable from day one (`_effective_roles()` in phase 2 already honoured it); the ability to
+  actually *set* it — API field + a "Role" picker on the contact card, shown only when the
+  account carries more than one role — was a gap caught in the final pass and closed then.
 
 ### v4 phase 2 (2026-10-01): role-based tabs, Customers-branch scaling
 
@@ -143,6 +145,21 @@ Allocation panel's "Allocated" slice has something exact to drill into.)
   Table view already has. Shows next to Export CSV whenever the Customers or Suppliers branch is
   open. `Ref` has its ingest-time `REF:` prefix (`src/ingest.py`'s `source_id` convention)
   stripped back off, so it round-trips as the original sheet value.
+
+### v4 final pass (2026-10-01): closing gaps against the spec
+
+A re-read of `V4-SPEC.md` against the actual code after all five phases, catching a few things
+that had been promised but not quite finished, or had gone stale in the spec's own write-up (see
+`V4-SPEC.md`'s own "Final pass" section for the full list):
+
+- `segments.supplier_token` (`SUPP`) actually exists now — a supplier contact's face file gets
+  its own token instead of falling through to competitor-style per-company naming.
+- `segment_override` can now actually be set (not just read): `POST /api/contacts/{id}` takes it,
+  and the contact card grows a "Role" picker whenever the account carries more than one role.
+- The Zoho screen's "Select all shown" now actually narrows to `engaged`+`allocated` contacts, as
+  phase 5 was supposed to do — the diff item didn't carry those fields at all before this.
+- The Table view's column list gained back `face` (optional, not default-on), matching the
+  spec's original field list.
 
 ```
 config.yaml        paths, scope, caps, Zoho field mapping

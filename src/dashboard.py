@@ -16,7 +16,7 @@ from pydantic import BaseModel
 from . import analyze, chat, db, export, harvest, orgchart, zoho
 from .config import load_config
 from .images import coverage, update_account_kyc_status
-from .util import CONTACT_CLASSES, DEPARTMENTS, norm_company
+from .util import ACCOUNT_ROLES, CONTACT_CLASSES, DEPARTMENTS, norm_company
 
 CONTACT_STATUSES = ("active", "left", "not_relevant")
 
@@ -41,6 +41,7 @@ class ContactUpdate(BaseModel):
     linkedin_url: str | None = None        # pin the exact profile when search can't find them; re-queues
     contact_class: str | None = None       # engaged | lead | backlog, or "" to clear (v4 §2)
     reports_to_id: int | None = None       # contact-level org chart; 0 clears it (v4 §3)
+    segment_override: str | None = None    # pins one account_role; "" clears it, back to inheriting (v4 §1)
 
 
 class ChatMessage(BaseModel):
@@ -99,7 +100,7 @@ def people_tree(conn, cfg) -> dict:
             "match_confidence": extra_c.get("match_confidence"), "category": c["category"] or extra_c.get("category"),
             "allocated_rep": c["allocated_rep"], "allocated": bool(c["allocated"]),
             "in_zoho": c["in_zoho"], "in_makdb": c["in_makdb"], "role_source": c["role_source"],
-            "contact_class": c["contact_class"],
+            "contact_class": c["contact_class"], "segment_override": c["segment_override"],
             "reports_to": ({"id": c["reports_to_id"], "name": names_by_id.get(c["reports_to_id"])}
                             if c["reports_to_id"] else None),
             "zoho": bool(c["zoho_contact_id"]),
@@ -175,6 +176,11 @@ def edit_contact(conn, contact_id: int, req: dict) -> dict:
             if not db.one(conn, "SELECT id FROM contacts WHERE id = ?", [manager_id]):
                 raise ValueError("manager not found")
         changes["reports_to_id"] = manager_id
+    if "segment_override" in req:
+        override = req["segment_override"] or None
+        if override and override not in ACCOUNT_ROLES:
+            raise ValueError(f"unknown role '{override}'")
+        changes["segment_override"] = override
     target = None
     if req.get("create_account"):
         name = req["create_account"].strip()

@@ -51,6 +51,7 @@ segments:
     Reditron: Reditron
   customer_token: CUST
   internal_token: INT
+  supplier_token: SUPP   # reserved for v4 §1 — no supplier data to ingest yet (phase 6)
 
 harvest:
   daily_cap: 40          # LinkedIn page-sets per calendar day (search + profile = 1)

@@ -342,7 +342,8 @@ def compute_diff(conn, cfg) -> dict:
                                 "differs": bool(zrec) and bool(zacct) and zoho_acct_of_contact != zacct}
         if item["status"] == "in-sync" and (pending or item["account_link"]["differs"]):
             item["status"] = "changed"
-        item.update({"company": c["company"], "segment": c["segment"], "priority": c["priority"]})
+        item.update({"company": c["company"], "segment": c["segment"], "priority": c["priority"],
+                     "contact_class": c["contact_class"], "allocated": bool(c["allocated"])})
         contacts.append(item)
 
     def counts(items):

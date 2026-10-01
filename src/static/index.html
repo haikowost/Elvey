@@ -175,7 +175,7 @@ dialog pre { white-space: pre-wrap; font-size: 12px; max-height: 55vh; overflow:
       <input type="search" id="zq" placeholder="Filter…">
     </div>
     <div class="bar">
-      <button class="chip" id="zselall">Select all shown (new/changed)</button>
+      <button class="chip" id="zselall">Select all shown</button>
       <button class="chip" id="zclear">Clear selection</button>
       <span class="muted" id="zselcount">0 selected</span>
       <span style="flex:1"></span>
@@ -264,6 +264,9 @@ function statusOk(p, f) {
 // ---------------------------------------------------------------- People Tree
 const ALL_COLUMNS = [
   { key: 'name', label: 'Name', always: true, get: p => p.name },
+  { key: 'face', label: 'Face', get: p => p.face ? 'photo' : '',
+    html: p => p.face ? `<img src="${esc(p.face)}" style="width:28px;height:28px;border-radius:50%;object-fit:cover">`
+      : `<div class="face" style="width:28px;height:28px;font-size:10px;background:hsl(${hue(p.name)} 45% 45%)">${esc(initials(p.name))}</div>` },
   { key: 'role', label: 'Role', get: p => p.role || '' },
   { key: 'department', label: 'Department', get: p => p.department || '' },
   { key: 'company', label: 'Company', get: p => p.company || '' },
@@ -414,6 +417,7 @@ function renderTreeAsTable(groups, f) {
   }
   const head = cols.map(c => `<th data-col="${c.key}">${esc(c.label)}${T.sortKey === c.key ? (T.sortDir > 0 ? ' ▲' : ' ▼') : ''}</th>`).join('');
   const body = rows.map(({ p, g }) => `<tr class="row" data-pid="${p.id}">${cols.map(c => {
+    if (c.html) return `<td>${c.html(p, g)}</td>`;
     const v = c.get(p, g);
     const href = c.href && c.href(p);
     return `<td>${href ? `<a href="${esc(href)}" target="_blank" rel="noopener" data-stop>${esc(v)}</a>` : esc(v)}</td>`;
@@ -548,6 +552,9 @@ function contactCard(id) {
         <option value="active" ${p.contact_status === 'active' ? 'selected' : ''}>Active</option>
         <option value="left" ${p.contact_status === 'left' ? 'selected' : ''}>No longer at company</option>
         <option value="not_relevant" ${p.contact_status === 'not_relevant' ? 'selected' : ''}>Not relevant</option></select></label>
+      ${g && g.account_roles && g.account_roles.length > 1 ? `<label title="This account is ${g.account_roles.join(' + ')} — pin this one contact to a single role instead of showing them under all of them">Role <select id="ccrole">
+        <option value="">— inherits all of: ${esc(g.account_roles.join(', '))} —</option>
+        ${g.account_roles.map(r => `<option value="${esc(r)}" ${p.segment_override === r ? 'selected' : ''}>${esc(r)} only</option>`).join('')}</select></label>` : ''}
       <input type="search" id="ccnote" placeholder="Note (optional)" value="${esc(p.status_note || '')}">
       <button class="btn" data-act="save">Save</button>
     </div>
@@ -580,7 +587,8 @@ function contactCard(id) {
       : act === 'left' ? { contact_status: 'left', status_note: p.now_at ? 'LinkedIn: now at ' + p.now_at : null }
       : act === 'keep' ? { keep_account: true }
       : act === 'reactivate' ? { contact_status: 'active' }
-      : act === 'save' ? { department: $('#ccdept').value, contact_status: $('#ccstatus').value, status_note: $('#ccnote').value }
+      : act === 'save' ? { department: $('#ccdept').value, contact_status: $('#ccstatus').value, status_note: $('#ccnote').value,
+                           ...($('#ccrole') ? { segment_override: $('#ccrole').value } : {}) }
       : null;
     let payload = body;
     if (act === 'moveto') {
@@ -702,6 +710,7 @@ function toggleSel(i, on) {
 function loadDiffRender() {
   document.querySelectorAll('[data-e]').forEach(b => b.classList.toggle('on', b.dataset.e === Z.entity));
   document.querySelectorAll('[data-s]').forEach(b => b.classList.toggle('on', b.dataset.s === Z.status));
+  $('#zselall').textContent = Z.entity === 'contact' ? 'Select all shown (engaged & allocated)' : 'Select all shown';
   const items = visibleItems();
   let html = '';
   items.slice(0, Z.limit).forEach(i => {
@@ -749,7 +758,14 @@ function detail(i, sel) {
 }
 $('#zq').oninput = () => loadDiffRender();
 $('#zmore').onclick = () => { Z.limit += 200; loadDiffRender(); };
-$('#zselall').onclick = () => { visibleItems().filter(i => i.status !== 'in-sync').forEach(i => toggleSel(i, true)); loadDiffRender(); };
+$('#zselall').onclick = () => {
+  // v4 §5: "select all" never pre-selects a lead/backlog/unallocated contact — that's still a
+  // deliberate individual pick, same People Tree filter semantics as the engaged+allocated chip.
+  visibleItems().filter(i => i.status !== 'in-sync')
+    .filter(i => i.entity !== 'contact' || (i.contact_class === 'engaged' && i.allocated))
+    .forEach(i => toggleSel(i, true));
+  loadDiffRender();
+};
 $('#zclear').onclick = () => { Z.sel.clear(); loadDiffRender(); };
 $('#zpull').onclick = async () => {
   $('#zpull').disabled = true; $('#zpulled').textContent = 'Pulling from Zoho…';
