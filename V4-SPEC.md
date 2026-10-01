@@ -131,17 +131,20 @@ generalises the same shape to two more destinations.
   narrows to `contact_class='engaged' AND allocated=1`. Leads and backlog are never pre-selected —
   pushing them, if ever wanted, is still a deliberate individual selection, not a side effect of
   "select all."
-- **Quote template export** — a new, separate export: pick an account (or a filtered set of
-  accounts/contacts) and generate the file in whatever layout the sales quote template expects
-  (company/contact details, address, the fields the quote needs on its cover sheet). **I need the
-  actual template file (or at minimum its field list/cell layout)** to map DB columns to it
-  correctly — this is a "fill in a specific target shape," not a generic export, so I can't spec
-  the mapping without seeing it.
+- **Quote template export** — confirmed simpler than first assumed: it's the **same column
+  layout as the consolidated contact list** (`Ref, Full Name, Role, Region/Branch, Office Tel,
+  Cell number, Email Address, Linkedin, Company name, ACCNO, Axis Partner, Milestone Partner,
+  Installer Category, AM, Category, In Zoho, In MakDB, Cluster, Sort`) — the same shape ingest
+  already reads, just written back out from the current DB state (including anything the harvester
+  or a manual edit has since filled in), for whatever account/contacts are currently
+  filtered/selected. No bespoke template to map against — this is a round-trip export, not a new
+  format.
 - **Ad-hoc reports/exports** — generalises the Table view's CSV export (section 4) into a proper
   first-class action: whatever is currently filtered — a People Tree branch filter, an Analyze-view
   drilldown slice, a saved Table-view column set — can be exported (CSV, and XLSX where formatting
-  matters) from wherever it's shown, not just from the Table view specifically. Same underlying
-  mechanism as the Quote export, just with a generic column layout instead of a fixed template.
+  matters) from wherever it's shown, not just from the Table view specifically. The Quote export
+  above is really just one named **preset** of this same mechanism (the consolidated-list column
+  set); any other column set is exportable the same way.
 
 ## Build phases
 
@@ -156,7 +159,8 @@ Kept small and reviewable, same pattern as every round so far — nothing here s
 4. **Table view + org chart.** Configurable columns; the contact-level org-chart rendering
    (Internal, and within any large customer account).
 5. **Exports.** Generic filtered CSV/XLSX export (from People Tree, Analyze, and Table views
-   alike), then the Quote template export once I have the template to map against.
+   alike) with the consolidated-list column set as the Quote-export preset — both ship together,
+   same mechanism.
 6. **Suppliers go live** once real supplier data exists to ingest — schema's already there from
    phase 1, this is just "point ingest at the sheet."
 
@@ -184,5 +188,3 @@ Kept small and reviewable, same pattern as every round so far — nothing here s
    source — for Elvey's own staff, or for any large customer's internal structure — worth a
    one-time import (an org chart slide, an HR list, a customer-supplied contact list with titles)
    instead of starting every account's hierarchy from a blank slate?
-4. **The Quote template itself**: can you share the actual template file (or its field/cell
-   layout)? I can't spec or build that export without seeing the target shape it needs to fill.
