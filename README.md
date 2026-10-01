@@ -40,6 +40,28 @@ D+ to triage), and `In Zoho` / `In MakDB` seed flags. What changed:
   `contacts.in_makdb`); whether a contact is *actually* linked in Zoho right now is still the
   separate, live `zoho_contact_id` (shown as the "in Zoho" tag) that `src/zoho.py` maintains.
 
+### v4 phase 1 (2026-10-01): account roles, contact classification, org-chart seed
+
+Schema + data foundation for the rebuild in `V4-SPEC.md` — no UI yet, just the DB/API groundwork.
+
+- **`account_roles`** (`src/orgchart.py`): an account can be more than one thing (a sub-distributor
+  is a customer *and* a supplier). `sync_account_roles()` runs on every ingest — it tags every
+  account with its primary `segment` role, then infers `supplier` from the sheet's
+  `Axis Partner`/`Milestone Partner`/`Installer Category` hints. (The Zoho step of that precedence,
+  and the LinkedIn-title fallback for when neither source hints at it, aren't wired up yet —
+  `infer_supplier_from_title()` exists and is tested, just not called from the harvester.)
+- **`contacts.contact_class`** (`engaged`/`lead`/`backlog`, nullable): the Customers-branch
+  signal-to-noise filter. Nothing auto-classifies yet — Qreg/Zoho activity, the intended trigger,
+  isn't wired up — so every contact starts unclassified until set manually via `POST
+  /api/contacts/{id}` (`"contact_class": "engaged"`, or `""` to clear).
+- **`contacts.reports_to_id`**: contact-level org chart, usable for Elvey's own staff and for any
+  large customer's internal structure alike. `seed_data/elvey_org_chart.json` (+ the human-readable
+  `elvey_org_chart.md`) is a one-time seed of Elvey's actual reporting line (EXCO down to branch
+  level) — run `python -m src.orgchart seed` once to import it. Editable afterwards via `POST
+  /api/contacts/{id}` (`"reports_to_id": <id>`, or `0` to clear).
+- **`contacts.segment_override`**: column exists (pins a contact to one role when it differs from
+  its account's); not yet read or written anywhere — lands with the People Tree role-tab work.
+
 ```
 config.yaml        paths, scope, caps, Zoho field mapping
 .env               Zoho credentials (copy .env.example; never committed)
@@ -47,8 +69,10 @@ src/schema.sql     accounts, contacts, harvest_log, zoho_records (mirror), zoho_
 src/ingest.py      consolidation workbook -> DB
 src/images.py      face library -> contacts, coverage, data/to_enrich.csv
 src/harvest.py     LinkedIn face + summary + work history (Playwright, persistent profile)
+src/orgchart.py    account_roles sync + the one-time org-chart reports_to_id seed (v4 phase 1)
 src/dashboard.py   FastAPI app + src/static/index.html
 src/zoho.py        auth, pull, diff, push selected, photo upload, id write-back
+seed_data/         one-time import sources (the Elvey org chart)
 tests/             pytest suite (synthetic data only)
 ```
 

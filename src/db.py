@@ -19,6 +19,8 @@ MIGRATIONS = {
         ("city", "TEXT"), ("province", "TEXT"), ("country", "TEXT"), ("location_source", "TEXT"),
         ("role_source", "TEXT"), ("allocated_rep", "TEXT"), ("allocated", "INTEGER NOT NULL DEFAULT 1"),
         ("category", "TEXT"), ("in_zoho", "TEXT"), ("in_makdb", "TEXT"),
+        ("segment_override", "TEXT"), ("contact_class", "TEXT"),
+        ("reports_to_id", "INTEGER REFERENCES contacts(id)"),
     ],
 }
 
@@ -41,6 +43,8 @@ def connect(db_path: str | Path) -> sqlite3.Connection:
     conn.executescript(SCHEMA.read_text(encoding="utf-8"))
     _migrate(conn)
     conn.execute("CREATE INDEX IF NOT EXISTS ix_contacts_status ON contacts(contact_status)")
+    conn.execute("CREATE INDEX IF NOT EXISTS ix_contacts_reports_to ON contacts(reports_to_id)")
+    conn.execute("CREATE INDEX IF NOT EXISTS ix_contacts_class ON contacts(contact_class)")
     return conn
 
 

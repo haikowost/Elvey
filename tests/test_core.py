@@ -1,9 +1,9 @@
 import csv
 import json
 
-from src import db, harvest, images, ingest
-from src.util import (category_rank, face_filename, norm_company, parse_face_filename, parse_money, resolve_role,
-                      slug, split_name, yn)
+from src import db, harvest, images, ingest, orgchart
+from src.util import (category_rank, face_filename, infer_supplier_from_title, norm_company, parse_face_filename,
+                      parse_money, resolve_role, slug, split_name, yn)
 
 
 # ------------------------------------------------------------------ util
@@ -267,6 +267,8 @@ def test_old_database_is_upgraded(tmp_path):
     c = db.connect(path)
     c.execute("INSERT INTO contacts(full_name, name_norm) VALUES ('Old Row', 'old row')")
     c.execute("DROP INDEX ix_contacts_status")
+    c.execute("DROP INDEX ix_contacts_reports_to")
+    c.execute("DROP INDEX ix_contacts_class")
     for col, _ in db.MIGRATIONS["contacts"]:
         c.execute(f"ALTER TABLE contacts DROP COLUMN {col}")
     c.commit()
@@ -281,4 +283,79 @@ def test_split_location():
     assert split_location("Gaborone, Botswana") == ("Gaborone", None, "Botswana")
     assert split_location("South Africa") == (None, None, "South Africa")
     assert split_location("  Cape Town ,  Western Cape , South Africa ") == ("Cape Town", "Western Cape", "South Africa")
+
+
+# ------------------------------------------------------------------ v4 phase 1: account_roles + org-chart seed
+
+def test_infer_supplier_from_title():
+    assert infer_supplier_from_title("Installer Technician")
+    assert infer_supplier_from_title("Regional Distributor")
+    assert infer_supplier_from_title("Authorised Reseller")
+    assert not infer_supplier_from_title("Sales Account Manager")
+    assert not infer_supplier_from_title(None)
+
+
+def test_sync_account_roles_primary_and_supplier_inference(cfg, conn):
+    ingest.run(cfg)  # already calls sync_account_roles once; re-run directly to check idempotency too
+    acme = db.one(conn, "SELECT id FROM accounts WHERE name='Acme Security (Pty) Ltd'")['id']
+    beta = db.one(conn, "SELECT id FROM accounts WHERE name='Beta Integrators'")['id']
+    assert orgchart.roles_for_account(conn, acme) == ["customer", "supplier"]  # has axis_partner 'Silver'
+    assert orgchart.roles_for_account(conn, beta) == ["customer"]  # no axis/milestone/installer hint
+    before = orgchart.roles_for_account(conn, acme)
+    orgchart.sync_account_roles(conn)  # idempotent: no duplicate rows, no error
+    assert orgchart.roles_for_account(conn, acme) == before
+
+
+def test_add_account_role_rejects_unknown_role(conn):
+    acct_id = db.insert(conn, "accounts", {"name": "X", "name_norm": "x", "segment": "customer"})
+    conn.commit()
+    try:
+        orgchart.add_account_role(conn, acct_id, "distributor", "manual")
+        assert False, "expected ValueError"
+    except ValueError:
+        pass
+
+
+def test_seed_reports_to_builds_chain_and_is_idempotent(conn):
+    seed = [
+        {"name": "Big Boss", "title": "CEO", "reports_to": None},
+        {"name": "Middle Manager", "title": "Director", "reports_to": "Big Boss"},
+        {"name": "Departed Person", "title": "Old Role", "reports_to": "Middle Manager", "left": True},
+    ]
+    out = orgchart.seed_reports_to(conn, seed)
+    assert out == {"nodes": 3, "matched": 0, "created": 3, "linked": 2}
+    boss = db.one(conn, "SELECT * FROM contacts WHERE full_name='Big Boss'")
+    mgr = db.one(conn, "SELECT * FROM contacts WHERE full_name='Middle Manager'")
+    dep = db.one(conn, "SELECT * FROM contacts WHERE full_name='Departed Person'")
+    assert boss["reports_to_id"] is None and boss["segment"] == "internal"
+    assert mgr["reports_to_id"] == boss["id"]
+    assert dep["reports_to_id"] == mgr["id"] and dep["contact_status"] == "left"
+
+    # re-running matches the existing contacts instead of duplicating them
+    out2 = orgchart.seed_reports_to(conn, seed)
+    assert out2 == {"nodes": 3, "matched": 3, "created": 0, "linked": 2}
+    assert db.one(conn, "SELECT count(*) n FROM contacts WHERE full_name='Big Boss'")["n"] == 1
+
+
+def test_seed_reports_to_matches_existing_internal_contact(cfg, conn):
+    ingest.run(cfg)  # seeds Jaco Moolman as an internal contact already
+    jaco_before = db.one(conn, "SELECT id FROM contacts WHERE full_name='Jaco Moolman'")
+    out = orgchart.seed_reports_to(conn, [{"name": "Jaco Moolman", "title": "Chief Executive Officer",
+                                            "reports_to": None}])
+    assert out == {"nodes": 1, "matched": 1, "created": 0, "linked": 0}
+    jaco_after = db.one(conn, "SELECT id FROM contacts WHERE full_name='Jaco Moolman'")
+    assert jaco_before["id"] == jaco_after["id"]
+
+
+def test_real_org_chart_seed_file_is_well_formed():
+    """The committed seed_data/elvey_org_chart.json loads and every reports_to points at a name
+    that appears earlier in the list (so seed_reports_to can always resolve the manager first)."""
+    seed = orgchart._load_seed()
+    assert len(seed) > 50
+    seen = set()
+    for node in seed:
+        assert node["name"] and node.get("title")
+        if node.get("reports_to"):
+            assert node["reports_to"] in seen, f"{node['name']} reports to {node['reports_to']} before they appear"
+        seen.add(node["name"])
     assert split_location(None) == (None, None, None) and split_location("") == (None, None, None)

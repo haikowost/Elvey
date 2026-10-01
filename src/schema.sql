@@ -45,6 +45,9 @@ CREATE TABLE IF NOT EXISTS contacts (
     category             TEXT,               -- call cadence: A weekly, B monthly, C ad-hoc, D+ to triage
     in_zoho              TEXT,               -- Y|N|Company only, from the source sheet; kept live thereafter
     in_makdb             TEXT,               -- Y|N, from the source sheet
+    segment_override     TEXT,               -- pins one role when it differs from the account's (v4 §1)
+    contact_class        TEXT,               -- engaged|lead|backlog; NULL = unclassified (v4 §2)
+    reports_to_id        INTEGER REFERENCES contacts(id),  -- contact-level org chart, any account (v4 §3)
     email                TEXT,
     tel                  TEXT,
     cell                 TEXT,
@@ -118,4 +121,14 @@ CREATE TABLE IF NOT EXISTS zoho_sync_log (
 CREATE TABLE IF NOT EXISTS meta (
     key   TEXT PRIMARY KEY,
     value TEXT
+);
+
+-- An account can be more than one thing (e.g. a sub-distributor is a customer AND a supplier).
+-- accounts.segment stays the primary role; this is the authoritative full set (v4 spec §1).
+CREATE TABLE IF NOT EXISTS account_roles (
+    account_id INTEGER NOT NULL REFERENCES accounts(id),
+    role       TEXT NOT NULL,               -- customer|supplier|competitor|internal
+    source     TEXT NOT NULL,               -- primary|zoho|sheet|linkedin|manual
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (account_id, role)
 );

@@ -17,7 +17,7 @@ from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any, Iterable
 
-from . import db
+from . import db, orgchart
 from .config import load_config
 from .util import (DEPT_RANK, LOC_RANK, as_int, category_rank, classify_department, clean, format_phone, linkedin_url,
                    norm_company, norm_name, parse_face_filename, parse_money, resolve_role, segment_of, split_name, yn)
@@ -501,8 +501,9 @@ def run(cfg, file: str | None = None, all_rows: bool = False) -> dict:
         accounts, contacts = load_flat(rows, cfg, all_rows)
     conn = db.connect(cfg.db_path)
     stats = upsert(conn, accounts, contacts)
+    roles = orgchart.sync_account_roles(conn)
     return {"input": str(path), "loaded": {"accounts": len(accounts), "contacts": len(contacts)}, "upsert": stats,
-            "db": summary(conn)}
+            "account_roles": roles, "db": summary(conn)}
 
 
 def main(argv: list[str] | None = None) -> None:

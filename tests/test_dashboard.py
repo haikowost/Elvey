@@ -22,10 +22,19 @@ def test_dashboard_endpoints(cfg, loaded):
     assert {g["title"] for g in tree["competitor"]} == {"Duxbury", "Reditron"}
     # v3: rows without an AM/allocation column (this old relational fixture) count as allocated
     assert anna["allocated"] is True and anna["allocated_rep"] is None
+    # v4: Acme has an axis_partner hint -> also tagged supplier; the group carries its account_roles
+    assert acme["account_roles"] == ["customer", "supplier"]
+    assert anna["contact_class"] is None and anna["reports_to"] is None
+
+    accts = c.get("/api/accounts").json()
+    assert next(a for a in accts if a["name"] == "Acme Security (Pty) Ltd")["roles"] == ["customer", "supplier"]
+    assert next(a for a in accts if a["name"] == "Beta Integrators")["roles"] == ["customer"]
 
     stats = c.get("/api/stats").json()
     assert stats["contacts"] == 6 and stats["live_enabled"] is False
     assert stats["allocated"] == 6 and stats["unallocated"] == 0 and stats["reps"] == [] and stats["categories"] == []
+    assert stats["contact_classes"] == {"unclassified": 6}
+    assert stats["account_roles"]["customer"] == 2 and stats["account_roles"]["supplier"] == 1
 
     d = c.get("/api/zoho/diff").json()
     assert d["pulled_at"] is None and d["summary"]["accounts"]["new"] >= 2
@@ -70,6 +79,30 @@ def test_contact_card_edits(cfg, loaded):
     bob2 = next(p for g in tree["customer"] for p in g["people"] if p["name"] == "Bob Jones")
     assert bob2["company"] == "Zeta Security" and len(bob2["previous_accounts"]) == 2
     assert "departments" in c.get("/api/stats").json()
+
+
+def test_contact_class_and_reports_to_edits(cfg, loaded):
+    c = TestClient(dashboard.create_app(cfg))
+    people = {p["name"]: p for g in c.get("/api/people").json()["customer"] for p in g["people"]}
+    bob, anna = people["Bob Jones"], people["Anna Smith"]
+
+    r = c.post(f"/api/contacts/{bob['id']}", json={"contact_class": "engaged"})
+    assert r.status_code == 200 and r.json()["contact"]["contact_class"] == "engaged"
+    assert c.post(f"/api/contacts/{bob['id']}", json={"contact_class": "urgent"}).status_code == 400
+    cleared = c.post(f"/api/contacts/{bob['id']}", json={"contact_class": ""}).json()["contact"]
+    assert cleared["contact_class"] is None
+
+    r = c.post(f"/api/contacts/{bob['id']}", json={"reports_to_id": anna["id"]})
+    assert r.status_code == 200
+    tree = c.get("/api/people").json()
+    bob2 = next(p for g in tree["customer"] for p in g["people"] if p["name"] == "Bob Jones")
+    assert bob2["reports_to"] == {"id": anna["id"], "name": "Anna Smith"}
+
+    assert c.post(f"/api/contacts/{bob['id']}", json={"reports_to_id": bob["id"]}).status_code == 400
+    assert c.post(f"/api/contacts/{bob['id']}", json={"reports_to_id": 999999}).status_code == 400
+
+    cleared2 = c.post(f"/api/contacts/{bob['id']}", json={"reports_to_id": 0}).json()["contact"]
+    assert cleared2["reports_to_id"] is None
 
 
 def test_verify_endpoints(cfg, loaded):

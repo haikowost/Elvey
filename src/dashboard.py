@@ -13,10 +13,10 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from pydantic import BaseModel
 
-from . import chat, db, harvest, zoho
+from . import chat, db, harvest, orgchart, zoho
 from .config import load_config
 from .images import coverage, update_account_kyc_status
-from .util import DEPARTMENTS, norm_company
+from .util import CONTACT_CLASSES, DEPARTMENTS, norm_company
 
 CONTACT_STATUSES = ("active", "left", "not_relevant")
 
@@ -39,6 +39,8 @@ class ContactUpdate(BaseModel):
     create_account: str | None = None      # re-allocate to a new account with this name
     keep_account: bool | None = None       # LinkedIn "moved" flag is wrong: keep them where they are
     linkedin_url: str | None = None        # pin the exact profile when search can't find them; re-queues
+    contact_class: str | None = None       # engaged | lead | backlog, or "" to clear (v4 §2)
+    reports_to_id: int | None = None       # contact-level org chart; 0 clears it (v4 §3)
 
 
 class ChatMessage(BaseModel):
@@ -53,7 +55,11 @@ class PushRequest(BaseModel):
 
 def people_tree(conn, cfg) -> dict:
     accounts = {a["id"]: a for a in db.rows(conn, "SELECT * FROM accounts")}
+    account_roles: dict[int, list[str]] = {}
+    for r in db.rows(conn, "SELECT account_id, role FROM account_roles ORDER BY role"):
+        account_roles.setdefault(r["account_id"], []).append(r["role"])
     contacts = db.rows(conn, "SELECT * FROM contacts ORDER BY priority IS NULL, priority, full_name")
+    names_by_id = {c["id"]: c["full_name"] for c in contacts}
     groups: dict[tuple, dict] = {}
     for c in contacts:
         a = accounts.get(c["account_id"]) or {}
@@ -78,6 +84,7 @@ def people_tree(conn, cfg) -> dict:
                    {"division": None, "rep": None, "sellout": None, "brand_focus": None, "allocation": None}),
                 "concerns": (extra.get("tasha_concerns") or "").strip(" ;") or None,
                 "tags": tags, "zoho": bool(a.get("zoho_account_id")), "people": [],
+                "account_roles": account_roles.get(a.get("id"), []),
             }
         extra_c = db.jload(c["extra"], {})
         groups[key]["people"].append({
@@ -99,6 +106,9 @@ def people_tree(conn, cfg) -> dict:
             "match_confidence": extra_c.get("match_confidence"), "category": c["category"] or extra_c.get("category"),
             "allocated_rep": c["allocated_rep"], "allocated": bool(c["allocated"]),
             "in_zoho": c["in_zoho"], "in_makdb": c["in_makdb"], "role_source": c["role_source"],
+            "contact_class": c["contact_class"],
+            "reports_to": ({"id": c["reports_to_id"], "name": names_by_id.get(c["reports_to_id"])}
+                            if c["reports_to_id"] else None),
             "zoho": bool(c["zoho_contact_id"]),
         })
     out = {seg: [] for seg in BRANCH_ORDER}
@@ -128,6 +138,19 @@ def edit_contact(conn, contact_id: int, req: dict) -> dict:
         changes["contact_status"] = req["contact_status"]
     if "status_note" in req:
         changes["status_note"] = req["status_note"] or None
+    if "contact_class" in req:
+        cls = req["contact_class"] or None
+        if cls and cls not in CONTACT_CLASSES:
+            raise ValueError(f"unknown contact class '{cls}'")
+        changes["contact_class"] = cls
+    if "reports_to_id" in req:
+        manager_id = req["reports_to_id"] or None
+        if manager_id:
+            if manager_id == contact_id:
+                raise ValueError("a contact cannot report to themselves")
+            if not db.one(conn, "SELECT id FROM contacts WHERE id = ?", [manager_id]):
+                raise ValueError("manager not found")
+        changes["reports_to_id"] = manager_id
     target = None
     if req.get("create_account"):
         name = req["create_account"].strip()
@@ -195,6 +218,10 @@ def create_app(cfg=None) -> FastAPI:
                 "SELECT DISTINCT allocated_rep FROM contacts WHERE allocated_rep IS NOT NULL ORDER BY 1")]
             cats = [r[0] for r in conn.execute(
                 "SELECT DISTINCT category FROM contacts WHERE category IS NOT NULL ORDER BY 1")]
+            class_counts = {r[0]: r[1] for r in conn.execute(
+                "SELECT COALESCE(contact_class, 'unclassified'), count(*) FROM contacts GROUP BY 1")}
+            role_counts = {r[0]: r[1] for r in conn.execute(
+                "SELECT role, count(*) FROM account_roles GROUP BY 1")}
             return {"accounts": q("SELECT count(*) FROM accounts"), "contacts": q("SELECT count(*) FROM contacts"),
                     "coverage": coverage(conn), "zoho_pulled_at": zoho.get_meta(conn, "zoho_pulled_at"),
                     "live_enabled": bool((cfg.get("zoho") or {}).get("live_enabled")),
@@ -202,13 +229,16 @@ def create_app(cfg=None) -> FastAPI:
                     "relevant_departments": list((cfg.get("dashboard") or {}).get("relevant_departments") or []),
                     "allocated": q("SELECT count(*) FROM contacts WHERE allocated = 1"),
                     "unallocated": q("SELECT count(*) FROM contacts WHERE allocated = 0"),
-                    "reps": reps, "categories": cats,
+                    "reps": reps, "categories": cats, "contact_classes": class_counts, "account_roles": role_counts,
                     "last_ingest": (conn.execute("SELECT value FROM meta WHERE key='last_ingest'").fetchone() or [None])[0]}
 
     @app.get("/api/accounts")
     def accounts_list():
         with lock:
-            return db.rows(conn, "SELECT id, name, segment, rank FROM accounts ORDER BY rank IS NULL, rank, name")
+            accts = db.rows(conn, "SELECT id, name, segment, rank FROM accounts ORDER BY rank IS NULL, rank, name")
+            for a in accts:
+                a["roles"] = orgchart.roles_for_account(conn, a["id"])
+            return accts
 
     @app.post("/api/contacts/{contact_id}")
     def update_contact(contact_id: int, req: ContactUpdate):

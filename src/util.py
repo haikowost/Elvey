@@ -7,6 +7,11 @@ from typing import Any
 
 SEGMENTS = ("competitor", "internal", "customer")
 
+# v4: an account can carry more than one of these at once (account_roles); contact_class is the
+# Customers-branch signal-to-noise filter (v4 spec §2).
+ACCOUNT_ROLES = ("customer", "supplier", "competitor", "internal")
+CONTACT_CLASSES = ("engaged", "lead", "backlog")
+
 _COMPANY_SUFFIXES = {
     "pty", "ltd", "limited", "proprietary", "cc", "inc", "llc", "plc", "npc", "soc",
     "co", "company", "corp", "corporation", "group", "holdings", "sa", "rsa",
@@ -241,6 +246,15 @@ def category_rank(category: str | None) -> int:
     an accidental spreadsheet-row-order artifact. Unknown/blank categories sort last."""
     s = (category or "").strip().upper()[:1]
     return _CATEGORY_RANK.get(s, 50)
+
+
+# last-resort account-role signal (v4 spec §1): a LinkedIn job title that reads installer/
+# distributor/reseller-shaped tags the account 'supplier' when Zoho and the sheet gave no hint.
+_SUPPLIER_TITLE_RE = re.compile(r"install|distribut|reseller|wholesal|dealer", re.IGNORECASE)
+
+
+def infer_supplier_from_title(title: str | None) -> bool:
+    return bool(title) and bool(_SUPPLIER_TITLE_RE.search(title))
 
 
 def yn(value: Any) -> str | None:
