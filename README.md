@@ -105,6 +105,29 @@ in sync. The three coverage panels have no matching filter control yet and are i
 only. (Picked up a `frep` filter option while at it — `__alloc`, "Allocated only" — so the
 Allocation panel's "Allocated" slice has something exact to drill into.)
 
+### v4 phase 4 (2026-10-01): Table view + org chart
+
+- **Table view.** A Cards/Table toggle in the People Tree's filter bar (`src/static/index.html`)
+  — same filters, same branch tabs, just a different render. Table mode flattens everyone
+  currently matching into one sortable grid (click a header to sort, click again to reverse) over
+  16 possible columns (name, role, department, company, region, rep, category, classification,
+  email, phone, LinkedIn, employment status, in-Zoho/in-MakDB, priority, reports-to); which ones
+  show is checkbox-picked via a **Columns** popover and remembered in `localStorage` across
+  reloads. **Export CSV** writes exactly the currently filtered/sorted/shown table, client-side.
+- **Org chart.** A read-only indented tree, built client-side from each group's own `reports_to`
+  field (no new endpoint needed — `/api/people` already carries it) — reuses face photos the same
+  way cards do. Renders under any People Tree group that has at least one actual reporting line
+  in it: Internal's contacts all land in one "(no account)" group once `python -m src.orgchart
+  seed` has run, so the whole Elvey chart renders there; a customer account's chart fills in as
+  its own contacts get a "Reports to" set.
+- **Contact card** grew a "Reports to" / "Direct reports" display (click either to jump to that
+  person's card) plus a "Reports to…" picker with a datalist scoped to the same group (same
+  account, or Internal) — the normal case from phase 1 §3. The rare cross-account picker is still
+  out of scope.
+- Verified end-to-end with Playwright against a real Chromium build: table render/sort/column-
+  persistence/CSV export, org-chart render, and the reports-to picker's set/clear round-trip —
+  all against the real 62-person org-chart seed data from phase 1.
+
 ```
 config.yaml        paths, scope, caps, Zoho field mapping
 .env               Zoho credentials (copy .env.example; never committed)

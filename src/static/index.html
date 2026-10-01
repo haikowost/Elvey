@@ -69,6 +69,18 @@ input[type=search] { padding: 7px 10px; border: 1px solid var(--line); border-ra
 .panel .slice.click:hover { background: var(--bg); }
 .panel .slice .v { font-variant-numeric: tabular-nums; color: var(--muted); white-space: nowrap; }
 .panel .total { margin-top: 8px; font-size: 11.5px; color: var(--muted); text-align: right; }
+#colpick { position: relative; }
+#colpick summary { list-style: none; }
+#colpick summary::-webkit-details-marker { display: none; }
+#colpicklist { position: absolute; right: 0; top: calc(100% + 4px); z-index: 20; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; box-shadow: var(--panel) 0 0 0; min-width: 200px; max-height: 320px; overflow: auto; }
+#colpicklist label { display: flex; align-items: center; gap: 6px; padding: 3px 0; font-size: 13px; white-space: nowrap; }
+.orgchart { padding: 6px 14px 12px; border-top: 1px dashed var(--line); }
+.orgchart .hint { font-size: 11px; color: var(--muted); margin-bottom: 6px; }
+.orgnode { margin-top: 4px; }
+.orgrow { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; padding: 2px 6px; border-radius: 6px; font-size: 12.5px; }
+.orgrow:hover { background: var(--bg); }
+.orgrow .face { width: 24px; height: 24px; font-size: 10px; }
+.cc-reports ul { margin: 4px 0; padding-left: 18px; font-size: 13px; }
 table { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
 th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
 th { font-size: 12px; color: var(--muted); font-weight: 600; background: var(--bg); }
@@ -132,6 +144,14 @@ dialog pre { white-space: pre-wrap; font-size: 12px; max-height: 55vh; overflow:
         <option value="__none">Unclassified</option>
       </select>
       <button class="chip hidden" id="fengaged" title="Only engaged, allocated contacts — the clean CRM core">Engaged &amp; allocated only</button>
+      <span style="flex:1"></span>
+      <button class="chip on" id="vcards">Cards</button>
+      <button class="chip" id="vtable">Table</button>
+      <details id="colpick" class="hidden">
+        <summary class="chip">Columns</summary>
+        <div id="colpicklist"></div>
+      </details>
+      <button class="chip hidden" id="texport">Export CSV</button>
       <button class="chip" id="expand">Expand all</button>
     </div>
     <div id="tree"></div>
@@ -241,7 +261,33 @@ function statusOk(p, f) {
 }
 
 // ---------------------------------------------------------------- People Tree
-const T = { data: null, branch: 'customer', override: new Map(), expandAll: false, engagedOnly: false };
+const ALL_COLUMNS = [
+  { key: 'name', label: 'Name', always: true, get: p => p.name },
+  { key: 'role', label: 'Role', get: p => p.role || '' },
+  { key: 'department', label: 'Department', get: p => p.department || '' },
+  { key: 'company', label: 'Company', get: p => p.company || '' },
+  { key: 'region', label: 'Region', get: (p, g) => (g && g.branch) || '' },
+  { key: 'allocated_rep', label: 'Rep', get: p => p.allocated_rep || '' },
+  { key: 'category', label: 'Category', get: p => p.category || '' },
+  { key: 'contact_class', label: 'Classification', get: p => p.contact_class || '' },
+  { key: 'email', label: 'Email', get: p => p.email || '', href: p => p.email ? 'mailto:' + p.email : null },
+  { key: 'cell', label: 'Phone', get: p => p.cell || p.tel || '' },
+  { key: 'linkedin', label: 'LinkedIn', get: p => p.linkedin ? 'profile' : '', href: p => p.linkedin },
+  { key: 'employment_status', label: 'Employment', get: p => p.employment_status || '' },
+  { key: 'in_zoho', label: 'In Zoho', get: p => p.in_zoho || '' },
+  { key: 'in_makdb', label: 'In MakDB', get: p => p.in_makdb || '' },
+  { key: 'priority', label: 'Priority', get: p => p.priority ?? '' },
+  { key: 'reports_to', label: 'Reports to', get: p => (p.reports_to && p.reports_to.name) || '' },
+];
+const DEFAULT_COLS = ['name', 'role', 'company', 'department', 'allocated_rep', 'category', 'contact_class', 'email', 'cell'];
+function loadCols() {
+  try { const saved = JSON.parse(localStorage.getItem('elvey_table_cols')); if (Array.isArray(saved) && saved.length) return saved; }
+  catch {}
+  return DEFAULT_COLS.slice();
+}
+function saveCols(cols) { try { localStorage.setItem('elvey_table_cols', JSON.stringify(cols)); } catch {} }
+const T = { data: null, branch: 'customer', override: new Map(), expandAll: false, engagedOnly: false,
+            view: 'cards', cols: loadCols(), sortKey: null, sortDir: 1 };
 const BR = [['competitor', 'Competitors'], ['internal', 'Internal'], ['customer', 'Customers'], ['supplier', 'Suppliers']];
 
 async function loadTree() {
@@ -250,29 +296,44 @@ async function loadTree() {
   document.querySelectorAll('[data-b]').forEach(b => b.onclick = () => { T.branch = b.dataset.b; loadTreeRender(); });
   loadTreeRender();
 }
+function currentFilters() {
+  return { q: $('#q').value.trim().toLowerCase(), fd: $('#fdept').value, fs: $('#fstatus').value,
+           fr: $('#frep').value, fc: $('#fcat').value, fcl: $('#fclass').value,
+           engagedOnly: T.branch === 'customer' && T.engagedOnly };
+}
+function isFiltering(f) {
+  return !!f.q || f.fd || f.fs !== 'active' || f.fr || f.fc || f.fcl || f.engagedOnly;
+}
+function personMatches(p, g, f) {
+  const gText = [g.title, g.division, g.rep, g.brand_focus, g.branch].join(' ').toLowerCase();
+  return statusOk(p, f.fs)
+    && (!f.fd || (f.fd === '__none' ? !p.department : p.department === f.fd))
+    && (!f.fr || (f.fr === '__unalloc' ? !p.allocated : f.fr === '__alloc' ? p.allocated : p.allocated_rep === f.fr))
+    && (!f.fc || p.category === f.fc)
+    && (!f.fcl || (f.fcl === '__none' ? !p.contact_class : p.contact_class === f.fcl))
+    && (!f.engagedOnly || (p.contact_class === 'engaged' && p.allocated))
+    && (!f.q || gText.includes(f.q) || [p.name, p.role, p.email, p.summary, p.department, p.now_at, p.allocated_rep, p.company]
+          .join(' ').toLowerCase().includes(f.q));
+}
 function loadTreeRender() {
   document.querySelectorAll('[data-b]').forEach(b => b.classList.toggle('on', b.dataset.b === T.branch));
   $('#fengaged').classList.toggle('hidden', T.branch !== 'customer');
   $('#fengaged').classList.toggle('on', T.engagedOnly);
-  const q = $('#q').value.trim().toLowerCase();
+  $('#vcards').classList.toggle('on', T.view === 'cards');
+  $('#vtable').classList.toggle('on', T.view === 'table');
+  $('#colpick').classList.toggle('hidden', T.view !== 'table');
+  $('#texport').classList.toggle('hidden', T.view !== 'table');
+  $('#expand').classList.toggle('hidden', T.view !== 'cards');
+  const f = currentFilters();
   const groups = T.data[T.branch];
+  if (T.view === 'table') { renderTreeAsTable(groups, f); return; }
   let html = '', shown = 0;
   groups.forEach((g, gi) => {
-    const gText = [g.title, g.division, g.rep, g.brand_focus, g.branch].join(' ').toLowerCase();
-    const fd = $('#fdept').value, fs = $('#fstatus').value, fr = $('#frep').value, fc = $('#fcat').value, fcl = $('#fclass').value;
-    const engagedOnly = T.branch === 'customer' && T.engagedOnly;
-    const people = g.people.filter(p => statusOk(p, fs)
-      && (!fd || (fd === '__none' ? !p.department : p.department === fd))
-      && (!fr || (fr === '__unalloc' ? !p.allocated : fr === '__alloc' ? p.allocated : p.allocated_rep === fr))
-      && (!fc || p.category === fc)
-      && (!fcl || (fcl === '__none' ? !p.contact_class : p.contact_class === fcl))
-      && (!engagedOnly || (p.contact_class === 'engaged' && p.allocated))
-      && (!q || gText.includes(q) || [p.name, p.role, p.email, p.summary, p.department, p.now_at, p.allocated_rep].join(' ').toLowerCase().includes(q)));
+    const people = g.people.filter(p => personMatches(p, g, f));
     if (!people.length) return;
     const key = T.branch + ':' + g.title;
     const byDefault = T.expandAll || (T.branch !== 'customer') || gi < 8;
-    const filtering = !!q || $('#fdept').value || $('#fstatus').value !== 'active' || fr || fc || fcl || engagedOnly;
-    const open = filtering || (T.override.has(key) ? T.override.get(key) : byDefault);
+    const open = isFiltering(f) || (T.override.has(key) ? T.override.get(key) : byDefault);
     shown += people.length;
     const meta = [g.division, g.rep && 'Rep: ' + g.rep, money(g.sellout), g.brand_focus && 'Brands: ' + g.brand_focus, g.allocation].filter(Boolean).map(esc).join(' · ');
     html += `<div class="group seg-${g.segment} ${open ? '' : 'closed'}" data-key="${esc(key)}">
@@ -280,7 +341,8 @@ function loadTreeRender() {
         <span class="meta">${people.length} ${people.length === 1 ? 'person' : 'people'}${meta ? ' · ' + meta : ''}</span>
         <span>${g.tags.map(t => `<span class="tag">${esc(t)}</span>`).join('')}${g.zoho ? '<span class="tag">in Zoho</span>' : ''}</span></div>
       ${g.concerns ? `<div class="concerns">Concerns: ${esc(g.concerns)}</div>` : ''}
-      <div class="cards">${open ? people.map(card).join('') : ''}</div></div>`;
+      <div class="cards">${open ? people.map(card).join('') : ''}</div>
+      ${open ? renderOrgChart(people) : ''}</div>`;
   });
   $('#tree').innerHTML = html || '<p class="muted">No matches.</p>';
   document.querySelectorAll('.ghead').forEach(h => h.onclick = () => {
@@ -288,6 +350,88 @@ function loadTreeRender() {
     T.override.set(el.dataset.key, el.classList.contains('closed'));
     loadTreeRender();
   });
+}
+
+// ---------------------------------------------------------------- Org chart (read-only, from reports_to)
+function buildOrgChart(people) {
+  const byId = new Map(people.map(p => [p.id, p]));
+  const children = new Map();
+  const roots = [];
+  people.forEach(p => {
+    const mgrId = p.reports_to && p.reports_to.id;
+    if (mgrId && byId.has(mgrId)) {
+      if (!children.has(mgrId)) children.set(mgrId, []);
+      children.get(mgrId).push(p);
+    } else roots.push(p);
+  });
+  return { roots, children };
+}
+function orgFace(p) {
+  return p.face ? `<img class="face" loading="lazy" src="${esc(p.face)}" alt="">`
+    : `<div class="face" style="background:hsl(${hue(p.name)} 45% 45%)">${esc(initials(p.name))}</div>`;
+}
+function renderOrgNode(p, children, depth) {
+  const kids = (children.get(p.id) || []).slice().sort((a, b) => a.name.localeCompare(b.name));
+  return `<div class="orgnode" style="margin-left:${depth * 18}px">
+    <span class="orgrow" data-pid="${p.id}">${orgFace(p)}<b>${esc(p.name)}</b> <span class="muted">${esc(p.role || '')}</span></span>
+    ${kids.map(k => renderOrgNode(k, children, depth + 1)).join('')}
+  </div>`;
+}
+function renderOrgChart(people) {
+  if (people.length < 2) return '';
+  const { roots, children } = buildOrgChart(people);
+  if (![...children.values()].some(v => v.length)) return '';
+  return `<div class="orgchart"><div class="hint">Reporting line (from "Reports to" on each contact card)</div>
+    ${roots.map(r => renderOrgNode(r, children, 0)).join('')}</div>`;
+}
+
+// ---------------------------------------------------------------- Table view (configurable columns)
+function renderTreeAsTable(groups, f) {
+  $('#colpicklist').innerHTML = ALL_COLUMNS.map(c => `<label><input type="checkbox" data-colkey="${c.key}"
+    ${T.cols.includes(c.key) ? 'checked' : ''} ${c.always ? 'disabled' : ''}>${esc(c.label)}</label>`).join('');
+  document.querySelectorAll('[data-colkey]').forEach(cb => cb.onchange = () => {
+    const k = cb.dataset.colkey;
+    T.cols = cb.checked ? [...T.cols, k] : T.cols.filter(x => x !== k);
+    saveCols(T.cols);
+    loadTreeRender();
+  });
+  const cols = ALL_COLUMNS.filter(c => c.always || T.cols.includes(c.key));
+  const rows = [];
+  groups.forEach(g => g.people.forEach(p => { if (personMatches(p, g, f)) rows.push({ p, g }); }));
+  if (T.sortKey) {
+    const col = ALL_COLUMNS.find(c => c.key === T.sortKey);
+    rows.sort((a, b) => {
+      const av = col.get(a.p, a.g), bv = col.get(b.p, b.g);
+      return (av > bv ? 1 : av < bv ? -1 : 0) * T.sortDir;
+    });
+  }
+  const head = cols.map(c => `<th data-col="${c.key}">${esc(c.label)}${T.sortKey === c.key ? (T.sortDir > 0 ? ' ▲' : ' ▼') : ''}</th>`).join('');
+  const body = rows.map(({ p, g }) => `<tr class="row" data-pid="${p.id}">${cols.map(c => {
+    const v = c.get(p, g);
+    const href = c.href && c.href(p);
+    return `<td>${href ? `<a href="${esc(href)}" target="_blank" rel="noopener" data-stop>${esc(v)}</a>` : esc(v)}</td>`;
+  }).join('')}</tr>`).join('');
+  $('#tree').innerHTML = rows.length ? `<table>${`<thead><tr>${head}</tr></thead>`}<tbody>${body}</tbody></table>`
+    : '<p class="muted">No matches.</p>';
+  document.querySelectorAll('#tree th[data-col]').forEach(th => th.onclick = () => {
+    const k = th.dataset.col;
+    T.sortDir = (T.sortKey === k) ? -T.sortDir : 1;
+    T.sortKey = k;
+    loadTreeRender();
+  });
+  T.tableExport = { cols, rows };
+}
+function exportTableCsv() {
+  const { cols, rows } = T.tableExport || { cols: [], rows: [] };
+  const esc_csv = v => { const s = String(v ?? ''); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  const lines = [cols.map(c => esc_csv(c.label)).join(',')];
+  rows.forEach(({ p, g }) => lines.push(cols.map(c => esc_csv(c.get(p, g))).join(',')));
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `elvey-${T.branch}-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
 }
 function card(p) {
   const face = p.face ? `<img class="face" loading="lazy" src="${esc(p.face)}" alt="">`
@@ -319,6 +463,9 @@ function findPerson(id) {
     if (p) return [p, g];
   }
   return [null, null];
+}
+function directReports(p, g) {
+  return g ? g.people.filter(x => x.reports_to && x.reports_to.id === p.id) : [];
 }
 function contactCard(id) {
   const [p, g] = findPerson(id);
@@ -364,6 +511,8 @@ function contactCard(id) {
       ${row('In Zoho', p.zoho ? 'yes' : 'not yet')}
       ${row('Department', p.department ? esc(p.department) + ` <span class="muted">(${esc({manual: 'set by you', linkedin: 'from LinkedIn title', role: 'from job title', email: 'from email address'}[p.department_source] || p.department_source || '')})</span>` : '<span class="muted">unknown</span>')}
       ${row('Previously at', (p.previous_accounts || []).map(a => esc(a.name) + (a.until ? ' <span class="muted">(until ' + esc(a.until) + ')</span>' : '')).join(', '))}
+      ${row('Reports to', p.reports_to && `<span class="orgrow" data-pid="${p.reports_to.id}" style="display:inline">${esc(p.reports_to.name)}</span>`)}
+      ${row('Direct reports', directReports(p, g).map(r => `<span class="orgrow" data-pid="${r.id}" style="display:inline">${esc(r.name)}</span>`).join(', '))}
     </dl>
     <h4>LinkedIn summary</h4>
     <div>${p.summary ? esc(p.summary) : '<span class="muted">None yet.</span>'}</div>
@@ -386,6 +535,13 @@ function contactCard(id) {
       <input type="search" id="ccmove" list="ccaccounts" placeholder="Move to another account…" style="min-width:260px">
       <datalist id="ccaccounts"></datalist>
       <button class="btn ghost" data-act="moveto">Move</button>
+    </div>
+    <div class="cc-actions">
+      <input type="search" id="ccreports" list="ccpeople" placeholder="Reports to… (same account/branch)" style="min-width:260px"
+             value="${esc((p.reports_to && p.reports_to.name) || '')}">
+      <datalist id="ccpeople">${(g ? g.people : []).filter(x => x.id !== p.id).map(x => `<option value="${esc(x.name)}">`).join('')}</datalist>
+      <button class="btn ghost" data-act="setmanager">Set</button>
+      ${p.reports_to ? `<button class="btn ghost" data-act="clearmanager">Clear</button>` : ''}
     </div>
     <div class="cc-actions">
       <input type="search" id="cclinkedin" placeholder="Correct LinkedIn profile URL…" value="${esc(p.linkedin && p.linkedin.includes('/in/') ? p.linkedin : '')}" style="min-width:320px">
@@ -419,6 +575,14 @@ function contactCard(id) {
       if (!url) return;
       payload = { linkedin_url: url };
     }
+    if (act === 'setmanager') {
+      const name = $('#ccreports').value.trim();
+      if (!name) return;
+      const mgr = (g ? g.people : []).find(x => x.id !== p.id && x.name.toLowerCase() === name.toLowerCase());
+      if (!mgr) { $('#ccmsg').textContent = `No one named "${name}" in this account/branch.`; return; }
+      payload = { reports_to_id: mgr.id };
+    }
+    if (act === 'clearmanager') payload = { reports_to_id: 0 };
     try {
       await api('/api/contacts/' + p.id, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       T.accounts = null;
@@ -427,6 +591,7 @@ function contactCard(id) {
       $('#ccmsg').textContent = act === 'seturl' ? 'Set — re-queued for the next harvest run.' : 'Saved.';
     } catch (e) { $('#ccmsg').textContent = 'Could not save: ' + e.message; }
   });
+  document.querySelectorAll('#ccbody .orgrow[data-pid]').forEach(el => el.onclick = () => contactCard(+el.dataset.pid));
 }
 async function loadAccounts() {
   if (!T.accounts) T.accounts = await api('/api/accounts');
@@ -434,7 +599,7 @@ async function loadAccounts() {
 }
 $('#tree').addEventListener('click', ev => {
   if (ev.target.closest('[data-stop]')) return;
-  const c = ev.target.closest('.card');
+  const c = ev.target.closest('.card, .orgrow, tr[data-pid]');
   if (c) { ev.stopPropagation(); contactCard(+c.dataset.pid); }
 });
 $('#ccclose').onclick = () => $('#contact').close();
@@ -447,6 +612,9 @@ $('#fcat').onchange = () => loadTreeRender();
 $('#fclass').onchange = () => loadTreeRender();
 $('#fengaged').onclick = () => { T.engagedOnly = !T.engagedOnly; loadTreeRender(); };
 $('#expand').onclick = () => { T.expandAll = !T.expandAll; T.override.clear(); $('#expand').textContent = T.expandAll ? 'Collapse' : 'Expand all'; loadTreeRender(); };
+$('#vcards').onclick = () => { T.view = 'cards'; loadTreeRender(); };
+$('#vtable').onclick = () => { T.view = 'table'; loadTreeRender(); };
+$('#texport').onclick = () => exportTableCsv();
 
 // ---------------------------------------------------------------- Analyze (BI panels + drilldown)
 function drilldown(filter) {

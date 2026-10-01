@@ -215,8 +215,16 @@ Kept small and reviewable, same pattern as every round so far — nothing here s
    carries a `filter` dict in the exact shape the People Tree's own filter bar already reads, so
    drilldown is "apply this filter and switch tabs," not a second filtering mechanism. A few
    (the three coverage panels) have no matching filter control yet and are informational only.
-4. **Table view + org chart.** Configurable columns; the contact-level org-chart rendering
-   (Internal, and within any large customer account).
+4. ✅ **Table view + org chart.** A Cards/Table toggle next to the People Tree's existing filter
+   bar (same filters, same branch tabs — no second filtering mechanism). Table mode is a flat,
+   sortable grid over 16 fields; which columns show is checkbox-picked and persisted in
+   `localStorage`, with a CSV export of exactly what's currently filtered/sorted/shown. The
+   read-only org-chart rendering (an indented tree from `reports_to_id`, reusing face photos)
+   appears under each People Tree group that actually has one — Internal's single "(no account)"
+   group after the org-chart seed import, or any customer account once its contacts get manual
+   reporting lines. The contact card grew a "Reports to"/"Direct reports" display plus a picker
+   to set/clear the manager — scoped to contacts in the same group (same account, or Internal),
+   matching the normal case from §3; the "rare cross-account case" picker is still out of scope.
 5. **Exports.** Generic filtered CSV/XLSX export (from People Tree, Analyze, and Table views
    alike) with the consolidated-list column set as the Quote-export preset — both ship together,
    same mechanism.
