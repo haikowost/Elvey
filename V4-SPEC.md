@@ -180,11 +180,16 @@ generalises the same shape to two more destinations.
 
 Kept small and reviewable, same pattern as every round so far — nothing here ships as one giant PR.
 
-1. **Schema + data foundation.** `account_roles`, `segment_override`, `reports_to_id`,
+1. ✅ **Schema + data foundation.** `account_roles`, `segment_override`, `reports_to_id`,
    `contact_class` — additive migrations only, plus the ingest-time default-class rule. No UI
    beyond what's needed to verify it in the DB/API.
-2. **Customers-branch scaling.** Dashboard default filtering/sorting by `contact_class`/`allocated`
-   for the Customers branch; role-based tab membership (an account can now appear in >1 branch).
+2. ✅ **Customers-branch scaling.** Role-based tab membership — a dual-role account (customer +
+   supplier, from the sheet-hint inference) now shows under both branch tabs with the same
+   people, until `segment_override` starts splitting individuals. The Customers branch sorts
+   `engaged` contacts first within each group; a one-click "Engaged & allocated only" toggle and a
+   classification filter are there for when contacts start actually getting classified (nothing
+   does yet — Qreg/Zoho activity isn't wired up — so this doesn't default to hiding everyone on
+   today's unclassified data).
 3. **Analyze/BI view.** Aggregate panels + drilldown into a filtered contact list.
 4. **Table view + org chart.** Configurable columns; the contact-level org-chart rendering
    (Internal, and within any large customer account).

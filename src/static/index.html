@@ -9,7 +9,7 @@
 :root {
   --bg: #f5f6f8; --panel: #ffffff; --ink: #1c2330; --muted: #667085; --line: #e3e6eb;
   --accent: #1f5fbf; --accent-ink: #ffffff;
-  --comp: #b4413a; --int: #2f7d4f; --cust: #1f5fbf;
+  --comp: #b4413a; --int: #2f7d4f; --cust: #1f5fbf; --supp: #8a5bc2;
   --new: #1f7a4d; --changed: #b26a00; --sync: #667085; --warn-bg: #fff6e5; --warn-line: #f0c36d;
 }
 @media (prefers-color-scheme: dark) {
@@ -59,7 +59,7 @@ input[type=search] { padding: 7px 10px; border: 1px solid var(--line); border-ra
 .card .x { font-size: 11px; color: var(--muted); margin-top: 4px; }
 .card a { color: var(--accent); text-decoration: none; }
 .concerns { padding: 0 14px 10px; font-size: 12px; color: var(--muted); }
-.seg-competitor .ghead h3 { color: var(--comp); } .seg-internal .ghead h3 { color: var(--int); } .seg-customer .ghead h3 { color: var(--cust); }
+.seg-competitor .ghead h3 { color: var(--comp); } .seg-internal .ghead h3 { color: var(--int); } .seg-customer .ghead h3 { color: var(--cust); } .seg-supplier .ghead h3 { color: var(--supp); }
 table { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
 th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
 th { font-size: 12px; color: var(--muted); font-weight: 600; background: var(--bg); }
@@ -114,6 +114,14 @@ dialog pre { white-space: pre-wrap; font-size: 12px; max-height: 55vh; overflow:
       </select>
       <select id="frep" title="Allocated rep"><option value="">All reps</option><option value="__unalloc">Unallocated only</option></select>
       <select id="fcat" title="Category"><option value="">All categories</option></select>
+      <select id="fclass" title="Classification">
+        <option value="">All classifications</option>
+        <option value="engaged">Engaged</option>
+        <option value="lead">Lead</option>
+        <option value="backlog">Backlog</option>
+        <option value="__none">Unclassified</option>
+      </select>
+      <button class="chip hidden" id="fengaged" title="Only engaged, allocated contacts — the clean CRM core">Engaged &amp; allocated only</button>
       <button class="chip" id="expand">Expand all</button>
     </div>
     <div id="tree"></div>
@@ -215,8 +223,8 @@ function statusOk(p, f) {
 }
 
 // ---------------------------------------------------------------- People Tree
-const T = { data: null, branch: 'customer', override: new Map(), expandAll: false };
-const BR = [['competitor', 'Competitors'], ['internal', 'Internal'], ['customer', 'Customers']];
+const T = { data: null, branch: 'customer', override: new Map(), expandAll: false, engagedOnly: false };
+const BR = [['competitor', 'Competitors'], ['internal', 'Internal'], ['customer', 'Customers'], ['supplier', 'Suppliers']];
 
 async function loadTree() {
   T.data = await api('/api/people');
@@ -226,21 +234,26 @@ async function loadTree() {
 }
 function loadTreeRender() {
   document.querySelectorAll('[data-b]').forEach(b => b.classList.toggle('on', b.dataset.b === T.branch));
+  $('#fengaged').classList.toggle('hidden', T.branch !== 'customer');
+  $('#fengaged').classList.toggle('on', T.engagedOnly);
   const q = $('#q').value.trim().toLowerCase();
   const groups = T.data[T.branch];
   let html = '', shown = 0;
   groups.forEach((g, gi) => {
     const gText = [g.title, g.division, g.rep, g.brand_focus].join(' ').toLowerCase();
-    const fd = $('#fdept').value, fs = $('#fstatus').value, fr = $('#frep').value, fc = $('#fcat').value;
+    const fd = $('#fdept').value, fs = $('#fstatus').value, fr = $('#frep').value, fc = $('#fcat').value, fcl = $('#fclass').value;
+    const engagedOnly = T.branch === 'customer' && T.engagedOnly;
     const people = g.people.filter(p => statusOk(p, fs)
       && (!fd || (fd === '__none' ? !p.department : p.department === fd))
       && (!fr || (fr === '__unalloc' ? !p.allocated : p.allocated_rep === fr))
       && (!fc || p.category === fc)
+      && (!fcl || (fcl === '__none' ? !p.contact_class : p.contact_class === fcl))
+      && (!engagedOnly || (p.contact_class === 'engaged' && p.allocated))
       && (!q || gText.includes(q) || [p.name, p.role, p.email, p.summary, p.department, p.now_at, p.allocated_rep].join(' ').toLowerCase().includes(q)));
     if (!people.length) return;
     const key = T.branch + ':' + g.title;
     const byDefault = T.expandAll || (T.branch !== 'customer') || gi < 8;
-    const filtering = !!q || $('#fdept').value || $('#fstatus').value !== 'active' || fr || fc;
+    const filtering = !!q || $('#fdept').value || $('#fstatus').value !== 'active' || fr || fc || fcl || engagedOnly;
     const open = filtering || (T.override.has(key) ? T.override.get(key) : byDefault);
     shown += people.length;
     const meta = [g.division, g.rep && 'Rep: ' + g.rep, money(g.sellout), g.brand_focus && 'Brands: ' + g.brand_focus, g.allocation].filter(Boolean).map(esc).join(' · ');
@@ -270,7 +283,8 @@ function card(p) {
                 p.department && T.relevant && T.relevant.size && !T.relevant.has(p.department) && '<span class="tag off">not sales</span>',
                 p.allocated_rep && `<span class="tag">${esc(p.allocated_rep)}</span>`,
                 !p.allocated && '<span class="tag off">Unallocated</span>',
-                p.category && `<span class="tag">Cat ${esc(p.category)}</span>`].filter(Boolean).join('');
+                p.category && `<span class="tag">Cat ${esc(p.category)}</span>`,
+                p.contact_class && `<span class="tag">${esc(p.contact_class)}</span>`].filter(Boolean).join('');
   return `<div class="card" data-pid="${p.id}" title="Open contact card">${face}<div style="min-width:0">
     <div class="n">${esc(p.name)} ${p.linkedin ? `<a href="${esc(p.linkedin)}" target="_blank" rel="noopener" data-stop>in</a>` : ''}</div>
     <div class="r">${esc(p.role || 'role pending')}</div>
@@ -302,7 +316,7 @@ function contactCard(id) {
     <div class="cc-head">${face}<div>
       <h3>${esc(p.name)}</h3>
       <div>${esc(p.role || 'Role not known yet')}${p.role_status === 'from LinkedIn' ? ' <span class="muted">(from LinkedIn)</span>' : ''}</div>
-      <div class="muted">${esc(p.company || '')}${g && g.segment ? ' · ' + esc({competitor: 'Competitor', internal: 'Internal', customer: 'Customer'}[g.segment]) : ''}</div>
+      <div class="muted">${esc(p.company || '')}${g && g.segment ? ' · ' + esc({competitor: 'Competitor', internal: 'Internal', customer: 'Customer', supplier: 'Supplier'}[g.segment]) : ''}</div>
     </div></div>
     ${p.employment_status === 'moved' && p.contact_status === 'active' ? `<div class="warnbox">
       <b>LinkedIn says ${esc(p.name.split(' ')[0])} now works at ${esc(p.now_at || '?')}</b>, not ${esc(p.company || 'this account')}.
@@ -320,7 +334,7 @@ function contactCard(id) {
       ${row('Phone', p.tel && `<a href="tel:${esc(p.tel)}">${esc(p.tel)}</a>`)}
       ${row('LinkedIn', p.linkedin && link(p.linkedin, 'Open profile'))}
       ${row('Location', [p.city, p.province, p.country].filter(Boolean).map(esc).join(', ') + (p.city || p.province || p.country ? ' <span class="muted">(from LinkedIn)</span>' : ''))}
-      ${g && g.segment === 'customer' ? row('Account', esc([g.title, g.rank ? '#' + g.rank : ''].filter(Boolean).join(' '))) : ''}
+      ${g && (g.segment === 'customer' || g.segment === 'supplier') ? row('Account', esc([g.title, g.rank ? '#' + g.rank : ''].filter(Boolean).join(' '))) : ''}
       ${g && g.rep ? row('Elvey rep', esc(g.rep)) : ''}
       ${g && g.division ? row('Division', esc(g.division)) : ''}
       ${g && g.sellout ? row('Latest sellout', esc(money(g.sellout))) : ''}
@@ -412,6 +426,8 @@ $('#fdept').onchange = () => loadTreeRender();
 $('#fstatus').onchange = () => loadTreeRender();
 $('#frep').onchange = () => loadTreeRender();
 $('#fcat').onchange = () => loadTreeRender();
+$('#fclass').onchange = () => loadTreeRender();
+$('#fengaged').onclick = () => { T.engagedOnly = !T.engagedOnly; loadTreeRender(); };
 $('#expand').onclick = () => { T.expandAll = !T.expandAll; T.override.clear(); $('#expand').textContent = T.expandAll ? 'Collapse' : 'Expand all'; loadTreeRender(); };
 
 // ---------------------------------------------------------------- Zoho review-and-select

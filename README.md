@@ -62,6 +62,20 @@ Schema + data foundation for the rebuild in `V4-SPEC.md` — no UI yet, just the
 - **`contacts.segment_override`**: column exists (pins a contact to one role when it differs from
   its account's); not yet read or written anywhere — lands with the People Tree role-tab work.
 
+### v4 phase 2 (2026-10-01): role-based tabs, Customers-branch scaling
+
+- **Role-based tab membership.** The People Tree now has a **Suppliers** tab alongside
+  Competitors/Internal/Customers. A dual-role account (Acme-style: a customer with an
+  `Axis Partner` hint) shows under *both* its tabs with the same people, same account record — no
+  duplicate data, just duplicate display. A contact's `segment_override` (once something sets it)
+  pins them to one tab instead of inheriting every role their account carries.
+- **Customers-branch scaling.** Every group sorts `engaged` contacts first, ahead of allocation and
+  priority. The People Tree filter bar gained a **Classification** filter (All/Engaged/Lead/Backlog/
+  Unclassified) and, on the Customers tab only, an **"Engaged & allocated only"** toggle chip — the
+  default-view behaviour the spec calls for, but left as a one-click toggle rather than an actual
+  default: nothing is classified yet (Qreg/Zoho activity isn't wired up), so defaulting it on would
+  just show an empty Customers tab today.
+
 ```
 config.yaml        paths, scope, caps, Zoho field mapping
 .env               Zoho credentials (copy .env.example; never committed)

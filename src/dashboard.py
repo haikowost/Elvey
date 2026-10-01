@@ -21,7 +21,7 @@ from .util import CONTACT_CLASSES, DEPARTMENTS, norm_company
 CONTACT_STATUSES = ("active", "left", "not_relevant")
 
 STATIC = Path(__file__).with_name("static")
-BRANCH_ORDER = ("competitor", "internal", "customer")
+BRANCH_ORDER = ("competitor", "internal", "customer", "supplier")
 
 
 class Selection(BaseModel):
@@ -53,6 +53,18 @@ class PushRequest(BaseModel):
     live: bool = False
 
 
+def _effective_roles(c: dict, account_roles: dict[int, list[str]]) -> list[str]:
+    """Which People Tree branch(es) a contact shows under. Internal contacts are always just
+    internal; a `segment_override` pins one role; otherwise a contact inherits every role its
+    account carries (v4 §1) — a dual customer+supplier account's contacts show under both tabs
+    until segment_override starts being set to split them."""
+    if c["segment"] == "internal":
+        return ["internal"]
+    if c["segment_override"]:
+        return [c["segment_override"]]
+    return account_roles.get(c["account_id"]) or [c["segment"]]
+
+
 def people_tree(conn, cfg) -> dict:
     accounts = {a["id"]: a for a in db.rows(conn, "SELECT * FROM accounts")}
     account_roles: dict[int, list[str]] = {}
@@ -63,33 +75,10 @@ def people_tree(conn, cfg) -> dict:
     groups: dict[tuple, dict] = {}
     for c in contacts:
         a = accounts.get(c["account_id"]) or {}
-        seg = c["segment"]
-        key_name = c["org_group"] if seg == "internal" and c["org_group"] else (a.get("name") or "(no account)")
-        key = (seg, key_name)
-        if key not in groups:
-            extra = db.jload(a.get("extra"), {}) if seg == "customer" else {}
-            tags = [t for t in (
-                f"Cat {extra['category']}" if extra.get("category") else None,
-                extra.get("axis_partner"),
-                f"Tasha: {extra['tasha_visit']}" if extra.get("tasha_visit") else None,
-                "Allocation conflict" if (extra.get("allocation_conflict") or "").upper() == "Y" else None,
-                f"KYC {a['kyc_status']}" if a.get("kyc_status") and seg != "internal" else None,
-            ) if t]
-            groups[key] = {
-                "segment": seg, "title": key_name, "account_id": a.get("id") if key_name == a.get("name") else None,
-                "rank": a.get("rank") if key_name == a.get("name") else None,
-                # business-case fields only mean something for customer accounts
-                **({"division": a.get("division"), "rep": a.get("rep"), "sellout": a.get("latest_sellout"),
-                    "brand_focus": a.get("brand_focus"), "allocation": a.get("allocation")} if seg == "customer" else
-                   {"division": None, "rep": None, "sellout": None, "brand_focus": None, "allocation": None}),
-                "concerns": (extra.get("tasha_concerns") or "").strip(" ;") or None,
-                "tags": tags, "zoho": bool(a.get("zoho_account_id")), "people": [],
-                "account_roles": account_roles.get(a.get("id"), []),
-            }
         extra_c = db.jload(c["extra"], {})
-        groups[key]["people"].append({
+        person = {
             "id": c["id"], "name": c["full_name"], "role": c["role"], "email": c["email"], "cell": c["cell"] or c["tel"],
-            "tel": c["tel"], "mobile": c["cell"], "company": a.get("name"), "segment": seg,
+            "tel": c["tel"], "mobile": c["cell"], "company": a.get("name"), "segment": c["segment"],
             "role_status": extra_c.get("role_status"), "enrich_error": c["enrich_error"],
             "enriched_at": c["enrich_last_at"],
             "account_id": c["account_id"], "department": c["department"], "department_source": c["department_source"],
@@ -110,10 +99,39 @@ def people_tree(conn, cfg) -> dict:
             "reports_to": ({"id": c["reports_to_id"], "name": names_by_id.get(c["reports_to_id"])}
                             if c["reports_to_id"] else None),
             "zoho": bool(c["zoho_contact_id"]),
-        })
+        }
+        for role in _effective_roles(c, account_roles):
+            if role not in BRANCH_ORDER:
+                continue
+            key_name = c["org_group"] if role == "internal" and c["org_group"] else (a.get("name") or "(no account)")
+            key = (role, key_name)
+            if key not in groups:
+                # business-case fields and sheet-hint tags mean something for customer/supplier accounts
+                is_biz = role in ("customer", "supplier")
+                extra = db.jload(a.get("extra"), {}) if is_biz else {}
+                tags = [t for t in (
+                    f"Cat {extra['category']}" if extra.get("category") else None,
+                    extra.get("axis_partner"),
+                    f"Tasha: {extra['tasha_visit']}" if extra.get("tasha_visit") else None,
+                    "Allocation conflict" if (extra.get("allocation_conflict") or "").upper() == "Y" else None,
+                    f"KYC {a['kyc_status']}" if a.get("kyc_status") and role != "internal" else None,
+                ) if t]
+                groups[key] = {
+                    "segment": role, "title": key_name, "account_id": a.get("id") if key_name == a.get("name") else None,
+                    "rank": a.get("rank") if key_name == a.get("name") else None,
+                    **({"division": a.get("division"), "rep": a.get("rep"), "sellout": a.get("latest_sellout"),
+                        "brand_focus": a.get("brand_focus"), "allocation": a.get("allocation")} if is_biz else
+                       {"division": None, "rep": None, "sellout": None, "brand_focus": None, "allocation": None}),
+                    "concerns": (extra.get("tasha_concerns") or "").strip(" ;") or None,
+                    "tags": tags, "zoho": bool(a.get("zoho_account_id")), "people": [],
+                    "account_roles": account_roles.get(a.get("id"), []),
+                }
+            groups[key]["people"].append(person)
     out = {seg: [] for seg in BRANCH_ORDER}
     for g in groups.values():
-        g["people"].sort(key=lambda p: (not p["allocated"], p["priority"] is None, p["priority"] or 0, p["name"]))
+        # the Customers branch surfaces the "actually being worked" contacts first (v4 §2)
+        g["people"].sort(key=lambda p: (p["contact_class"] != "engaged", not p["allocated"],
+                                         p["priority"] is None, p["priority"] or 0, p["name"]))
         out[g["segment"]].append(g)
     for seg in out:
         out[seg].sort(key=lambda g: (g["rank"] is None, g["rank"] or 0, -(g["sellout"] or 0), g["title"]))

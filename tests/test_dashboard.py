@@ -11,7 +11,7 @@ def test_dashboard_endpoints(cfg, loaded):
     assert "People Tree" in c.get("/").text
 
     tree = c.get("/api/people").json()
-    assert set(tree) == {"competitor", "internal", "customer"}
+    assert set(tree) == {"competitor", "internal", "customer", "supplier"}
     acme = tree["customer"][0]
     assert acme["title"] == "Acme Security (Pty) Ltd" and acme["rank"] == 1 and "Tasha: High" in acme["tags"]
     anna = next(p for p in acme["people"] if p["name"] == "Anna Smith")
@@ -81,6 +81,21 @@ def test_contact_card_edits(cfg, loaded):
     assert "departments" in c.get("/api/stats").json()
 
 
+def test_dual_role_account_appears_under_both_branch_tabs(cfg, loaded):
+    """Acme has account_roles customer+supplier (axis_partner hint) -> v4 role-based tab
+    membership shows the same account, and the same people, under both the Customers and
+    Suppliers branches, until segment_override starts splitting individual contacts."""
+    c = TestClient(dashboard.create_app(cfg))
+    tree = c.get("/api/people").json()
+    cust_acme = next(g for g in tree["customer"] if g["title"] == "Acme Security (Pty) Ltd")
+    supp_acme = next(g for g in tree["supplier"] if g["title"] == "Acme Security (Pty) Ltd")
+    assert cust_acme["account_roles"] == supp_acme["account_roles"] == ["customer", "supplier"]
+    assert {p["name"] for p in cust_acme["people"]} == {p["name"] for p in supp_acme["people"]}
+    # Beta has no supplier hint -> customer only, not duplicated into Suppliers
+    assert not any(g["title"] == "Beta Integrators" for g in tree["supplier"])
+    assert any(g["title"] == "Beta Integrators" for g in tree["customer"])
+
+
 def test_contact_class_and_reports_to_edits(cfg, loaded):
     c = TestClient(dashboard.create_app(cfg))
     people = {p["name"]: p for g in c.get("/api/people").json()["customer"] for p in g["people"]}
@@ -103,6 +118,16 @@ def test_contact_class_and_reports_to_edits(cfg, loaded):
 
     cleared2 = c.post(f"/api/contacts/{bob['id']}", json={"reports_to_id": 0}).json()["contact"]
     assert cleared2["reports_to_id"] is None
+
+
+def test_engaged_contacts_sort_first_within_their_group(cfg, loaded):
+    c = TestClient(dashboard.create_app(cfg))
+    acme = next(g for g in c.get("/api/people").json()["customer"] if g["title"] == "Acme Security (Pty) Ltd")
+    bob = next(p for p in acme["people"] if p["name"] == "Bob Jones")
+    assert bob["priority"] is not None  # Bob would otherwise rank behind Anna on priority alone
+    c.post(f"/api/contacts/{bob['id']}", json={"contact_class": "engaged"})
+    acme2 = next(g for g in c.get("/api/people").json()["customer"] if g["title"] == "Acme Security (Pty) Ltd")
+    assert acme2["people"][0]["name"] == "Bob Jones"
 
 
 def test_verify_endpoints(cfg, loaded):
