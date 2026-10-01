@@ -13,7 +13,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from pydantic import BaseModel
 
-from . import chat, db, harvest, orgchart, zoho
+from . import analyze, chat, db, harvest, orgchart, zoho
 from .config import load_config
 from .images import coverage, update_account_kyc_status
 from .util import CONTACT_CLASSES, DEPARTMENTS, norm_company
@@ -120,8 +120,10 @@ def people_tree(conn, cfg) -> dict:
                     "segment": role, "title": key_name, "account_id": a.get("id") if key_name == a.get("name") else None,
                     "rank": a.get("rank") if key_name == a.get("name") else None,
                     **({"division": a.get("division"), "rep": a.get("rep"), "sellout": a.get("latest_sellout"),
-                        "brand_focus": a.get("brand_focus"), "allocation": a.get("allocation")} if is_biz else
-                       {"division": None, "rep": None, "sellout": None, "brand_focus": None, "allocation": None}),
+                        "brand_focus": a.get("brand_focus"), "allocation": a.get("allocation"),
+                        "branch": a.get("branch")} if is_biz else
+                       {"division": None, "rep": None, "sellout": None, "brand_focus": None, "allocation": None,
+                        "branch": None}),
                     "concerns": (extra.get("tasha_concerns") or "").strip(" ;") or None,
                     "tags": tags, "zoho": bool(a.get("zoho_account_id")), "people": [],
                     "account_roles": account_roles.get(a.get("id"), []),
@@ -249,6 +251,11 @@ def create_app(cfg=None) -> FastAPI:
                     "unallocated": q("SELECT count(*) FROM contacts WHERE allocated = 0"),
                     "reps": reps, "categories": cats, "contact_classes": class_counts, "account_roles": role_counts,
                     "last_ingest": (conn.execute("SELECT value FROM meta WHERE key='last_ingest'").fetchone() or [None])[0]}
+
+    @app.get("/api/analyze")
+    def analyze_panels():
+        with lock:
+            return analyze.panels(conn)
 
     @app.get("/api/accounts")
     def accounts_list():

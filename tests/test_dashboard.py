@@ -81,6 +81,17 @@ def test_contact_card_edits(cfg, loaded):
     assert "departments" in c.get("/api/stats").json()
 
 
+def test_analyze_endpoint_serves_panels(cfg, loaded):
+    c = TestClient(dashboard.create_app(cfg))
+    panels = c.get("/api/analyze").json()
+    assert {p["key"] for p in panels} >= {"branch", "account_role", "allocation", "category",
+                                           "contact_class", "department", "region", "sellout_division",
+                                           "sellout_rep", "in_zoho", "in_makdb", "role_source", "coverage"}
+    branch = next(p for p in panels if p["key"] == "branch")
+    customers = next(s for s in branch["slices"] if s["label"] == "Customers")
+    assert customers["filter"] == {"branch": "customer"}
+
+
 def test_dual_role_account_appears_under_both_branch_tabs(cfg, loaded):
     """Acme has account_roles customer+supplier (installer_category 'SubD' hint) -> v4 role-based tab
     membership shows the same account, and the same people, under both the Customers and

@@ -60,6 +60,15 @@ input[type=search] { padding: 7px 10px; border: 1px solid var(--line); border-ra
 .card a { color: var(--accent); text-decoration: none; }
 .concerns { padding: 0 14px 10px; font-size: 12px; color: var(--muted); }
 .seg-competitor .ghead h3 { color: var(--comp); } .seg-internal .ghead h3 { color: var(--int); } .seg-customer .ghead h3 { color: var(--cust); } .seg-supplier .ghead h3 { color: var(--supp); }
+.panels { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+.panel h3 { margin: 0 0 8px; font-size: 13px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }
+.panel .slice { display: flex; justify-content: space-between; gap: 10px; padding: 4px 0; font-size: 13.5px; border-bottom: 1px dashed var(--line); }
+.panel .slice:last-child { border-bottom: none; }
+.panel .slice.click { cursor: pointer; border-radius: 6px; margin: 0 -6px; padding: 4px 6px; }
+.panel .slice.click:hover { background: var(--bg); }
+.panel .slice .v { font-variant-numeric: tabular-nums; color: var(--muted); white-space: nowrap; }
+.panel .total { margin-top: 8px; font-size: 11.5px; color: var(--muted); text-align: right; }
 table { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
 th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
 th { font-size: 12px; color: var(--muted); font-weight: 600; background: var(--bg); }
@@ -92,6 +101,7 @@ dialog pre { white-space: pre-wrap; font-size: 12px; max-height: 55vh; overflow:
   <h1>Elvey KYC</h1>
   <nav>
     <button data-view="tree" class="on">People Tree</button>
+    <button data-view="analyze">Analyze</button>
     <button data-view="chat">Corrections<span id="chatbadge" class="tag hidden" style="margin-left:5px"></span></button>
     <button data-view="zoho">Zoho sync</button>
   </nav>
@@ -112,7 +122,7 @@ dialog pre { white-space: pre-wrap; font-size: 12px; max-height: 55vh; overflow:
         <option value="not_relevant">Not relevant</option>
         <option value="all">Everyone</option>
       </select>
-      <select id="frep" title="Allocated rep"><option value="">All reps</option><option value="__unalloc">Unallocated only</option></select>
+      <select id="frep" title="Allocated rep"><option value="">All reps</option><option value="__alloc">Allocated only</option><option value="__unalloc">Unallocated only</option></select>
       <select id="fcat" title="Category"><option value="">All categories</option></select>
       <select id="fclass" title="Classification">
         <option value="">All classifications</option>
@@ -125,6 +135,12 @@ dialog pre { white-space: pre-wrap; font-size: 12px; max-height: 55vh; overflow:
       <button class="chip" id="expand">Expand all</button>
     </div>
     <div id="tree"></div>
+  </section>
+
+  <section id="view-analyze" class="hidden">
+    <p class="muted">Each panel is a small, named aggregate — not a general query builder. Click a
+      clickable slice to jump to the People Tree filtered to exactly that slice.</p>
+    <div id="panels" class="panels"></div>
   </section>
 
   <section id="view-zoho" class="hidden">
@@ -194,8 +210,10 @@ const hue = n => [...(n || '')].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 36
 document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
   document.querySelectorAll('nav button').forEach(x => x.classList.toggle('on', x === b));
   $('#view-tree').classList.toggle('hidden', b.dataset.view !== 'tree');
+  $('#view-analyze').classList.toggle('hidden', b.dataset.view !== 'analyze');
   $('#view-zoho').classList.toggle('hidden', b.dataset.view !== 'zoho');
   $('#view-chat').classList.toggle('hidden', b.dataset.view !== 'chat');
+  if (b.dataset.view === 'analyze') loadAnalyze();
   if (b.dataset.view === 'zoho' && !Z.diff) loadDiff();
   if (b.dataset.view === 'chat' && !Chat.queue) loadChat();
 });
@@ -210,8 +228,8 @@ async function loadStats() {
   T.relevant = new Set(s.relevant_departments || []);
   $('#fdept').innerHTML = '<option value="">All departments</option><option value="__none">Department unknown</option>' +
     T.departments.map(d => `<option>${esc(d)}</option>`).join('');
-  $('#frep').innerHTML = '<option value="">All reps</option><option value="__unalloc">Unallocated only</option>' +
-    (s.reps || []).map(r => `<option>${esc(r)}</option>`).join('');
+  $('#frep').innerHTML = '<option value="">All reps</option><option value="__alloc">Allocated only</option>' +
+    '<option value="__unalloc">Unallocated only</option>' + (s.reps || []).map(r => `<option>${esc(r)}</option>`).join('');
   $('#fcat').innerHTML = '<option value="">All categories</option>' +
     (s.categories || []).map(c => `<option>${esc(c)}</option>`).join('');
 }
@@ -240,12 +258,12 @@ function loadTreeRender() {
   const groups = T.data[T.branch];
   let html = '', shown = 0;
   groups.forEach((g, gi) => {
-    const gText = [g.title, g.division, g.rep, g.brand_focus].join(' ').toLowerCase();
+    const gText = [g.title, g.division, g.rep, g.brand_focus, g.branch].join(' ').toLowerCase();
     const fd = $('#fdept').value, fs = $('#fstatus').value, fr = $('#frep').value, fc = $('#fcat').value, fcl = $('#fclass').value;
     const engagedOnly = T.branch === 'customer' && T.engagedOnly;
     const people = g.people.filter(p => statusOk(p, fs)
       && (!fd || (fd === '__none' ? !p.department : p.department === fd))
-      && (!fr || (fr === '__unalloc' ? !p.allocated : p.allocated_rep === fr))
+      && (!fr || (fr === '__unalloc' ? !p.allocated : fr === '__alloc' ? p.allocated : p.allocated_rep === fr))
       && (!fc || p.category === fc)
       && (!fcl || (fcl === '__none' ? !p.contact_class : p.contact_class === fcl))
       && (!engagedOnly || (p.contact_class === 'engaged' && p.allocated))
@@ -429,6 +447,34 @@ $('#fcat').onchange = () => loadTreeRender();
 $('#fclass').onchange = () => loadTreeRender();
 $('#fengaged').onclick = () => { T.engagedOnly = !T.engagedOnly; loadTreeRender(); };
 $('#expand').onclick = () => { T.expandAll = !T.expandAll; T.override.clear(); $('#expand').textContent = T.expandAll ? 'Collapse' : 'Expand all'; loadTreeRender(); };
+
+// ---------------------------------------------------------------- Analyze (BI panels + drilldown)
+function drilldown(filter) {
+  $('#q').value = filter.q || '';
+  $('#fdept').value = filter.fdept || '';
+  $('#fstatus').value = 'active';
+  $('#frep').value = filter.frep || '';
+  $('#fcat').value = filter.fcat || '';
+  $('#fclass').value = filter.fclass || '';
+  T.engagedOnly = false;
+  T.expandAll = true;
+  T.override.clear();
+  T.branch = filter.branch || T.branch;
+  document.querySelector('nav button[data-view="tree"]').click();
+  loadTreeRender();
+}
+async function loadAnalyze() {
+  const panels = await api('/api/analyze');
+  $('#panels').innerHTML = panels.map(p => {
+    const fmt = v => p.metric === 'money' ? (money(v) || 'R 0') : v.toLocaleString();
+    const rows = p.slices.map(s => {
+      const attr = s.filter ? ` data-filter="${esc(JSON.stringify(s.filter))}"` : '';
+      return `<div class="slice${s.filter ? ' click' : ''}"${attr}><span>${esc(s.label)}</span><span class="v">${fmt(s.value)}</span></div>`;
+    }).join('');
+    return `<div class="panel"><h3>${esc(p.title)}</h3>${rows}<div class="total">Total: ${fmt(p.total)}</div></div>`;
+  }).join('') || '<p class="muted">Nothing to show yet.</p>';
+  document.querySelectorAll('.slice.click').forEach(el => el.onclick = () => drilldown(JSON.parse(el.dataset.filter)));
+}
 
 // ---------------------------------------------------------------- Zoho review-and-select
 const Z = { diff: null, entity: 'account', status: 'pending', sel: new Map(), open: new Set(), limit: 200 };

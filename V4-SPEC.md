@@ -209,7 +209,12 @@ Kept small and reviewable, same pattern as every round so far — nothing here s
    classification filter are there for when contacts start actually getting classified (nothing
    does yet — Qreg/Zoho activity isn't wired up — so this doesn't default to hiding everyone on
    today's unclassified data).
-3. **Analyze/BI view.** Aggregate panels + drilldown into a filtered contact list.
+3. ✅ **Analyze/BI view.** 13 named panels (`src/analyze.py`): branch, account role, allocation,
+   category, classification, department, region/branch, sellout by division/rep, in Zoho/in
+   MakDB coverage, role-source coverage, face+summary coverage. Most are clickable — each slice
+   carries a `filter` dict in the exact shape the People Tree's own filter bar already reads, so
+   drilldown is "apply this filter and switch tabs," not a second filtering mechanism. A few
+   (the three coverage panels) have no matching filter control yet and are informational only.
 4. **Table view + org chart.** Configurable columns; the contact-level org-chart rendering
    (Internal, and within any large customer account).
 5. **Exports.** Generic filtered CSV/XLSX export (from People Tree, Analyze, and Table views

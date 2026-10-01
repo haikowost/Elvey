@@ -91,6 +91,20 @@ Schema + data foundation for the rebuild in `V4-SPEC.md` — no UI yet, just the
   Exports/other-region book matches the current SA-focused sheet poorly — a scope gap, not a
   bug) — contacts outside that coverage show as unclassified, not wrongly excluded.
 
+### v4 phase 3 (2026-10-01): the Analyze/BI view
+
+A new **Analyze** tab (`src/analyze.py`, `/api/analyze`) alongside the People Tree: 13 small,
+named aggregate panels — people by branch, accounts by role, allocated vs unallocated, by
+category/classification/department/region, latest sellout by division and by rep, in-Zoho/in-
+MakDB coverage, where each contact's role came from, and face+LinkedIn-summary coverage. No
+generic query builder — every panel is its own auditable SQL query, same philosophy as
+`classify_department`. Most slices are clickable: each carries a `filter` dict in the exact shape
+the People Tree's filter bar already reads (`branch`/`fdept`/`fcat`/`fclass`/`frep`/`q`), so
+clicking one just applies that filter and switches tabs — no second filtering mechanism to keep
+in sync. The three coverage panels have no matching filter control yet and are informational
+only. (Picked up a `frep` filter option while at it — `__alloc`, "Allocated only" — so the
+Allocation panel's "Allocated" slice has something exact to drill into.)
+
 ```
 config.yaml        paths, scope, caps, Zoho field mapping
 .env               Zoho credentials (copy .env.example; never committed)
@@ -99,6 +113,7 @@ src/ingest.py      consolidation workbook -> DB
 src/images.py      face library -> contacts, coverage, data/to_enrich.csv
 src/harvest.py     LinkedIn face + summary + work history (Playwright, persistent profile)
 src/orgchart.py    account_roles sync + the one-time org-chart reports_to_id seed (v4 phase 1)
+src/analyze.py     named BI panels + drilldown filters for the Analyze tab (v4 phase 3)
 src/dashboard.py   FastAPI app + src/static/index.html
 src/zoho.py        auth, pull, diff, push selected, photo upload, id write-back
 src/zoho_activity.py  offline Zoho Contacts export -> Last Activity Time -> engaged classification
