@@ -42,6 +42,14 @@ usability at that scale is the main design constraint, not an afterthought.
 - **Suppliers**: no data exists yet. This design reserves the `supplier` role/token now (naming
   convention gets a `SUPP` face-filename token alongside `CUST`/`INT`/the competitor tokens) so
   ingesting real supplier contacts later is just "load the sheet," not a schema change.
+- **Confirmed: a real `account_roles` table**, not a simpler JSON tag — settles open question 1.
+- **Where an account's role comes from, when it isn't given directly** — a three-step precedence,
+  same shape as the existing `role_source`/`ROLE_RANK` pattern: **Zoho** (an account's module/type
+  there) → the **consolidated contact sheet** (`Axis Partner`/`Milestone Partner`/`Installer
+  Category` already hint supplier-side relationships) → as a last resort, **harvest LinkedIn's
+  current job title** and keyword-match it (installer/distributor/reseller-shaped titles tag the
+  account `supplier`). Each step only fills what the step before it left blank; a Zoho or
+  sheet-asserted role is never overwritten by a LinkedIn guess.
 
 ## 2. Contact classification — what actually makes the Customers branch manageable
 
@@ -65,11 +73,21 @@ and `allocated`, grouped by account" — everything else (leads, backlog, unallo
 click away, not scrolled past. This is the actual fix for "the dashboard doesn't look great" at
 scale: it's not a styling problem, it's a signal-to-noise problem, and classification is the fix.
 
-**Where the classification comes from (phase 1):** a rule of thumb at ingest time — `allocated=1`
-and `role_source` resolved → defaults to `engaged`; everyone else defaults to unclassified — plus a
-manual override from the dashboard contact card (a dropdown next to the existing department/status
-ones). No LLM/AI classification in this phase; same "small, auditable rules" philosophy as
-`classify_department`.
+**Where the classification comes from (confirmed, settles open question 2):** auto-classify
+`engaged` from actual activity, not just allocation — a contact with recent logged activity in
+**Qreg** (the quote register) or in **Zoho** (a deal, task, or note against them) is `engaged`;
+everyone else starts unclassified. This is a stronger signal than the "allocated + resolved role"
+rule drafted earlier (dropped) — allocation says who's *responsible*, activity says who's actually
+*being worked*, which is the real "no unverified contacts" test. Plus the same manual override from
+the dashboard contact card (a dropdown next to the existing department/status ones), for anyone the
+activity signal hasn't caught up with yet. No LLM/AI classification; same "small, auditable rules"
+philosophy as `classify_department`.
+
+**Phase-1 groundwork needed:** Qreg isn't wired into this tool yet — what system it actually is,
+what export/API it offers, and how a "quote exists for this contact" fact gets into the local DB
+needs nailing down at the start of phase 1 (schema + data foundation), alongside the Zoho
+activity-pull this already assumes nothing live yet does. Until that's wired up, a contact can still
+be classified manually.
 
 ## 3. Contact-level hierarchy — within *any* account, not just Elvey's own
 
@@ -95,6 +113,18 @@ manual path means it's usable from day one regardless.
 multiple branch/site accounts) is a separate, smaller thing and only worth building if it's
 actually needed — `accounts.parent_account_id` would cover it, but nothing in what's been asked
 for so far requires it. Dropped from phase 1 unless you tell me otherwise.
+
+**Seed data found (settles open question 3):** a real org chart already exists — EXCO down to
+branch/cluster level (CEO → Finance/Sales-Marketing/Global-Comms directors → cluster leads/PMs →
+AMs, branch managers, technicals — vacancies and proposed moves included). Captured as
+`seed_data/elvey-org-chart.md` in this repo. Phase 1's schema migration includes a one-time seed
+import of this as the initial `reports_to_id` chains for Internal-branch contacts: match each name
+against existing Internal contacts (create a stub contact for a name that isn't there yet; flag
+anything ambiguous for manual linking rather than guessing). Nothing on the customer side has
+reporting-line data yet, so every customer account's hierarchy still starts blank, built manually
+from the contact card as before. The chart's "proposed move"/"semi-retired" annotations are
+presentational context for this one import, not a new contact field — only the current, as-is
+reporting line gets written to `reports_to_id`.
 
 ## 4. BI drilldown + configurable views
 
@@ -170,21 +200,17 @@ Kept small and reviewable, same pattern as every round so far — nothing here s
   file.
 - No AI/LLM-based contact classification — rule + manual override, same philosophy as the existing
   department classifier.
-- No automatic org-chart derivation — reporting lines are manually entered until a real source
-  exists.
+- No *ongoing* automatic org-chart derivation — the existing Elvey org chart is a one-time seed
+  import (section 3), not a live sync; every reporting line after that, and every customer-side
+  one from day one, is manually entered.
 - No change to the Zoho write-safety model (`live_enabled` + typed confirmation) — the sync gets a
   smarter default selection, not a new permission to write more.
 
-## Open questions to confirm before phase 1 starts
+## Open questions
 
-1. **Account roles vs. a simpler tag:** is `account_roles` (a proper many-to-many table) the right
-   weight, or would a simpler `accounts.extra_roles` (JSON list, like the existing `extra` column
-   pattern) be enough for how often an account actually spans customer+supplier in practice?
-2. **Classification trigger:** is "allocated + resolved role → engaged by default" the right
-   starting rule, or should *nothing* auto-classify and every contact start unclassified until a
-   human (or a bulk action in the dashboard) sets it? Given the "no unverified contacts" principle,
-   erring toward nothing auto-classifying may be closer to what you actually want.
-3. **Reporting-line data**: besides manual entry via the contact card, is there any existing
-   source — for Elvey's own staff, or for any large customer's internal structure — worth a
-   one-time import (an org chart slide, an HR list, a customer-supplied contact list with titles)
-   instead of starting every account's hierarchy from a blank slate?
+All three resolved — see sections 1 (account-role precedence), 2 (Qreg/Zoho activity
+classification), and 3 (org-chart seed import) above. Phase 1 (schema + data foundation) can
+start: `account_roles`, `segment_override`, `contact_class`, `reports_to_id` plus the org-chart
+seed migration, and the Zoho/sheet/LinkedIn account-role precedence. Qreg's actual shape (what
+system, what export/API) still needs nailing down as the first concrete step inside phase 1 — not
+a blocker to starting, since manual classification covers the gap until it's wired up.
