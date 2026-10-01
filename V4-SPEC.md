@@ -96,7 +96,7 @@ multiple branch/site accounts) is a separate, smaller thing and only worth build
 actually needed — `accounts.parent_account_id` would cover it, but nothing in what's been asked
 for so far requires it. Dropped from phase 1 unless you tell me otherwise.
 
-## 5. BI drilldown + configurable views
+## 4. BI drilldown + configurable views
 
 The biggest actual engineering piece, and new to this tool rather than an extension of something
 existing.
@@ -118,12 +118,30 @@ existing.
   filtered/column set, since "choose what data is shown" implies people will want to take it
   elsewhere too.
 
-## 6. Zoho sync — tightened default, not a new mechanism
+## 5. The master DB stays the single source of truth, with multiple export destinations
 
-The existing pull → diff → review → select → push flow is unchanged. The only change: the
-dashboard's "select all shown" default narrows to `contact_class='engaged' AND allocated=1`. Leads
-and backlog are never pre-selected — pushing them, if ever wanted, is still possible but has to be
-a deliberate individual selection, not a side effect of "select all."
+The SQLite file is, and stays, **the master record** — every other system (Zoho, a quote, a
+report) is a derived, point-in-time export *from* it, never the other way round. Nothing reads
+this tool's data back out of Zoho or a spreadsheet and treats it as more authoritative than the
+local DB. That's already true for Zoho (pull → diff → review → select → push); this section
+generalises the same shape to two more destinations.
+
+- **Zoho sync** — unchanged mechanism (pull → diff → review → select → push, `live_enabled` +
+  typed confirmation). The only change from this spec: the dashboard's "select all shown" default
+  narrows to `contact_class='engaged' AND allocated=1`. Leads and backlog are never pre-selected —
+  pushing them, if ever wanted, is still a deliberate individual selection, not a side effect of
+  "select all."
+- **Quote template export** — a new, separate export: pick an account (or a filtered set of
+  accounts/contacts) and generate the file in whatever layout the sales quote template expects
+  (company/contact details, address, the fields the quote needs on its cover sheet). **I need the
+  actual template file (or at minimum its field list/cell layout)** to map DB columns to it
+  correctly — this is a "fill in a specific target shape," not a generic export, so I can't spec
+  the mapping without seeing it.
+- **Ad-hoc reports/exports** — generalises the Table view's CSV export (section 4) into a proper
+  first-class action: whatever is currently filtered — a People Tree branch filter, an Analyze-view
+  drilldown slice, a saved Table-view column set — can be exported (CSV, and XLSX where formatting
+  matters) from wherever it's shown, not just from the Table view specifically. Same underlying
+  mechanism as the Quote export, just with a generic column layout instead of a fixed template.
 
 ## Build phases
 
@@ -135,9 +153,11 @@ Kept small and reviewable, same pattern as every round so far — nothing here s
 2. **Customers-branch scaling.** Dashboard default filtering/sorting by `contact_class`/`allocated`
    for the Customers branch; role-based tab membership (an account can now appear in >1 branch).
 3. **Analyze/BI view.** Aggregate panels + drilldown into a filtered contact list.
-4. **Table view + org chart.** Configurable columns, CSV export; the contact-level org-chart
-   rendering (Internal, and within any large customer account).
-5. **Suppliers go live** once real supplier data exists to ingest — schema's already there from
+4. **Table view + org chart.** Configurable columns; the contact-level org-chart rendering
+   (Internal, and within any large customer account).
+5. **Exports.** Generic filtered CSV/XLSX export (from People Tree, Analyze, and Table views
+   alike), then the Quote template export once I have the template to map against.
+6. **Suppliers go live** once real supplier data exists to ingest — schema's already there from
    phase 1, this is just "point ingest at the sheet."
 
 ## Explicit non-goals (for now)
@@ -164,3 +184,5 @@ Kept small and reviewable, same pattern as every round so far — nothing here s
    source — for Elvey's own staff, or for any large customer's internal structure — worth a
    one-time import (an org chart slide, an HR list, a customer-supplied contact list with titles)
    instead of starting every account's hierarchy from a blank slate?
+4. **The Quote template itself**: can you share the actual template file (or its field/cell
+   layout)? I can't spec or build that export without seeing the target shape it needs to fill.
