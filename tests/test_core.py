@@ -2,8 +2,8 @@ import csv
 import json
 
 from src import db, harvest, images, ingest, orgchart
-from src.util import (category_rank, face_filename, infer_supplier_from_title, norm_company, parse_face_filename,
-                      parse_money, resolve_role, slug, split_name, yn)
+from src.util import (category_rank, face_filename, infer_supplier_from_title, is_subdistributor_category,
+                      norm_company, parse_face_filename, parse_money, resolve_role, slug, split_name, yn)
 
 
 # ------------------------------------------------------------------ util
@@ -295,12 +295,25 @@ def test_infer_supplier_from_title():
     assert not infer_supplier_from_title(None)
 
 
+def test_is_subdistributor_category():
+    """Found against the real Consolidated Sales Contacts sheet: 'SubD' is the only Installer
+    Category value that actually means the account resells (i.e. is also a supplier) — System
+    Integrator / Consultant / Installer / End-user are all just customer types."""
+    assert is_subdistributor_category("SubD")
+    assert is_subdistributor_category("Sub-D")
+    assert is_subdistributor_category("Sub Distributor")
+    assert not is_subdistributor_category("System Integrator")
+    assert not is_subdistributor_category("Installer")
+    assert not is_subdistributor_category("End-user")
+    assert not is_subdistributor_category(None)
+
+
 def test_sync_account_roles_primary_and_supplier_inference(cfg, conn):
     ingest.run(cfg)  # already calls sync_account_roles once; re-run directly to check idempotency too
     acme = db.one(conn, "SELECT id FROM accounts WHERE name='Acme Security (Pty) Ltd'")['id']
     beta = db.one(conn, "SELECT id FROM accounts WHERE name='Beta Integrators'")['id']
-    assert orgchart.roles_for_account(conn, acme) == ["customer", "supplier"]  # has axis_partner 'Silver'
-    assert orgchart.roles_for_account(conn, beta) == ["customer"]  # no axis/milestone/installer hint
+    assert orgchart.roles_for_account(conn, acme) == ["customer", "supplier"]  # installer_category 'SubD'
+    assert orgchart.roles_for_account(conn, beta) == ["customer"]  # 'System Integrator' is not a supplier signal
     before = orgchart.roles_for_account(conn, acme)
     orgchart.sync_account_roles(conn)  # idempotent: no duplicate rows, no error
     assert orgchart.roles_for_account(conn, acme) == before

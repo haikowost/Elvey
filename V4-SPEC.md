@@ -45,11 +45,17 @@ usability at that scale is the main design constraint, not an afterthought.
 - **Confirmed: a real `account_roles` table**, not a simpler JSON tag — settles open question 1.
 - **Where an account's role comes from, when it isn't given directly** — a three-step precedence,
   same shape as the existing `role_source`/`ROLE_RANK` pattern: **Zoho** (an account's module/type
-  there) → the **consolidated contact sheet** (`Axis Partner`/`Milestone Partner`/`Installer
-  Category` already hint supplier-side relationships) → as a last resort, **harvest LinkedIn's
-  current job title** and keyword-match it (installer/distributor/reseller-shaped titles tag the
-  account `supplier`). Each step only fills what the step before it left blank; a Zoho or
-  sheet-asserted role is never overwritten by a LinkedIn guess.
+  there — still not wired up, no account-level type signal in what's been pulled so far) → the
+  **consolidated contact sheet** → as a last resort, **harvest LinkedIn's current job title** and
+  keyword-match it (installer/distributor/reseller-shaped titles tag the account `supplier`).
+  Each step only fills what the step before it left blank; a Zoho or sheet-asserted role is never
+  overwritten by a LinkedIn guess.
+  **Corrected against the real sheet:** only `Installer Category` actually hints at a supplier
+  relationship, and only one specific value — `SubD` (sub-distributor) means the account also
+  resells, i.e. is itself a supplier. `Axis Partner`/`Milestone Partner` turned out to be brand-
+  partnership tiers (`Authorized`/`Silver`/`Gold`/...) — about the account's own standing with that
+  brand, nothing to do with whether *they* supply *Elvey*. An earlier draft of this heuristic used
+  all three; `is_subdistributor_category()` in `src/util.py` is the fixed version.
 
 ## 2. Contact classification — what actually makes the Customers branch manageable
 
@@ -83,11 +89,18 @@ the dashboard contact card (a dropdown next to the existing department/status on
 activity signal hasn't caught up with yet. No LLM/AI classification; same "small, auditable rules"
 philosophy as `classify_department`.
 
-**Phase-1 groundwork needed:** Qreg isn't wired into this tool yet — what system it actually is,
-what export/API it offers, and how a "quote exists for this contact" fact gets into the local DB
-needs nailing down at the start of phase 1 (schema + data foundation), alongside the Zoho
-activity-pull this already assumes nothing live yet does. Until that's wired up, a contact can still
-be classified manually.
+**Zoho half: done.** `src/zoho_activity.py` imports an offline Zoho Contacts export (ahead of
+teaching the live API pull to request `Last Activity Time`, which it doesn't today) and fills
+`contact_class='engaged'` for anyone unclassified whose recorded activity is inside
+`classification.engaged_activity_days` (default 365) — never touching a contact already
+classified by anything else. Matches by email, then account + name, then name alone when unique.
+
+**Qreg half: still not wired up.** What arrived labelled "each rep/AM's Qreg data" turned out to
+be the refreshed **Consolidated Sales Contacts roster** itself (the real `AM`/`Category` columns,
+not a placeholder) — valuable on its own (it's now the real ingest source), but it's a roster,
+not a quote/activity log: there's no per-quote timestamp in it. Auto-classifying from Qreg still
+needs an actual raw feed (export or API) from whatever system reps log quotes in — open question,
+not yet answered. Until then, Qreg-driven classification stays manual.
 
 ## 3. Contact-level hierarchy — within *any* account, not just Elvey's own
 

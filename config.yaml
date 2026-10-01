@@ -69,6 +69,11 @@ dashboard:
   # Departments the sales team works with; others get a "not sales" tag (nothing is hidden).
   relevant_departments: [Management, Sales, Technical, Projects, Procurement]
 
+classification:
+  # v4 §2: how recent a contact's Zoho activity (src/zoho_activity.py) must be to auto-classify
+  # them 'engaged'. Only fills a blank contact_class — never overwrites a manual or Qreg-driven one.
+  engaged_activity_days: 365
+
 zoho:
   api_version: v3
   per_page: 200          # pull page size (Zoho max 200)

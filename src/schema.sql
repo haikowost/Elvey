@@ -47,6 +47,7 @@ CREATE TABLE IF NOT EXISTS contacts (
     in_makdb             TEXT,               -- Y|N, from the source sheet
     segment_override     TEXT,               -- pins one role when it differs from the account's (v4 §1)
     contact_class        TEXT,               -- engaged|lead|backlog; NULL = unclassified (v4 §2)
+    zoho_last_activity   TEXT,               -- 'Last Activity Time' from a Zoho Contacts export (v4 §2)
     reports_to_id        INTEGER REFERENCES contacts(id),  -- contact-level org chart, any account (v4 §3)
     email                TEXT,
     tel                  TEXT,

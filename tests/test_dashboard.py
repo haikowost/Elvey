@@ -22,7 +22,7 @@ def test_dashboard_endpoints(cfg, loaded):
     assert {g["title"] for g in tree["competitor"]} == {"Duxbury", "Reditron"}
     # v3: rows without an AM/allocation column (this old relational fixture) count as allocated
     assert anna["allocated"] is True and anna["allocated_rep"] is None
-    # v4: Acme has an axis_partner hint -> also tagged supplier; the group carries its account_roles
+    # v4: Acme's installer_category 'SubD' -> also tagged supplier; the group carries its account_roles
     assert acme["account_roles"] == ["customer", "supplier"]
     assert anna["contact_class"] is None and anna["reports_to"] is None
 
@@ -82,7 +82,7 @@ def test_contact_card_edits(cfg, loaded):
 
 
 def test_dual_role_account_appears_under_both_branch_tabs(cfg, loaded):
-    """Acme has account_roles customer+supplier (axis_partner hint) -> v4 role-based tab
+    """Acme has account_roles customer+supplier (installer_category 'SubD' hint) -> v4 role-based tab
     membership shows the same account, and the same people, under both the Customers and
     Suppliers branches, until segment_override starts splitting individual contacts."""
     c = TestClient(dashboard.create_app(cfg))

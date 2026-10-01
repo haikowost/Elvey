@@ -257,6 +257,19 @@ def infer_supplier_from_title(title: str | None) -> bool:
     return bool(title) and bool(_SUPPLIER_TITLE_RE.search(title))
 
 
+# sheet-hint account-role signal (v4 spec §1), corrected against the real Consolidated Sales
+# Contacts sheet: 'Installer Category' holds the account's own trade type — System Integrator,
+# Consultant, Installer, End-user, or 'SubD' (sub-distributor). Only SubD means the account also
+# resells/distributes, i.e. is itself a supplier; the others are plain customers. 'Axis Partner'/
+# 'Milestone Partner' are brand-partnership tiers (Authorized/Silver/Gold/...) unrelated to this —
+# despite an earlier draft of this heuristic treating any of the three as a supplier hint.
+_SUBDISTRIBUTOR_RE = re.compile(r"sub[\s-]?d(ist(ributor)?)?\b", re.IGNORECASE)
+
+
+def is_subdistributor_category(value: str | None) -> bool:
+    return bool(value) and bool(_SUBDISTRIBUTOR_RE.search(value))
+
+
 def yn(value: Any) -> str | None:
     """Normalise a Y/N-ish cell ('Y', 'yes', 'N', '0', 'Company only') to 'Y'/'N'/the original text."""
     s = clean(value)

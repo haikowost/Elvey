@@ -13,7 +13,7 @@ from typing import Any
 
 from . import db
 from .config import load_config
-from .util import ACCOUNT_ROLES, classify_department, infer_supplier_from_title, norm_name, split_name
+from .util import ACCOUNT_ROLES, classify_department, is_subdistributor_category, norm_name, split_name
 
 SEED_FILE = Path(__file__).resolve().parent.parent / "seed_data" / "elvey_org_chart.json"
 
@@ -33,8 +33,12 @@ def add_account_role(conn, account_id: int, role: str, source: str) -> None:
 def sync_account_roles(conn) -> dict:
     """Ensure every account's primary `segment` is reflected in account_roles, then layer in the
     sheet-hint precedence step for `supplier` (Zoho's own account-type pull isn't wired up yet —
-    that's the first, still-missing step; this covers the second). Idempotent: existing rows are
-    never removed or overwritten, only filled in where blank (ON CONFLICT DO NOTHING)."""
+    that's the first, still-missing step; this covers the second): an 'Installer Category' of
+    'SubD' (sub-distributor) means the account also resells, i.e. is itself a supplier.
+    'Axis Partner'/'Milestone Partner' are brand-partnership tiers, not a supplier signal — an
+    earlier draft of this heuristic used them too; corrected against the real sheet (v4 spec §1).
+    Idempotent: existing rows are never removed or overwritten, only filled in where blank
+    (ON CONFLICT DO NOTHING)."""
     accounts = db.rows(conn, "SELECT id, segment, extra FROM accounts")
     primary = supplier = 0
     with conn:
@@ -42,8 +46,7 @@ def sync_account_roles(conn) -> dict:
             add_account_role(conn, a["id"], a["segment"], "primary")
             primary += 1
             extra = db.jload(a["extra"], {})
-            if a["segment"] != "supplier" and any(extra.get(k) for k in
-                                                   ("axis_partner", "milestone_partner", "installer_category")):
+            if a["segment"] != "supplier" and is_subdistributor_category(extra.get("installer_category")):
                 add_account_role(conn, a["id"], "supplier", "sheet")
                 supplier += 1
     return {"accounts": len(accounts), "primary_roles": primary, "supplier_roles_inferred": supplier}

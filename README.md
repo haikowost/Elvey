@@ -47,13 +47,21 @@ Schema + data foundation for the rebuild in `V4-SPEC.md` — no UI yet, just the
 - **`account_roles`** (`src/orgchart.py`): an account can be more than one thing (a sub-distributor
   is a customer *and* a supplier). `sync_account_roles()` runs on every ingest — it tags every
   account with its primary `segment` role, then infers `supplier` from the sheet's
-  `Axis Partner`/`Milestone Partner`/`Installer Category` hints. (The Zoho step of that precedence,
-  and the LinkedIn-title fallback for when neither source hints at it, aren't wired up yet —
+  `Installer Category` column being `SubD`. (`Axis Partner`/`Milestone Partner` were tried too in
+  an earlier draft, then dropped once real data showed they're brand-partnership tiers, not a
+  supplier signal — see `is_subdistributor_category()`. The Zoho step of that precedence, and the
+  LinkedIn-title fallback for when neither source hints at it, aren't wired up yet —
   `infer_supplier_from_title()` exists and is tested, just not called from the harvester.)
 - **`contacts.contact_class`** (`engaged`/`lead`/`backlog`, nullable): the Customers-branch
-  signal-to-noise filter. Nothing auto-classifies yet — Qreg/Zoho activity, the intended trigger,
-  isn't wired up — so every contact starts unclassified until set manually via `POST
-  /api/contacts/{id}` (`"contact_class": "engaged"`, or `""` to clear).
+  signal-to-noise filter. The Zoho half of the auto-classify trigger is wired up —
+  `src/zoho_activity.py import <export.xlsx>` records each contact's real Zoho "Last Activity
+  Time" from an offline export (ahead of teaching the live API pull to request that field), then
+  `python -m src.zoho_activity classify` fills `engaged` for anyone still unclassified whose
+  activity is inside `classification.engaged_activity_days` (default 365). The Qreg half is still
+  not wired up — what arrived as "Qreg data" turned out to be the refreshed Consolidated Sales
+  Contacts roster itself, not a per-quote activity log. Either way, nothing already classified
+  (manually or otherwise) is ever overwritten; edit via `POST /api/contacts/{id}`
+  (`"contact_class": "engaged"`, or `""` to clear).
 - **`contacts.reports_to_id`**: contact-level org chart, usable for Elvey's own staff and for any
   large customer's internal structure alike. `seed_data/elvey_org_chart.json` (+ the human-readable
   `elvey_org_chart.md`) is a one-time seed of Elvey's actual reporting line (EXCO down to branch
@@ -65,16 +73,17 @@ Schema + data foundation for the rebuild in `V4-SPEC.md` — no UI yet, just the
 ### v4 phase 2 (2026-10-01): role-based tabs, Customers-branch scaling
 
 - **Role-based tab membership.** The People Tree now has a **Suppliers** tab alongside
-  Competitors/Internal/Customers. A dual-role account (Acme-style: a customer with an
-  `Axis Partner` hint) shows under *both* its tabs with the same people, same account record — no
-  duplicate data, just duplicate display. A contact's `segment_override` (once something sets it)
-  pins them to one tab instead of inheriting every role their account carries.
+  Competitors/Internal/Customers. A dual-role account (a sub-distributor: a customer with
+  `Installer Category = SubD`) shows under *both* its tabs with the same people, same account
+  record — no duplicate data, just duplicate display. A contact's `segment_override` (once
+  something sets it) pins them to one tab instead of inheriting every role their account carries.
 - **Customers-branch scaling.** Every group sorts `engaged` contacts first, ahead of allocation and
   priority. The People Tree filter bar gained a **Classification** filter (All/Engaged/Lead/Backlog/
   Unclassified) and, on the Customers tab only, an **"Engaged & allocated only"** toggle chip — the
   default-view behaviour the spec calls for, but left as a one-click toggle rather than an actual
-  default: nothing is classified yet (Qreg/Zoho activity isn't wired up), so defaulting it on would
-  just show an empty Customers tab today.
+  default, now that real Zoho-activity classification is wired up (see phase 1 above) but has
+  only matched a fraction of the roster so far (names/accounts that don't exist in Zoho under
+  that exact spelling, or predate it, show as unclassified, not wrongly excluded).
 
 ```
 config.yaml        paths, scope, caps, Zoho field mapping
@@ -86,6 +95,7 @@ src/harvest.py     LinkedIn face + summary + work history (Playwright, persisten
 src/orgchart.py    account_roles sync + the one-time org-chart reports_to_id seed (v4 phase 1)
 src/dashboard.py   FastAPI app + src/static/index.html
 src/zoho.py        auth, pull, diff, push selected, photo upload, id write-back
+src/zoho_activity.py  offline Zoho Contacts export -> Last Activity Time -> engaged classification
 seed_data/         one-time import sources (the Elvey org chart)
 tests/             pytest suite (synthetic data only)
 ```
