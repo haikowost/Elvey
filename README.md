@@ -31,6 +31,11 @@ D+ to triage), and `In Zoho` / `In MakDB` seed flags. What changed:
   matches this sheet's existing format).
 - **Filters.** The People Tree has `Allocated rep` and `Category` filters alongside the existing
   department/status ones, and every contact list sorts allocated contacts first within its group.
+- **Priority fallback.** When a contact has no explicit `Sort`/`Rank` value, its priority used to
+  default to its row position in the sheet — so whoever happened to be listed first always showed
+  up first everywhere (People Tree, Corrections chat), regardless of how urgent they actually
+  were. It now falls back to the `Category` cadence instead (A before B before C before D+), with
+  name as the tiebreaker within a category — reported, root-caused and fixed.
 - `In Zoho` / `In MakDB` are carried through as-is from the sheet (`contacts.in_zoho` /
   `contacts.in_makdb`); whether a contact is *actually* linked in Zoho right now is still the
   separate, live `zoho_contact_id` (shown as the "in Zoho" tag) that `src/zoho.py` maintains.

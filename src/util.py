@@ -231,6 +231,18 @@ def resolve_role(raw: Any) -> tuple[str | None, str | None]:
     return s, "data"
 
 
+_CATEGORY_RANK = {"A": 1, "B": 2, "C": 3, "D": 4}
+
+
+def category_rank(category: str | None) -> int:
+    """Call-cadence order for the Category column (A weekly, B monthly, C ad-hoc, D+ to triage):
+    used as the default priority when a contact has no explicit Sort/Rank value, so the People
+    Tree and Corrections chat surface the contacts that need the most attention first instead of
+    an accidental spreadsheet-row-order artifact. Unknown/blank categories sort last."""
+    s = (category or "").strip().upper()[:1]
+    return _CATEGORY_RANK.get(s, 50)
+
+
 def yn(value: Any) -> str | None:
     """Normalise a Y/N-ish cell ('Y', 'yes', 'N', '0', 'Company only') to 'Y'/'N'/the original text."""
     s = clean(value)

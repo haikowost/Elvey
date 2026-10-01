@@ -2,7 +2,8 @@ import csv
 import json
 
 from src import db, harvest, images, ingest
-from src.util import face_filename, norm_company, parse_face_filename, parse_money, resolve_role, slug, split_name, yn
+from src.util import (category_rank, face_filename, norm_company, parse_face_filename, parse_money, resolve_role,
+                      slug, split_name, yn)
 
 
 # ------------------------------------------------------------------ util
@@ -28,6 +29,12 @@ def test_resolve_role_and_yn():
     assert yn("N") == yn("no") == yn("0") == "N"
     assert yn("Company only") == "Company only"
     assert yn(None) is None and yn("") is None
+
+
+def test_category_rank_orders_by_cadence():
+    assert category_rank("A") < category_rank("B") < category_rank("C") < category_rank("D")
+    assert category_rank("a") == category_rank("A")  # case-insensitive
+    assert category_rank(None) > category_rank("D")  # unknown/blank sorts last of all
 
 
 def test_parse_money_and_company():
@@ -114,6 +121,26 @@ def test_ingest_v3_cleaned_sales_contacts_sheet(cfg, conn, tmp_path):
     assert yan["role"] is None and yan["role_source"] == "pending"  # placeholder text never stored as the role
     assert yan["allocated_rep"] == "Unallocated" and yan["allocated"] == 0
     assert yan["in_zoho"] == "N" and yan["in_makdb"] == "N"
+
+
+def test_category_is_the_priority_fallback_not_row_order(cfg, conn, tmp_path):
+    """Reported symptom: without an explicit Sort value, everyone's priority used to be their
+    row position in the sheet, so whoever happened to be listed first always showed up first in
+    the People Tree / Corrections chat - regardless of how urgent they actually are. The fallback
+    is now the Category cadence (A before D), with name as the tiebreaker within a category."""
+    p = tmp_path / "flat.csv"
+    p.write_text(
+        "Company,Contact Name,Category\n"
+        "Zeta (Pty) Ltd,Vashna First,D\n"   # listed first in the sheet, but low-priority category
+        "Zeta (Pty) Ltd,Amara Weekly,A\n"   # listed last, but the highest call-cadence priority
+        "Zeta (Pty) Ltd,Zane Weekly,A\n",
+        encoding="utf-8")
+    ingest.run(cfg, file=str(p))
+    vashna = db.one(conn, "SELECT * FROM contacts WHERE full_name='Vashna First'")
+    amara, zane = (db.one(conn, "SELECT * FROM contacts WHERE full_name=?", [n]) for n in ("Amara Weekly", "Zane Weekly"))
+    assert amara["priority"] == zane["priority"] == 1 and vashna["priority"] == 4  # A=1, D=4
+    assert amara["priority"] < vashna["priority"]  # category A now outranks row order entirely
+    # same category -> tied priority -> dashboard breaks the tie by name (Amara before Zane)
 
 
 def test_flat_csv_location_beats_linkedin_guess(cfg, conn, tmp_path):

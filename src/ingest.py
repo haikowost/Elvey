@@ -19,8 +19,8 @@ from typing import Any, Iterable
 
 from . import db
 from .config import load_config
-from .util import (DEPT_RANK, LOC_RANK, as_int, classify_department, clean, format_phone, linkedin_url, norm_company,
-                   norm_name, parse_face_filename, parse_money, resolve_role, segment_of, split_name, yn)
+from .util import (DEPT_RANK, LOC_RANK, as_int, category_rank, classify_department, clean, format_phone, linkedin_url,
+                   norm_company, norm_name, parse_face_filename, parse_money, resolve_role, segment_of, split_name, yn)
 
 # Flat-file header aliases (normalised: lowercase, non-alnum removed).
 FLAT_ALIASES: dict[str, list[str]] = {
@@ -284,8 +284,8 @@ def load_flat(rows: list[dict], cfg: dict, all_rows: bool = False) -> tuple[list
     for i, r in enumerate(rows, 1):
         company = clean(get(r, "company"))
         full = clean(get(r, "full_name")) or " ".join(filter(None, [clean(get(r, "first_name")), clean(get(r, "last_name"))]))
-        rank = as_int(get(r, "rank")) or i
-        if not company or not full or (top_c is not None and rank > top_c):
+        explicit_rank = as_int(get(r, "rank"))
+        if not company or not full or (top_c is not None and (explicit_rank or i) > top_c):
             continue
         key = f"FLAT:{norm_company(company)}"
         acct = accounts.setdefault(key, {"source_id": key, "name": company, "segment": segment_of(get(r, "segment")),
@@ -305,6 +305,11 @@ def load_flat(rows: list[dict], cfg: dict, all_rows: bool = False) -> tuple[list
         role, role_source = resolve_role(get(r, "role"))
         allocated_rep = clean(get(r, "allocated_rep"))
         allocated = 0 if (not allocated_rep or allocated_rep.lower() == "unallocated") else 1
+        category = clean(get(r, "category"))
+        # a contact with no explicit Sort/Rank falls back to its call-cadence Category (A before
+        # B before C before D+), not its row position in the sheet - ties within a category are
+        # then broken by name (dashboard sort), not by an accidental spreadsheet-order artifact.
+        priority = explicit_rank if explicit_rank is not None else category_rank(category)
         ref = clean(get(r, "ref"))
         contacts.append(finish_contact({
             "source_id": f"REF:{ref}" if ref else None, "account_source_id": key, "full_name": full,
@@ -312,9 +317,9 @@ def load_flat(rows: list[dict], cfg: dict, all_rows: bool = False) -> tuple[list
             "email": (clean(get(r, "email")) or "").lower() or None,
             "tel": clean(get(r, "tel")), "cell": clean(get(r, "cell")),
             "linkedin_contact_url": linkedin_url(get(r, "linkedin_contact_url")),
-            "segment": segment_of(get(r, "segment")), "org_group": None, "priority": rank,
+            "segment": segment_of(get(r, "segment")), "org_group": None, "priority": priority,
             "image_filename": clean(get(r, "image_filename")), "extra": None,
-            "allocated_rep": allocated_rep, "allocated": allocated, "category": clean(get(r, "category")),
+            "allocated_rep": allocated_rep, "allocated": allocated, "category": category,
             "in_zoho": yn(get(r, "in_zoho")), "in_makdb": yn(get(r, "in_makdb")),
             "city": clean(get(r, "city")), "province": clean(get(r, "province")), "country": clean(get(r, "country")),
         }))
