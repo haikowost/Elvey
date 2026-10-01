@@ -71,24 +71,30 @@ manual override from the dashboard contact card (a dropdown next to the existing
 ones). No LLM/AI classification in this phase; same "small, auditable rules" philosophy as
 `classify_department`.
 
-## 3. Account hierarchy (parent/subsidiary, branch/site)
+## 3. Contact-level hierarchy — within *any* account, not just Elvey's own
 
-`accounts.parent_account_id` (self-referential FK). Covers both shapes the business actually has:
-a holding company with subsidiaries, and one customer with multiple branches/sites. The People
-Tree nests child accounts under their parent instead of listing every site as a flat, unrelated
-group. Contacts stay attached to the specific account/site they belong to; the parent is a grouping
-device, not a contact container.
+**Correction from an earlier draft of this spec:** the hierarchy that matters here is
+**contact-to-contact**, not account-to-account. The original ask was "if there is a hierarchy
+within the larger accounts this needs to be visible" — meaning a big customer's own contacts
+(sales account manager, technician, pre-sales, ...) reporting up through a regional/divisional
+manager to a national manager, all *within that one customer account*. It is the same shape as
+Elvey's own internal reporting line, just not limited to the Internal branch.
 
-## 4. Elvey's own org chart
+**Design:** one mechanism, used everywhere: `contacts.reports_to_id` (self-referential FK to
+`contacts.id`). Nothing auto-derives it — there's no source column for it in any sheet today — so
+phase 1 adds a manual "Reports to" picker on the contact card (same pattern as the existing "move
+to account" picker; the picker lists other contacts *at the same account*, since that's the
+normal case, with an option to pick across accounts for the rare cross-account case). A contact
+card and the account group view both grow a read-only org-chart rendering (an indented tree,
+reusing the existing face photos) built from `reports_to_id` — under Internal for Elvey's own
+staff, and under any large customer account for its internal structure. Real reporting-line data
+can backfill later from an HR export or a customer-supplied org chart if either ever exists; the
+manual path means it's usable from day one regardless.
 
-We already hold most of what this needs: `contacts.segment='internal'`, `org_group`, and (from the
-relational ingest path) each rep's `role`/`cluster`/`branch`. What's missing is the *reporting
-line*. Add `contacts.reports_to_id` (self-referential FK to `contacts.id`). Nothing auto-derives
-this — there's no source column for it yet — so phase 1 adds a manual "Reports to" picker on the
-contact card (same pattern as the existing "move to account" picker) and a read-only org-chart
-rendering under the Internal branch (an indented tree, reusing the existing face photos). Real
-reporting-line data can backfill later from an HR export if one ever exists; the manual path means
-it's usable from day one regardless.
+**Account-to-account hierarchy** (a holding company with subsidiaries, or one customer with
+multiple branch/site accounts) is a separate, smaller thing and only worth building if it's
+actually needed — `accounts.parent_account_id` would cover it, but nothing in what's been asked
+for so far requires it. Dropped from phase 1 unless you tell me otherwise.
 
 ## 5. BI drilldown + configurable views
 
@@ -123,13 +129,14 @@ a deliberate individual selection, not a side effect of "select all."
 
 Kept small and reviewable, same pattern as every round so far — nothing here ships as one giant PR.
 
-1. **Schema + data foundation.** `account_roles`, `segment_override`, `parent_account_id`,
-   `reports_to_id`, `contact_class` — additive migrations only, plus the ingest-time default-class
-   rule. No UI beyond what's needed to verify it in the DB/API.
+1. **Schema + data foundation.** `account_roles`, `segment_override`, `reports_to_id`,
+   `contact_class` — additive migrations only, plus the ingest-time default-class rule. No UI
+   beyond what's needed to verify it in the DB/API.
 2. **Customers-branch scaling.** Dashboard default filtering/sorting by `contact_class`/`allocated`
    for the Customers branch; role-based tab membership (an account can now appear in >1 branch).
 3. **Analyze/BI view.** Aggregate panels + drilldown into a filtered contact list.
-4. **Table view.** Configurable columns, CSV export; the Internal org-chart rendering.
+4. **Table view + org chart.** Configurable columns, CSV export; the contact-level org-chart
+   rendering (Internal, and within any large customer account).
 5. **Suppliers go live** once real supplier data exists to ingest — schema's already there from
    phase 1, this is just "point ingest at the sheet."
 
@@ -153,5 +160,7 @@ Kept small and reviewable, same pattern as every round so far — nothing here s
    starting rule, or should *nothing* auto-classify and every contact start unclassified until a
    human (or a bulk action in the dashboard) sets it? Given the "no unverified contacts" principle,
    erring toward nothing auto-classifying may be closer to what you actually want.
-3. **Org chart data**: besides manual entry, is there any existing source (even an informal one —
-   an org chart slide, an HR list) worth a one-time import instead of starting from a blank slate?
+3. **Reporting-line data**: besides manual entry via the contact card, is there any existing
+   source — for Elvey's own staff, or for any large customer's internal structure — worth a
+   one-time import (an org chart slide, an HR list, a customer-supplied contact list with titles)
+   instead of starting every account's hierarchy from a blank slate?
