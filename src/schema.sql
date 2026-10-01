@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS contacts (
     segment_override     TEXT,               -- pins one role when it differs from the account's (v4 §1)
     contact_class        TEXT,               -- engaged|lead|backlog; NULL = unclassified (v4 §2)
     zoho_last_activity   TEXT,               -- 'Last Activity Time' from a Zoho Contacts export (v4 §2)
+    qreg_last_quote      TEXT,               -- latest Quote Date from a rep's QReg sheet (v4 §2)
     reports_to_id        INTEGER REFERENCES contacts(id),  -- contact-level org chart, any account (v4 §3)
     email                TEXT,
     tel                  TEXT,

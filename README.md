@@ -53,15 +53,20 @@ Schema + data foundation for the rebuild in `V4-SPEC.md` — no UI yet, just the
   LinkedIn-title fallback for when neither source hints at it, aren't wired up yet —
   `infer_supplier_from_title()` exists and is tested, just not called from the harvester.)
 - **`contacts.contact_class`** (`engaged`/`lead`/`backlog`, nullable): the Customers-branch
-  signal-to-noise filter. The Zoho half of the auto-classify trigger is wired up —
-  `src/zoho_activity.py import <export.xlsx>` records each contact's real Zoho "Last Activity
-  Time" from an offline export (ahead of teaching the live API pull to request that field), then
-  `python -m src.zoho_activity classify` fills `engaged` for anyone still unclassified whose
-  activity is inside `classification.engaged_activity_days` (default 365). The Qreg half is still
-  not wired up — what arrived as "Qreg data" turned out to be the refreshed Consolidated Sales
-  Contacts roster itself, not a per-quote activity log. Either way, nothing already classified
-  (manually or otherwise) is ever overwritten; edit via `POST /api/contacts/{id}`
-  (`"contact_class": "engaged"`, or `""` to clear).
+  signal-to-noise filter, now driven by both halves of the spec's trigger:
+  - **Zoho**: `python -m src.zoho_activity import <export.xlsx>` records each contact's real Zoho
+    "Last Activity Time" from an offline export (ahead of teaching the live API pull to request
+    that field).
+  - **Qreg**: it turned out to be the `QReg` sheet inside each rep's own Pentagon Quotation
+    Template workbook, not a separate system — one row per quote, with a date and the customer's
+    company/contact/email. `python -m src.qreg import <rep's .xlsm> [...]` records each matched
+    contact's latest quote date.
+  - Either `python -m src.zoho_activity classify` or `python -m src.qreg classify` then fills
+    `engaged` for anyone still unclassified whose recorded activity/quote is inside
+    `classification.engaged_activity_days` / `engaged_quote_days` (default 365 each) — run both,
+    whichever signal is recent enough wins, since neither ever overwrites a contact someone (or
+    the other signal) already classified. Edit manually via `POST /api/contacts/{id}`
+    (`"contact_class": "engaged"`, or `""` to clear).
 - **`contacts.reports_to_id`**: contact-level org chart, usable for Elvey's own staff and for any
   large customer's internal structure alike. `seed_data/elvey_org_chart.json` (+ the human-readable
   `elvey_org_chart.md`) is a one-time seed of Elvey's actual reporting line (EXCO down to branch
@@ -81,9 +86,10 @@ Schema + data foundation for the rebuild in `V4-SPEC.md` — no UI yet, just the
   priority. The People Tree filter bar gained a **Classification** filter (All/Engaged/Lead/Backlog/
   Unclassified) and, on the Customers tab only, an **"Engaged & allocated only"** toggle chip — the
   default-view behaviour the spec calls for, but left as a one-click toggle rather than an actual
-  default, now that real Zoho-activity classification is wired up (see phase 1 above) but has
-  only matched a fraction of the roster so far (names/accounts that don't exist in Zoho under
-  that exact spelling, or predate it, show as unclassified, not wrongly excluded).
+  default: real Zoho- and Qreg-activity classification are both wired up now (see phase 1 above),
+  but together still only cover roughly a fifth of the real roster so far (every rep's own
+  Exports/other-region book matches the current SA-focused sheet poorly — a scope gap, not a
+  bug) — contacts outside that coverage show as unclassified, not wrongly excluded.
 
 ```
 config.yaml        paths, scope, caps, Zoho field mapping
@@ -96,6 +102,7 @@ src/orgchart.py    account_roles sync + the one-time org-chart reports_to_id see
 src/dashboard.py   FastAPI app + src/static/index.html
 src/zoho.py        auth, pull, diff, push selected, photo upload, id write-back
 src/zoho_activity.py  offline Zoho Contacts export -> Last Activity Time -> engaged classification
+src/qreg.py        a rep's QReg sheet (in their quotation workbook) -> last quote -> engaged classification
 seed_data/         one-time import sources (the Elvey org chart)
 tests/             pytest suite (synthetic data only)
 ```

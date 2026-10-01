@@ -73,6 +73,9 @@ classification:
   # v4 §2: how recent a contact's Zoho activity (src/zoho_activity.py) must be to auto-classify
   # them 'engaged'. Only fills a blank contact_class — never overwrites a manual or Qreg-driven one.
   engaged_activity_days: 365
+  # v4 §2: same, from a rep's QReg quote-date (src/qreg.py). Run both classify steps; whichever
+  # signal is recent enough wins, since both only ever fill a still-blank contact_class.
+  engaged_quote_days: 365
 
 zoho:
   api_version: v3

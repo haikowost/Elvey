@@ -20,7 +20,7 @@ MIGRATIONS = {
         ("role_source", "TEXT"), ("allocated_rep", "TEXT"), ("allocated", "INTEGER NOT NULL DEFAULT 1"),
         ("category", "TEXT"), ("in_zoho", "TEXT"), ("in_makdb", "TEXT"),
         ("segment_override", "TEXT"), ("contact_class", "TEXT"), ("zoho_last_activity", "TEXT"),
-        ("reports_to_id", "INTEGER REFERENCES contacts(id)"),
+        ("qreg_last_quote", "TEXT"), ("reports_to_id", "INTEGER REFERENCES contacts(id)"),
     ],
 }
 

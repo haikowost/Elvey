@@ -95,12 +95,18 @@ teaching the live API pull to request `Last Activity Time`, which it doesn't tod
 `classification.engaged_activity_days` (default 365) — never touching a contact already
 classified by anything else. Matches by email, then account + name, then name alone when unique.
 
-**Qreg half: still not wired up.** What arrived labelled "each rep/AM's Qreg data" turned out to
-be the refreshed **Consolidated Sales Contacts roster** itself (the real `AM`/`Category` columns,
-not a placeholder) — valuable on its own (it's now the real ingest source), but it's a roster,
-not a quote/activity log: there's no per-quote timestamp in it. Auto-classifying from Qreg still
-needs an actual raw feed (export or API) from whatever system reps log quotes in — open question,
-not yet answered. Until then, Qreg-driven classification stays manual.
+**Qreg half: also done.** Found: Qreg isn't a separate system — it's the `QReg` sheet inside each
+rep's own Pentagon Quotation Template workbook (`MASTERv12`/revisions), one row per quote raised,
+with a quote date and the customer's company/contact/email. (What first arrived labelled "Qreg
+data" was actually the refreshed Consolidated Sales Contacts roster — valuable on its own, now
+the real ingest source, but a roster, not a quote log; the real Qreg sheets came in a follow-up.)
+`src/qreg.py import <rep's .xlsm> [...]` reads one or more reps' sheets and records each matched
+contact's latest quote date (`contacts.qreg_last_quote`); `python -m src.qreg classify` fills
+`engaged` the same fill-blank-only way as the Zoho half. Run both — whichever signal is recent
+enough wins, since neither ever overwrites an existing classification. Matching coverage varies a
+lot by rep (65–109/121–137 for the SA-focused reps, 15/155 for the Exports rep) — the low numbers
+are a scope mismatch, not a bug: that rep's book is almost entirely non-SA accounts (Botswana,
+Namibia, Mozambique, Zambia, Nigeria, Zimbabwe...) not yet in this consolidated sheet's scope.
 
 ## 3. Contact-level hierarchy — within *any* account, not just Elvey's own
 
