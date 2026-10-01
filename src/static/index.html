@@ -152,6 +152,7 @@ dialog pre { white-space: pre-wrap; font-size: 12px; max-height: 55vh; overflow:
         <div id="colpicklist"></div>
       </details>
       <button class="chip hidden" id="texport">Export CSV</button>
+      <button class="chip hidden" id="tquote" title="Round-trips the Consolidated Sales Contacts sheet's own columns for whoever's currently shown">Quote export (.xlsx)</button>
       <button class="chip" id="expand">Expand all</button>
     </div>
     <div id="tree"></div>
@@ -322,10 +323,12 @@ function loadTreeRender() {
   $('#vcards').classList.toggle('on', T.view === 'cards');
   $('#vtable').classList.toggle('on', T.view === 'table');
   $('#colpick').classList.toggle('hidden', T.view !== 'table');
-  $('#texport').classList.toggle('hidden', T.view !== 'table');
+  $('#texport').classList.remove('hidden');
+  $('#tquote').classList.toggle('hidden', T.branch !== 'customer' && T.branch !== 'supplier');
   $('#expand').classList.toggle('hidden', T.view !== 'cards');
   const f = currentFilters();
   const groups = T.data[T.branch];
+  updateExportSnapshot(groups, f);
   if (T.view === 'table') { renderTreeAsTable(groups, f); return; }
   let html = '', shown = 0;
   groups.forEach((g, gi) => {
@@ -386,6 +389,12 @@ function renderOrgChart(people) {
 }
 
 // ---------------------------------------------------------------- Table view (configurable columns)
+function updateExportSnapshot(groups, f) {
+  const cols = ALL_COLUMNS.filter(c => c.always || T.cols.includes(c.key));
+  const rows = [];
+  groups.forEach(g => g.people.forEach(p => { if (personMatches(p, g, f)) rows.push({ p, g }); }));
+  T.tableExport = { cols, rows };
+}
 function renderTreeAsTable(groups, f) {
   $('#colpicklist').innerHTML = ALL_COLUMNS.map(c => `<label><input type="checkbox" data-colkey="${c.key}"
     ${T.cols.includes(c.key) ? 'checked' : ''} ${c.always ? 'disabled' : ''}>${esc(c.label)}</label>`).join('');
@@ -395,9 +404,7 @@ function renderTreeAsTable(groups, f) {
     saveCols(T.cols);
     loadTreeRender();
   });
-  const cols = ALL_COLUMNS.filter(c => c.always || T.cols.includes(c.key));
-  const rows = [];
-  groups.forEach(g => g.people.forEach(p => { if (personMatches(p, g, f)) rows.push({ p, g }); }));
+  const { cols, rows } = T.tableExport;
   if (T.sortKey) {
     const col = ALL_COLUMNS.find(c => c.key === T.sortKey);
     rows.sort((a, b) => {
@@ -419,7 +426,6 @@ function renderTreeAsTable(groups, f) {
     T.sortKey = k;
     loadTreeRender();
   });
-  T.tableExport = { cols, rows };
 }
 function exportTableCsv() {
   const { cols, rows } = T.tableExport || { cols: [], rows: [] };
@@ -430,6 +436,20 @@ function exportTableCsv() {
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = `elvey-${T.branch}-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+async function exportQuote() {
+  const { rows } = T.tableExport || { rows: [] };
+  if (!rows.length) { alert('Nothing currently shown to export.'); return; }
+  const r = await fetch('/api/export/quote', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ contact_ids: rows.map(({ p }) => p.id) }) });
+  if (!r.ok) { alert('Export failed: ' + (await r.json().catch(() => ({})).then(j => j.detail || r.statusText))); return; }
+  const blob = await r.blob();
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  const disp = r.headers.get('content-disposition') || '';
+  a.download = (disp.match(/filename="([^"]+)"/) || [])[1] || 'elvey-quote-export.xlsx';
   a.click();
   URL.revokeObjectURL(a.href);
 }
@@ -615,6 +635,7 @@ $('#expand').onclick = () => { T.expandAll = !T.expandAll; T.override.clear(); $
 $('#vcards').onclick = () => { T.view = 'cards'; loadTreeRender(); };
 $('#vtable').onclick = () => { T.view = 'table'; loadTreeRender(); };
 $('#texport').onclick = () => exportTableCsv();
+$('#tquote').onclick = () => exportQuote();
 
 // ---------------------------------------------------------------- Analyze (BI panels + drilldown)
 function drilldown(filter) {

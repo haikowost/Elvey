@@ -128,6 +128,22 @@ Allocation panel's "Allocated" slice has something exact to drill into.)
   persistence/CSV export, org-chart render, and the reports-to picker's set/clear round-trip —
   all against the real 62-person org-chart seed data from phase 1.
 
+### v4 phase 5 (2026-10-01): exports
+
+- **Export CSV** now shows in Cards mode too, not just Table — same client-side mechanism from
+  phase 4, same filters, exactly what's currently shown in either view.
+- **Quote export** (`src/export.py`, `POST /api/export/quote`): the named preset the spec called
+  for — the exact Consolidated Sales Contacts column set (`Ref, Full Name, Role, Region/Branch,
+  Office Tel, Cell number, Email Address, Linkedin, Company name, ACCNO, Axis Partner, Milestone
+  Partner, Installer Category, AM, Category, In Zoho, In MakDB, Cluster, Sort`), written back out
+  as a real `.xlsx` from the current DB state for whichever contacts are currently filtered in
+  the dashboard. Server-side, because several of those columns (`ACCNO`, `Cluster`, `Axis
+  Partner`, `Milestone Partner`, `Installer Category`, `Sort`, `Ref`) never reach the browser via
+  `/api/people` at all — this pulls fresh from `accounts`/`contacts` instead of reshaping what the
+  Table view already has. Shows next to Export CSV whenever the Customers or Suppliers branch is
+  open. `Ref` has its ingest-time `REF:` prefix (`src/ingest.py`'s `source_id` convention)
+  stripped back off, so it round-trips as the original sheet value.
+
 ```
 config.yaml        paths, scope, caps, Zoho field mapping
 .env               Zoho credentials (copy .env.example; never committed)
@@ -137,6 +153,7 @@ src/images.py      face library -> contacts, coverage, data/to_enrich.csv
 src/harvest.py     LinkedIn face + summary + work history (Playwright, persistent profile)
 src/orgchart.py    account_roles sync + the one-time org-chart reports_to_id seed (v4 phase 1)
 src/analyze.py     named BI panels + drilldown filters for the Analyze tab (v4 phase 3)
+src/export.py      the Quote-export preset: Consolidated Sales Contacts columns as .xlsx (v4 phase 5)
 src/dashboard.py   FastAPI app + src/static/index.html
 src/zoho.py        auth, pull, diff, push selected, photo upload, id write-back
 src/zoho_activity.py  offline Zoho Contacts export -> Last Activity Time -> engaged classification

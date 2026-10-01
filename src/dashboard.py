@@ -10,10 +10,10 @@ import time
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 from pydantic import BaseModel
 
-from . import analyze, chat, db, harvest, orgchart, zoho
+from . import analyze, chat, db, export, harvest, orgchart, zoho
 from .config import load_config
 from .images import coverage, update_account_kyc_status
 from .util import CONTACT_CLASSES, DEPARTMENTS, norm_company
@@ -51,6 +51,10 @@ class ChatMessage(BaseModel):
 class PushRequest(BaseModel):
     selections: list[Selection]
     live: bool = False
+
+
+class QuoteExportRequest(BaseModel):
+    contact_ids: list[int]
 
 
 def _effective_roles(c: dict, account_roles: dict[int, list[str]]) -> list[str]:
@@ -256,6 +260,17 @@ def create_app(cfg=None) -> FastAPI:
     def analyze_panels():
         with lock:
             return analyze.panels(conn)
+
+    @app.post("/api/export/quote")
+    def export_quote(req: QuoteExportRequest):
+        with lock:
+            rows = export.quote_rows(conn, req.contact_ids)
+        if not rows:
+            raise HTTPException(400, "No matching contacts to export")
+        content = export.rows_to_xlsx(rows)
+        filename = f"elvey-quote-export-{time.strftime('%Y%m%d')}.xlsx"
+        return Response(content=content, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                         headers={"Content-Disposition": f'attachment; filename="{filename}"'})
 
     @app.get("/api/accounts")
     def accounts_list():

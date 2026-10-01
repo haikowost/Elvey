@@ -2,7 +2,7 @@ import json
 
 from fastapi.testclient import TestClient
 
-from src import dashboard, db
+from src import dashboard, db, export
 
 
 def test_dashboard_endpoints(cfg, loaded):
@@ -79,6 +79,22 @@ def test_contact_card_edits(cfg, loaded):
     bob2 = next(p for g in tree["customer"] for p in g["people"] if p["name"] == "Bob Jones")
     assert bob2["company"] == "Zeta Security" and len(bob2["previous_accounts"]) == 2
     assert "departments" in c.get("/api/stats").json()
+
+
+def test_quote_export_endpoint(cfg, loaded):
+    c = TestClient(dashboard.create_app(cfg))
+    anna = db.one(loaded, "SELECT id FROM contacts WHERE full_name='Anna Smith'")
+    r = c.post("/api/export/quote", json={"contact_ids": [anna["id"]]})
+    assert r.status_code == 200
+    assert r.headers["content-type"] == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    assert "elvey-quote-export-" in r.headers["content-disposition"]
+    import io
+    import openpyxl
+    wb = openpyxl.load_workbook(io.BytesIO(r.content))
+    ws = wb.active
+    header = next(ws.iter_rows(values_only=True))
+    assert header == export.QUOTE_COLUMNS
+    assert c.post("/api/export/quote", json={"contact_ids": []}).status_code == 400
 
 
 def test_analyze_endpoint_serves_panels(cfg, loaded):

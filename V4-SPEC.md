@@ -225,9 +225,19 @@ Kept small and reviewable, same pattern as every round so far — nothing here s
    reporting lines. The contact card grew a "Reports to"/"Direct reports" display plus a picker
    to set/clear the manager — scoped to contacts in the same group (same account, or Internal),
    matching the normal case from §3; the "rare cross-account case" picker is still out of scope.
-5. **Exports.** Generic filtered CSV/XLSX export (from People Tree, Analyze, and Table views
-   alike) with the consolidated-list column set as the Quote-export preset — both ship together,
-   same mechanism.
+5. ✅ **Exports.** **Export CSV** (client-side, any column set `T.cols` currently has picked) now
+   shows in both Cards and Table mode — People Tree and Table views alike, same mechanism, same
+   filters, exactly what's currently shown. Analyze reaches it the same way everything else
+   reaches a filtered list: drilldown into the People Tree, then export from there — no separate
+   export surface on the panels themselves. **Quote export** (`src/export.py`,
+   `POST /api/export/quote`) is the named preset: the exact Consolidated Sales Contacts column
+   set (`Ref, Full Name, Role, Region/Branch, ..., Cluster, Sort`), server-side because several of
+   those columns (ACCNO, Cluster, Axis Partner, Milestone Partner, Installer Category, Sort,
+   Ref) aren't in what `/api/people` sends the browser at all — a genuine round-trip straight from
+   the DB, not a re-shaping of the Table view's own data. .xlsx, since that's the sheet's native
+   format and "where formatting matters" per this section's original framing. Shown next to
+   Export CSV whenever the Customers or Suppliers branch is open, for whatever's currently
+   filtered/selected there.
 6. **Suppliers go live** once real supplier data exists to ingest — schema's already there from
    phase 1, this is just "point ingest at the sheet."
 
