@@ -164,6 +164,7 @@ def test_profile_extraction_new_layout(page, css):
     page.set_content(css + NEW_PROFILE.format(img=_img_data_url()))
     data = page.evaluate(harvest.JS_PROFILE)
     assert data["name"] == "Bob Jones" and not data["headline"] and not data["about"]  # old selectors miss
+    assert data["connection_degree"] == "2nd"
     headline, about, exp = harvest.parse_profile(data)
     assert headline == "Senior Buyer at Acme Security | Procurement"
     assert about == "Procurement lead for security projects across SADC."
@@ -238,3 +239,39 @@ def test_photo_fallback_finds_unclassed_image_near_name(page):
 def test_photo_fallback_returns_none_with_no_candidate(page):
     page.set_content("<main><h1>Nobody</h1><img src='https://media.licdn.com/logo.png' width='300' height='40'></main>")
     assert page.evaluate(harvest.JS_CAPTURE, [None, "img.no-such-class", 240, 0.85]) is None
+
+
+# Top-card right-rail fields (connection degree, current company / school links) and the
+# generated-summary fallback for a profile that has no About section at all.
+NO_ABOUT_PROFILE = f"""<main>
+ <section class="a1b2"><img class="c3d4 profile-displayphoto" src="{{img}}">
+   <h1 class="x9">Nadia Vlok</h1><span class="q2">· 2nd</span>
+   <div class="z7">Branch Manager at Pentagon Distribution</div>
+   <div>Durban, KwaZulu-Natal, South Africa</div>
+   <div class="rail"><a href="https://www.linkedin.com/company/pentagon-distribution/">Pentagon Distribution</a></div>
+   <div class="rail"><a href="https://www.linkedin.com/school/university-of-kwazulu-natal/">University of KwaZulu-Natal</a></div>
+ </section>
+ <section class="k4"><h2>{_dup("Experience")}</h2><ul>
+   <li><div>{_dup("Branch Manager")}</div><div>{_dup("Pentagon Distribution · Full-time")}</div>
+       <div>{_dup("Jan 2021 - Present · 3 yrs 9 mos")}</div></li>
+   <li><div>{_dup("Sales Rep")}</div><div>{_dup("Duxbury Networking · Full-time")}</div>
+       <div>{_dup("2015 - 2020 · 5 yrs")}</div></li>
+ </ul></section>
+</main>"""
+
+
+def test_top_card_fields_and_generated_summary_when_no_about(page):
+    page.set_content(NO_ABOUT_PROFILE.format(img=_img_data_url()))
+    data = page.evaluate(harvest.JS_PROFILE)
+    assert data["connection_degree"] == "2nd"
+    assert data["current_company_top"] == "Pentagon Distribution"
+    assert data["education_top"] == "University of KwaZulu-Natal"
+    headline, about, exp = harvest.parse_profile(data)
+    assert about is None
+    assert exp[0] == {"title": "Branch Manager", "company": "Pentagon Distribution", "dates": "Jan 2021 - Present"}
+    assert exp[1] == {"title": "Sales Rep", "company": "Duxbury Networking", "dates": "2015 - 2020"}
+    assert harvest.summary_source(headline, about, exp) == "generated"
+    summary = harvest.build_summary(headline, about, experience=exp, location=harvest.location_from(data))
+    assert summary.startswith("Branch Manager at Pentagon Distribution")
+    assert "Durban" in summary
+    assert "Duxbury Networking" in summary

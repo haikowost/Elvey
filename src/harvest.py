@@ -74,6 +74,9 @@ class Result:
     error: str | None = None
     debug_text: str | None = None    # visible page text (saved to data/debug when something went wrong)
     match_how: str | None = None     # how the profile was found: stored url | name+company | name-only …
+    connection_degree: str | None = None   # '1st' | '2nd' | '3rd+' badge next to the name, if shown
+    current_company_top: str | None = None  # top-card company link (right-rail "Current" row), if shown
+    education_top: str | None = None       # top-card school link (right-rail "Education" row), if shown
 
 
 class Driver(Protocol):
@@ -289,11 +292,56 @@ def current_company(experience: list[dict], headline: str | None) -> str | None:
     return m.group(1).strip() if m else None
 
 
-def build_summary(headline: str | None, about: str | None, limit: int = 500) -> str | None:
-    parts = [p.strip() for p in (headline, about) if p and p.strip()]
-    if not parts:
+def generate_summary_from_experience(experience: list[dict], headline: str | None = None,
+                                     location: str | None = None, today: date | None = None) -> str | None:
+    """Deterministic 2-3 sentence narrative built from Experience, for profiles with no About section."""
+    if not experience:
         return None
-    text = " — ".join(parts)
+    today = today or date.today()
+    current, prior_companies = experience[0], []
+    title, company = current.get("title"), current.get("company")
+    sentences = []
+    if title and company:
+        where = f", based in {location}" if location else ""
+        sentences.append(f"{title} at {company}{where}.")
+    elif company:
+        sentences.append(f"Currently with {company}" + (f", based in {location}" if location else "") + ".")
+    elif headline:
+        sentences.append(headline.strip().rstrip(".") + ".")
+    years = [int(y) for e in experience for y in re.findall(r"\b((?:19|20)\d{2})\b", e.get("dates") or "")]
+    if years:
+        tenure = today.year - min(years)
+        if tenure > 0:
+            sentences.append(f"Approximately {tenure} year{'s' if tenure != 1 else ''} of professional experience.")
+    for e in experience[1:]:
+        c = e.get("company")
+        if c and c != company and c not in prior_companies:
+            prior_companies.append(c)
+    if prior_companies:
+        sentences.append("Previously with " + ", ".join(prior_companies[:3]) + ".")
+    return " ".join(sentences) or None
+
+
+def summary_source(headline: str | None, about: str | None, experience: list[dict] | None = None) -> str | None:
+    if (about or "").strip():
+        return "about"
+    if experience and generate_summary_from_experience(experience, headline):
+        return "generated"
+    return "headline" if headline else None
+
+
+def build_summary(headline: str | None, about: str | None, limit: int = 500,
+                  experience: list[dict] | None = None, location: str | None = None) -> str | None:
+    about = (about or "").strip()
+    if about:
+        parts = [p.strip() for p in (headline, about) if p and p.strip()]
+        text = " — ".join(parts) if parts else None
+    else:
+        text = generate_summary_from_experience(experience, headline, location) if experience else None
+        if not text and headline and headline.strip():
+            text = headline.strip()
+    if not text:
+        return None
     text = re.sub(r"\s+", " ", text)
     if len(text) > limit:
         text = text[: limit - 1].rsplit(" ", 1)[0] + "…"
@@ -436,8 +484,17 @@ JS_PROFILE = """
     const h = sec.querySelector('h2, h3, [role="heading"]');
     return {heading: h ? (lines(h)[0] || '') : '', lines: lines(sec).slice(0, 300)};
   }).filter(x => x.heading);
+  // Top-card badges/links: scope to the <h1>'s own <section> so these never pick up unrelated
+  // '/company/' or '/school/' links (e.g. from Experience/Education) or stray '1st'/'2nd' text
+  // elsewhere on the page.
+  const topCard = (main.querySelector('h1') && main.querySelector('h1').closest('section')) || main;
+  const linkText = sel => { const el = topCard.querySelector(sel); if (!el) return ''; const s = spans(el); return s.length ? s.join(' ') : txt(el); };
+  const connM = txt(topCard).match(/\\b(1st|2nd|3rd\\+?)\\b/);
   return {name, headline, about, experience, topLines: lines(main).slice(0, 20), sections,
-          text: lines(main).slice(0, 600), title: document.title};
+          text: lines(main).slice(0, 600), title: document.title,
+          connection_degree: connM ? connM[1] : '',
+          current_company_top: linkText('a[href*="/company/"]'),
+          education_top: linkText('a[href*="/school/"]')};
 }
 """
 
@@ -587,7 +644,9 @@ class LinkedInDriver:
         location = location_from(data)
         return Result("done", profile_url=self.page.url.split("?")[0], profile_name=name, headline=headline,
                       about=about, experience=experience, location=location, photo=photo, match_how=how,
-                      debug_text=page_text)
+                      debug_text=page_text, connection_degree=(data.get("connection_degree") or None),
+                      current_company_top=(data.get("current_company_top") or None),
+                      education_top=(data.get("education_top") or None))
 
     def close(self) -> None:
         try:
@@ -681,10 +740,16 @@ def apply_result(conn, cfg, contact: dict, res: Result, need_face: bool) -> str:
     if res.status == "done":
         empty = not (res.headline or res.about or res.experience)
         changes.update({
-            "linkedin_summary": build_summary(res.headline, res.about, int(h.get("summary_chars", 500))),
+            "linkedin_summary": build_summary(res.headline, res.about, int(h.get("summary_chars", 500)),
+                                              experience=res.experience, location=res.location),
             "linkedin_experience": db.jdump(res.experience),
             "linkedin_profile_url": res.profile_url,
         })
+        extra["summary_source"] = summary_source(res.headline, res.about, res.experience)
+        if res.connection_degree:
+            extra["connection_degree"] = res.connection_degree
+        if res.education_top:
+            extra["education_top"] = res.education_top
         if empty:
             # profile opened but nothing readable: retry later rather than calling it done
             changes.update({"enrich_status": "failed", "enrich_attempts": (contact.get("enrich_attempts") or 0) + 1,
@@ -718,7 +783,7 @@ def apply_result(conn, cfg, contact: dict, res: Result, need_face: bool) -> str:
         if res.location and LOC_RANK.get("linkedin", 0) >= LOC_RANK.get(contact.get("location_source"), 0):
             city, province, country = split_location(res.location)
             changes.update({"city": city, "province": province, "country": country, "location_source": "linkedin"})
-        now_at = current_company(res.experience, res.headline)
+        now_at = res.current_company_top or current_company(res.experience, res.headline)
         changes["linkedin_current_company"] = now_at
         if now_at and contact.get("company"):
             if same_company(now_at, contact["company"]):

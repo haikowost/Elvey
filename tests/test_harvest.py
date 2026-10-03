@@ -6,7 +6,8 @@ import json
 from PIL import Image
 
 from src import db, harvest
-from src.harvest import Result, StopHarvest, build_summary, is_stop_page, parse_experience
+from src.harvest import (Result, StopHarvest, build_summary, generate_summary_from_experience, is_stop_page,
+                         parse_experience, summary_source)
 
 
 def jpeg():
@@ -38,6 +39,31 @@ def test_summary_and_stop_detection():
     assert is_stop_page("https://www.linkedin.com/checkpoint/challenge", "")
     assert is_stop_page("https://www.linkedin.com/in/x", "You've reached the commercial use limit on search")
     assert is_stop_page("https://www.linkedin.com/in/x", "Experience ...") is None
+
+
+def test_generated_summary_fallback_when_no_about():
+    """No About section at all -> a deterministic narrative from Experience, not just the headline."""
+    import datetime
+    exp = [
+        {"title": "Branch Manager", "company": "Pentagon Distribution", "dates": "Jan 2021 - Present"},
+        {"title": "Sales Rep", "company": "Duxbury Networking", "dates": "2015 - 2020"},
+    ]
+    assert generate_summary_from_experience([]) is None
+    text = generate_summary_from_experience(exp, "Branch Manager at Pentagon Distribution", "Durban",
+                                            today=datetime.date(2026, 1, 1))
+    assert text.startswith("Branch Manager at Pentagon Distribution, based in Durban.")
+    assert "11 years" in text
+    assert "Duxbury Networking" in text
+
+    assert summary_source("headline", None, exp) == "generated"
+    assert summary_source("headline", "an about blurb", exp) == "about"
+    assert summary_source("headline", None, []) == "headline"
+    assert summary_source(None, None, []) is None
+
+    s = build_summary("Branch Manager at Pentagon Distribution", None, experience=exp, location="Durban")
+    assert s.startswith("Branch Manager at Pentagon Distribution, based in Durban.")
+    # about present -> unaffected by the generated fallback, same as before
+    assert build_summary("CEO at Acme", "hand-written about text", experience=exp) == "CEO at Acme — hand-written about text"
 
 
 class FakeDriver:
@@ -252,6 +278,19 @@ def test_current_person_and_manual_department_kept(cfg, loaded):
     harvest.apply_result(loaded, cfg, anna, res, need_face=False)
     row = db.one(loaded, "SELECT * FROM contacts WHERE id=?", [anna["id"]])
     assert row["employment_status"] == "current" and row["department"] == "Management"  # manual wins
+
+
+def test_apply_result_stores_top_card_metadata_and_generated_summary(cfg, loaded):
+    anna = _contact(loaded, "Anna Smith")
+    res = Result("done", profile_url="u", profile_name="Anna Smith", headline="Sales Director at Acme Security",
+                 experience=[{"title": "Sales Director", "company": "Acme Security", "dates": "2020 - Present"}],
+                 connection_degree="2nd", current_company_top="Acme Security Pty", education_top="UCT")
+    harvest.apply_result(loaded, cfg, anna, res, need_face=False)
+    row = db.one(loaded, "SELECT * FROM contacts WHERE id=?", [anna["id"]])
+    extra = json.loads(row["extra"])
+    assert extra["connection_degree"] == "2nd" and extra["education_top"] == "UCT"
+    assert extra["summary_source"] == "generated"  # no About section was captured
+    assert row["linkedin_current_company"] == "Acme Security Pty"  # top-card link wins over derived
 
 
 def test_no_profile_saves_debug_and_inactive_not_queued(cfg, loaded):
