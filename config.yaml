@@ -1,0 +1,135 @@
+# Elvey KYC — configuration. Paths may be overridden by env vars (see .env.example).
+# Relative paths are resolved against this file's folder.
+
+paths:
+  # Google Drive KYC face library (the <Segment>__<First>_<Last>.jpg files live here).
+  kyc_folder: 'G:\.shortcut-targets-by-id\1ZYeE9cZf8VERsTP7Nq1jHVFXJvUgzThq\Elveygroup portfolio expert\Elvey KYC — People'
+  db: elvey_kyc.db
+  data_dir: data
+  # Playwright persistent Chromium profile (you log into LinkedIn here once).
+  browser_profile: data/chrome-profile
+  to_enrich_csv: data/to_enrich.csv
+
+inputs:
+  # v3 (2026-09-30): the authoritative source is the CLEANED, hand-synced Consolidated Sales
+  # Contacts sheet — 'Elvey Consolidated Sales Contacts - CLEANED <date>.xlsx', tab
+  # 'Customers (import)'. It is a flat, one-row-per-contact sheet (Ref, Full Name, Role,
+  # Region/Branch, Office Tel, Cell number, Email Address, Linkedin, Company name, ACCNO,
+  # Axis Partner, Milestone Partner, Installer Category, AM, Category, In Zoho, In MakDB,
+  # Cluster, Sort) and is already the curated contact base — nothing else needs top-N capping.
+  # Update the filename below to the latest CLEANED export each time it's re-synced.
+  #
+  # Two layouts are supported:
+  #   flat:       one CSV/xlsx sheet, one row per contact (this is the v3 format; headers are
+  #               matched via FLAT_ALIASES in src/ingest.py, so column order doesn't matter).
+  #   relational: the older Customer Data Consolidation workbook with dim_accounts /
+  #               dim_contacts / dim_reps / fact_sellout / view_top50_projects /
+  #               view_top500_contacts sheets — kept for backward compatibility only.
+  # 'auto' picks relational when a dim_contacts sheet exists, else flat.
+  # Must be the .xlsx (a .gsheet file is only a Google Sheets shortcut and cannot be read).
+  workbook: 'G:\.shortcut-targets-by-id\1ZYeE9cZf8VERsTP7Nq1jHVFXJvUgzThq\Elveygroup portfolio expert\Sales\Elvey Consolidated Sales Contacts - CLEANED.xlsx'
+  format: auto
+  sheet: 'Customers (import)'   # flat format only: sheet name (default = first sheet)
+
+scope:
+  # v3: the CLEANED sheet is already the full, curated contact base (allocated + Unallocated) —
+  # leave both null to load every row. The top_* caps only matter for the older relational
+  # workbook layout, where they select the ranked top-N accounts/contacts out of a much larger DB.
+  top_accounts: null     # ranked accounts from view_top50_projects (relational layout only)
+  top_contacts: null     # ranked contacts from view_top500_contacts (relational layout only)
+  # Competitor + Internal contacts are always loaded (they are the other two branches).
+  include_competitor_internal: true
+  # Customers who already have a KYC face in the library are loaded even outside the top-N.
+  include_kyc_faces: true
+
+segments:
+  # Accounts whose (normalised) name matches one of these are the internal branch.
+  internal_accounts: [Elvey, Elvey Group, Pentagon, Pentagon Distributors]
+  # Accounts treated as competitors. Key = account name, value = filename token.
+  competitor_accounts:
+    Duxbury: Duxbury
+    Reditron: Reditron
+  customer_token: CUST
+  internal_token: INT
+  supplier_token: SUPP   # reserved for v4 §1 — no supplier data to ingest yet (phase 6)
+
+harvest:
+  daily_cap: 40          # LinkedIn page-sets per calendar day (search + profile = 1)
+  delay_min_s: 4
+  delay_max_s: 9
+  render_wait_s: 3       # SPA render wait after navigation
+  image_px: 240
+  jpeg_quality: 0.85
+  summary_chars: 500
+  max_experience: 5
+  max_attempts: 2        # give up on a contact after N failed attempts
+
+dashboard:
+  host: 127.0.0.1
+  port: 8765
+  # Departments the sales team works with; others get a "not sales" tag (nothing is hidden).
+  relevant_departments: [Management, Sales, Technical, Projects, Procurement]
+
+classification:
+  # v4 §2: how recent a contact's Zoho activity (src/zoho_activity.py) must be to auto-classify
+  # them 'engaged'. Only fills a blank contact_class — never overwrites a manual or Qreg-driven one.
+  engaged_activity_days: 365
+  # v4 §2: same, from a rep's QReg quote-date (src/qreg.py). Run both classify steps; whichever
+  # signal is recent enough wins, since both only ever fill a still-blank contact_class.
+  engaged_quote_days: 365
+
+zoho:
+  api_version: v3
+  per_page: 200          # pull page size (Zoho max 200)
+  batch_size: 100        # records per create/update call (Zoho max 100)
+  pause_s: 0.3           # pause between API calls (credit friendliness)
+  # Safety latch: live pushes are refused until you set this to true
+  # (after reviewing a dry run). CLI also asks for confirmation.
+  live_enabled: false
+  # local column -> Zoho API name. Fields that don't exist in Zoho are skipped
+  # at push time and listed by `python -m src.zoho check`.
+  accounts_fields:
+    name: Account_Name
+    accno: Pentagon_Account_Number
+    division: Division
+    cluster: Cluster
+    branch: Branch
+    rep: Elvey_Rep
+    latest_sellout: Latest_Sellout
+    brand_focus: Brand_Focus
+    allocation: Allocation
+    kyc_status: KYC_Status
+    rank: Rank
+    linkedin_company_url: LinkedIn_URL
+  contacts_fields:
+    first_name: First_Name
+    last_name: Last_Name
+    email: Email
+    tel: Phone
+    cell: Mobile
+    role: Title
+    department: Department     # standard Zoho field
+    city: Mailing_City          # standard Zoho field
+    province: Mailing_State     # standard Zoho field — Zoho's label is 'State', holds our 'province'
+    country: Mailing_Country    # standard Zoho field
+    linkedin_contact_url: LinkedIn_URL
+    linkedin_summary: LinkedIn_Summary
+    segment: Segment
+    allocated_rep: Allocated_Rep
+    category: Category
+  # Suggested data types when creating the custom fields in the Zoho UI.
+  custom_field_types:
+    Division: Single Line
+    Cluster: Single Line
+    Branch: Single Line
+    Elvey_Rep: Single Line
+    Latest_Sellout: Currency
+    Brand_Focus: Single Line
+    Allocation: Single Line
+    KYC_Status: Single Line
+    Rank: Number
+    LinkedIn_URL: URL
+    LinkedIn_Summary: Multi Line (Large)
+    Segment: Single Line
+    Allocated_Rep: Single Line
+    Category: Single Line
