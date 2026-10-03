@@ -245,45 +245,45 @@ def test_photo_fallback_returns_none_with_no_candidate(page):
 # fields (connection degree, current company / school links) plus the generated-summary fallback
 # for a real individual relevant to Elvey's book who has no About section at all. Nadia Vlok has
 # since moved on from Pentagon Distribution (an Elvey-internal account) and is now a supplier
-# contact at Idemia -- her profile's current role must reflect that, with Pentagon and her earlier
-# Duxbury Networking stint showing up as prior experience.
+# contact at Ideco -- her profile's current role must reflect that, with Pentagon and her earlier
+# ADI stint showing up as prior experience.
 NADIA_VLOK_PROFILE = f"""<main>
  <section class="a1b2"><img class="c3d4 profile-displayphoto" src="{{img}}">
    <h1 class="x9">Nadia Vlok</h1><span class="q2">· 2nd</span>
-   <div class="z7">Account Manager at Idemia</div>
+   <div class="z7">Account Manager at Ideco</div>
    <div>Durban, KwaZulu-Natal, South Africa</div>
-   <div class="rail"><a href="https://www.linkedin.com/company/idemia/">Idemia</a></div>
+   <div class="rail"><a href="https://www.linkedin.com/company/ideco/">Ideco</a></div>
    <div class="rail"><a href="https://www.linkedin.com/school/university-of-kwazulu-natal/">University of KwaZulu-Natal</a></div>
  </section>
  <section class="k4"><h2>{_dup("Experience")}</h2><ul>
-   <li><div>{_dup("Account Manager")}</div><div>{_dup("Idemia · Full-time")}</div>
+   <li><div>{_dup("Account Manager")}</div><div>{_dup("Ideco · Full-time")}</div>
        <div>{_dup("Feb 2024 - Present · 1 yr 8 mos")}</div></li>
    <li><div>{_dup("Branch Manager")}</div><div>{_dup("Pentagon Distribution · Full-time")}</div>
        <div>{_dup("Jan 2021 - Jan 2024 · 3 yrs")}</div></li>
-   <li><div>{_dup("Sales Rep")}</div><div>{_dup("Duxbury Networking · Full-time")}</div>
+   <li><div>{_dup("Sales Rep")}</div><div>{_dup("ADI · Full-time")}</div>
        <div>{_dup("2015 - 2020 · 5 yrs")}</div></li>
  </ul></section>
 </main>"""
 
 
-def test_nadia_vlok_golden_profile_now_a_supplier_at_idemia(page):
+def test_nadia_vlok_golden_profile_now_a_supplier_at_ideco(page):
     page.set_content(NADIA_VLOK_PROFILE.format(img=_img_data_url()))
     data = page.evaluate(harvest.JS_PROFILE)
     assert data["connection_degree"] == "2nd"
-    assert data["current_company_top"] == "Idemia"  # no longer Pentagon Distribution
+    assert data["current_company_top"] == "Ideco"  # no longer Pentagon Distribution
     assert data["education_top"] == "University of KwaZulu-Natal"
     headline, about, exp = harvest.parse_profile(data)
     assert about is None
     # exact experience array match, per the spec's acceptance criteria
     assert exp == [
-        {"title": "Account Manager", "company": "Idemia", "dates": "Feb 2024 - Present"},
+        {"title": "Account Manager", "company": "Ideco", "dates": "Feb 2024 - Present"},
         {"title": "Branch Manager", "company": "Pentagon Distribution", "dates": "Jan 2021 - Jan 2024"},
-        {"title": "Sales Rep", "company": "Duxbury Networking", "dates": "2015 - 2020"},
+        {"title": "Sales Rep", "company": "ADI", "dates": "2015 - 2020"},
     ]
-    assert harvest.current_company(exp, headline) == "Idemia"
+    assert harvest.current_company(exp, headline) == "Ideco"
     # summary_source must be "generated"; the wording itself is allowed to vary
     assert harvest.summary_source(headline, about, exp) == "generated"
     summary = harvest.build_summary(headline, about, experience=exp, location=harvest.location_from(data))
-    assert summary.startswith("Account Manager at Idemia")
+    assert summary.startswith("Account Manager at Ideco")
     assert "Durban" in summary
-    assert "Pentagon Distribution" in summary and "Duxbury Networking" in summary
+    assert "Pentagon Distribution" in summary and "ADI" in summary
