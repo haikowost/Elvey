@@ -285,6 +285,44 @@ python -m src.zoho log
 
 > **LinkedIn ToS:** LinkedIn's User Agreement restricts automated access. Keep this modest, interactive and owner-run: your own account, small daily volumes, for Elvey's own KYC. Stop if LinkedIn warns you.
 
+### Scheduling the harvester (so you don't have to run it by hand)
+
+`python -m src.harvest` already paces itself (`harvest.delay_min_s`/`delay_max_s` between contacts)
+and stops the moment it hits the daily cap or a LinkedIn checkpoint/authwall — the pieces needed to
+run it unattended are already there. `scripts/run_harvest.ps1` wraps one call and appends its
+output to `data\harvest_schedule.log`; schedule *that* to fire every couple of hours during the day
+instead of running the whole day's cap in one sitting, which both looks more human to LinkedIn and
+means a checkpoint only costs you that one batch, not the rest of the day.
+
+One-time setup, in PowerShell from the repo folder:
+```
+schtasks /Create /SC MINUTE /MO 120 /TN "Elvey LinkedIn harvest" /TR "powershell -ExecutionPolicy Bypass -File \"$PWD\scripts\run_harvest.ps1\" -Limit 8" /RL LIMITED
+```
+This runs a batch of up to 8 contacts every 2 hours, around the clock (five such batches a day
+roughly matches the default `harvest.daily_cap` of 40 — raise `-Limit`/the cap, or add more, to
+taste). It needs nothing from you after that, but it does need:
+- **You logged in once already** (`python -m src.harvest --test` once, interactively, to get past
+  LinkedIn's login/security check in the visible browser window) — the persistent profile in
+  `data/chrome-profile` remembers that session.
+- **A visible desktop session** for the scheduled runs to open their browser window in, same as a
+  manual run (headless is not recommended — see above). In Task Scheduler's properties for the task,
+  under *General*, tick "Run only when user is logged on"; the window will briefly pop up each run.
+  If the task instead needs to run while you're logged out, this harvester isn't set up for that —
+  say so and we can look at headless as a fallback, accepting the higher block risk that implies.
+
+Check on it any time with `Get-Content data\harvest_schedule.log -Tail 40` or
+`python -m src.harvest --report 10`. If a batch stops early with "not logged in" or a checkpoint
+message in the log, LinkedIn needs you to re-verify by hand — run `python -m src.harvest --test`
+once, interactively, then the scheduled runs pick back up on their own.
+
+To pause it: `schtasks /Change /TN "Elvey LinkedIn harvest" /DISABLE` (`/ENABLE` to resume). To
+remove it entirely: `schtasks /Delete /TN "Elvey LinkedIn harvest" /F`.
+
+Running this unattended is a step beyond "interactive, owner-run" — you're still the only account
+being used, and the existing cap/pacing/stop-on-checkpoint behavior all still apply, but nobody is
+watching each run happen. Keep an eye on the log for the first few days and back off the schedule if
+LinkedIn ever pushes back.
+
 ## Correcting a specific person (the Corrections chat)
 
 The dashboard's **Corrections** tab is the fastest way to work through the handful of people each
