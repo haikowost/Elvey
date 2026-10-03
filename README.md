@@ -294,10 +294,18 @@ output to `data\harvest_schedule.log`; schedule *that* to fire every couple of h
 instead of running the whole day's cap in one sitting, which both looks more human to LinkedIn and
 means a checkpoint only costs you that one batch, not the rest of the day.
 
-One-time setup, in PowerShell from the repo folder:
+One-time setup, in PowerShell from the repo folder — replace the path after `-File` with your own
+repo location (run `(Get-Location).Path` to check it; this only works unquoted if that path has no
+spaces in it, which `C:\Users\<you>\Documents\elvey-kyc` doesn't):
 ```
-schtasks /Create /SC MINUTE /MO 120 /TN "Elvey LinkedIn harvest" /TR "powershell -ExecutionPolicy Bypass -File \"$PWD\scripts\run_harvest.ps1\" -Limit 8" /RL LIMITED
+schtasks /Create /SC MINUTE /MO 120 /TN "Elvey LinkedIn harvest" /TR "powershell -ExecutionPolicy Bypass -File C:\Users\HaikoWostmann\Documents\elvey-kyc\scripts\run_harvest.ps1 -Limit 8" /RL LIMITED
 ```
+(Nesting quotes around the path here — e.g. `-File \"...\"` — trips up how PowerShell hands the
+string to `schtasks`, which then mistakes `-Limit` for a stray top-level option. Keeping the whole
+`/TR` value as one quoted string with no quotes inside it avoids that; if your path ever does have
+spaces, drop `-Limit 8` from the end instead — the script already defaults to 8 — rather than trying
+to quote the path.)
+
 This runs a batch of up to 8 contacts every 2 hours, around the clock (five such batches a day
 roughly matches the default `harvest.daily_cap` of 40 — raise `-Limit`/the cap, or add more, to
 taste). It needs nothing from you after that, but it does need:
