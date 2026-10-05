@@ -425,6 +425,29 @@ def test_verify_flags_empty_marked_done_and_partial_and_stuck(cfg, loaded):
     assert db.one(loaded, "SELECT linkedin_summary FROM contacts WHERE id=?", [carla["id"]])["linkedin_summary"] == "A summary."
 
 
+def test_verify_stops_requeuing_persistently_bad_data(cfg, loaded):
+    """Reproduces the reported bug: a contact whose profile is empty/bad the SAME way every time
+    (e.g. no readable Experience section) got reset to enrich_attempts=0 on every --verify fix,
+    defeating max_attempts and consuming a harvest slot on every single run forever. After
+    max_attempts fixes it must give up and leave it for a person, not loop indefinitely."""
+    bob = _contact(loaded, "Bob Jones")
+    cfg["harvest"]["max_attempts"] = 2
+    _mark_done(loaded, bob["id"], linkedin_summary=None, linkedin_experience="[]", image_status="downloaded")
+
+    rep1 = harvest.verify(loaded, cfg, fix=True)
+    assert rep1["requeued"] == [bob["id"]] and not rep1.get("stuck")
+    row = db.one(loaded, "SELECT enrich_status, enrich_attempts FROM contacts WHERE id=?", [bob["id"]])
+    assert row["enrich_status"] == "pending" and row["enrich_attempts"] == 1  # counted, not reset to 0
+
+    # a re-harvest attempt produces the same bad result again
+    _mark_done(loaded, bob["id"], linkedin_summary=None, linkedin_experience="[]", image_status="downloaded")
+    rep2 = harvest.verify(loaded, cfg, fix=True)
+    assert rep2["stuck"] == [bob["id"]] and not rep2["requeued"]  # gave up, not another loop
+    row = db.one(loaded, "SELECT enrich_status, enrich_attempts FROM contacts WHERE id=?", [bob["id"]])
+    assert row["enrich_status"] == "failed" and row["enrich_attempts"] == 2
+    assert bob["id"] not in {r["id"] for r in harvest.queue(loaded, cfg)}  # max_attempts reached -> not requeued
+
+
 def test_verify_flags_duplicate_profile_url(cfg, loaded):
     bob, carla = _contact(loaded, "Bob Jones"), _contact(loaded, "Carla Müller")
     for c in (bob, carla):

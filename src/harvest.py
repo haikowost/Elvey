@@ -906,11 +906,14 @@ def verify(conn, cfg, fix: bool = True) -> dict:
     Everything else here needs a person: fix it with --set-url NAME URL (or the dashboard contact
     card), which pins the exact profile and skips search for that person from then on.
     """
+    max_attempts = int((cfg.get("harvest") or {}).get("max_attempts", 2))
     report: dict = {k: [] for k in VERIFY_CHECKS}
     rows = db.rows(conn, """SELECT c.*, a.name AS company FROM contacts c LEFT JOIN accounts a ON a.id = c.account_id
                             WHERE c.enrich_status = 'done'""")
+    by_id = {r["id"]: r for r in rows}
     seen_urls: dict[str, list] = {}
     requeue: set[int] = set()
+    stuck: set[int] = set()
     for r in rows:
         summary = r["linkedin_summary"] or ""
         exp = db.jload(r["linkedin_experience"], [])
@@ -933,10 +936,24 @@ def verify(conn, cfg, fix: bool = True) -> dict:
     if fix and requeue:
         with conn:
             for cid in requeue:
-                db.update(conn, "contacts", cid, {"enrich_status": "pending", "enrich_attempts": 0,
-                                                   "linkedin_summary": None, "linkedin_experience": None,
-                                                   "enrich_error": "re-queued by --verify (bad stored data)"})
-    report["requeued"] = sorted(requeue)
+                # bad/incomplete data that's the SAME every time (e.g. a profile with no readable
+                # Experience section) must not loop forever: resetting enrich_attempts to 0 on every
+                # --verify fix defeated max_attempts entirely, so a contact like this consumed a
+                # harvest slot on every single run, indefinitely. Count these fixes against the same
+                # cap instead, and stop re-queuing once it's exhausted -- it needs a person by then.
+                attempts = (by_id[cid]["enrich_attempts"] or 0) + 1
+                if attempts >= max_attempts:
+                    stuck.add(cid)
+                    db.update(conn, "contacts", cid, {"enrich_status": "failed", "enrich_attempts": attempts,
+                                                       "linkedin_summary": None, "linkedin_experience": None,
+                                                       "enrich_error": "bad/incomplete stored data, repeatedly, "
+                                                                       "after --verify fixes — needs a person"})
+                else:
+                    db.update(conn, "contacts", cid, {"enrich_status": "pending", "enrich_attempts": attempts,
+                                                       "linkedin_summary": None, "linkedin_experience": None,
+                                                       "enrich_error": "re-queued by --verify (bad stored data)"})
+    report["requeued"] = sorted(requeue - stuck)
+    report["stuck"] = sorted(stuck)
     return report
 
 
@@ -966,6 +983,10 @@ def print_verify_report(report: dict) -> None:
             print(f"  ... and {len(items) - 30} more")
     if report["requeued"]:
         print(f"\nRe-queued {len(report['requeued'])} contact(s) for another try — run a normal harvest to pick them up.")
+    if report.get("stuck"):
+        print(f"\nGave up on {len(report['stuck'])} contact(s) — bad/incomplete data every time, even after "
+              f"repeated --verify fixes (max_attempts reached). Marked 'failed' and left for a person; "
+              f"fix with --set-url or the dashboard, not another retry.")
 
 
 def report(conn, n: int) -> None:
@@ -1082,9 +1103,12 @@ def main(argv: list[str] | None = None) -> None:
         return
     # a quiet, automatic self-check before every real run: bad old data never sits unnoticed
     silent = verify(conn, cfg, fix=True)
-    fixed = len(silent["requeued"])
+    fixed, gave_up = len(silent["requeued"]), len(silent.get("stuck") or [])
     if fixed:
         print(f"(self-check: re-queued {fixed} contact(s) with bad or incomplete stored data)")
+    if gave_up:
+        print(f"(self-check: gave up on {gave_up} contact(s) — bad data every time even after repeated "
+              f"fixes; marked 'failed', left for --set-url or the dashboard, not another auto-retry)")
     stats = run(conn, cfg, factory, limit, args.cap, ids, args.segment)
     print(json.dumps(stats, indent=2))
 
