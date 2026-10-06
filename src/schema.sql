@@ -134,3 +134,43 @@ CREATE TABLE IF NOT EXISTS account_roles (
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     PRIMARY KEY (account_id, role)
 );
+
+-- Deal Intelligence Graph (/graph). All optional: the graph degrades to accounts + people when
+-- these are empty. Loaded with `python -m src.graph import <file.json>`; the UI never writes.
+CREATE TABLE IF NOT EXISTS projects (
+    id         INTEGER PRIMARY KEY,
+    name       TEXT NOT NULL,
+    sub        TEXT,                        -- one-line description
+    region     TEXT,
+    brands     TEXT,                        -- comma-separated brand / product lines
+    facts      TEXT,                        -- JSON list of strings
+    source_key TEXT UNIQUE                  -- the import file's own id, so re-imports update in place
+);
+
+CREATE TABLE IF NOT EXISTS products (
+    id         INTEGER PRIMARY KEY,
+    name       TEXT NOT NULL,
+    sub        TEXT,
+    brand      TEXT,
+    source_key TEXT UNIQUE
+);
+
+CREATE TABLE IF NOT EXISTS opportunities (
+    id          INTEGER PRIMARY KEY,
+    title       TEXT NOT NULL,
+    stage       TEXT,                       -- free text: Discovery|Qualified|Quoted|Tender|...
+    value       TEXT,                       -- display value as captured, e.g. 'R 1.2m'
+    account_id  INTEGER REFERENCES accounts(id),
+    project_id  INTEGER REFERENCES projects(id),
+    source_key  TEXT UNIQUE
+);
+
+-- Typed edges between graph node ids ('a12' account, 'c5' contact, 'p3' project, 'pr2' product).
+CREATE TABLE IF NOT EXISTS graph_links (
+    id      INTEGER PRIMARY KEY,
+    source  TEXT NOT NULL,
+    target  TEXT NOT NULL,
+    rel     TEXT NOT NULL,                  -- works_at|part_of|does_business_with|involved_in|specifies|serves|competes|opportunity|knows
+    ex      TEXT,                           -- JSON extras, e.g. {"owner": "Quin"}
+    UNIQUE (source, target, rel)
+);

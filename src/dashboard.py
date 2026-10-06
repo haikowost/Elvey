@@ -9,11 +9,12 @@ import threading
 import time
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
+from fastapi import FastAPI, HTTPException, Query
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import analyze, chat, db, export, harvest, orgchart, zoho
+from . import analyze, chat, db, export, graph, harvest, orgchart, zoho
 from .config import load_config
 from .images import coverage, update_account_kyc_status
 from .util import ACCOUNT_ROLES, CONTACT_CLASSES, DEPARTMENTS, norm_company
@@ -21,6 +22,7 @@ from .util import ACCOUNT_ROLES, CONTACT_CLASSES, DEPARTMENTS, norm_company
 CONTACT_STATUSES = ("active", "left", "not_relevant")
 
 STATIC = Path(__file__).with_name("static")
+GRAPH_DIST = STATIC / "graph"   # the built Deal Intelligence Graph front-end (web/ -> npm run build)
 BRANCH_ORDER = ("competitor", "internal", "customer", "supplier")
 
 
@@ -358,6 +360,79 @@ def create_app(cfg=None) -> FastAPI:
     def sync_log(limit: int = 200):
         with lock:
             return db.rows(conn, "SELECT * FROM zoho_sync_log ORDER BY id DESC LIMIT ?", [limit])
+
+    # ------------------------------------------------------------------ Deal Intelligence Graph (read-only)
+
+    # The live graph is rebuilt from the DB at most every few seconds: the 3D view asks for one photo
+    # per node, and rebuilding the whole graph for each of those requests would serialise hundreds
+    # of full rebuilds behind the DB lock.
+    cache: dict = {"graph": None, "at": 0.0}
+
+    def g():
+        with lock:
+            if graph.source_name(cfg) == "seed":
+                return graph.load_seed()
+            if cache["graph"] is None or time.monotonic() - cache["at"] > graph.LIVE_CACHE_S:
+                cache.update(graph=graph.load_live(conn, cfg), at=time.monotonic())
+            return cache["graph"]
+
+    def node_or_404(gr, nid: str) -> dict:
+        if nid not in gr.by_id:
+            raise HTTPException(404, f"no entity '{nid}'")
+        return gr.by_id[nid]
+
+    def csv(v: str | None) -> list[str]:
+        return [x for x in (v or "").split(",") if x]
+
+    @app.get("/api/graph")
+    def graph_all(types: str | None = None, rels: str | None = None, regions: str | None = None,
+                  brands: str | None = None, opps: bool = False):
+        gr = g()
+        if not any((types, rels, regions, brands, opps)):
+            return gr.payload()
+        return graph.filter_graph(gr, csv(types), csv(rels), csv(regions), csv(brands), opps)
+
+    @app.get("/api/entity/{nid}")
+    def entity(nid: str):
+        gr = g()
+        node_or_404(gr, nid)
+        return graph.dossier(gr, nid)
+
+    @app.get("/api/entity/{nid}/ego")
+    def entity_ego(nid: str, depth: int = Query(1, ge=1, le=2)):
+        gr = g()
+        node_or_404(gr, nid)
+        return graph.ego(gr, nid, depth)
+
+    @app.get("/api/account/{nid}/investigate")
+    def account_investigate(nid: str):
+        gr = g()
+        if node_or_404(gr, nid)["type"] != "company":
+            raise HTTPException(400, "Investigate works on companies")
+        return graph.investigate(gr, nid)
+
+    @app.get("/api/search")
+    def graph_search(q: str = ""):
+        return graph.search(g(), q)
+
+    @app.get("/api/photo/{nid}")
+    def photo(nid: str):
+        gr = g()
+        n = node_or_404(gr, nid)
+        fname = (gr.details.get(nid) or {}).get("image_filename")
+        if fname:
+            folder = cfg.kyc_folder.resolve()
+            path = (folder / fname).resolve()
+            if path.parent == folder and path.is_file():
+                return FileResponse(path, headers={"Cache-Control": "max-age=3600"})
+        return Response(graph.monogram_svg(n), media_type="image/svg+xml", headers={"Cache-Control": "max-age=3600"})
+
+    @app.get("/graph", include_in_schema=False)
+    def graph_root():
+        return RedirectResponse("/graph/")
+
+    if GRAPH_DIST.is_dir():
+        app.mount("/graph", StaticFiles(directory=GRAPH_DIST, html=True), name="graph")
 
     return app
 

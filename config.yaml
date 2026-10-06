@@ -70,6 +70,14 @@ dashboard:
   # Departments the sales team works with; others get a "not sales" tag (nothing is hidden).
   relevant_departments: [Management, Sales, Technical, Projects, Procurement]
 
+graph:
+  # Deal Intelligence Graph at http://127.0.0.1:8765/graph/ (read-only).
+  #   live — the KYC database: accounts + people + reporting lines, plus projects / opportunities /
+  #          company links loaded with `python -m src.graph import deals.json`
+  #   seed — the illustrative demo dataset in seed_data/graph_seed.json (shown with a DEMO badge)
+  # The ELVEY_GRAPH_SOURCE env var overrides this (e.g. ELVEY_GRAPH_SOURCE=seed for a demo).
+  source: live
+
 classification:
   # v4 §2: how recent a contact's Zoho activity (src/zoho_activity.py) must be to auto-classify
   # them 'engaged'. Only fills a blank contact_class — never overwrites a manual or Qreg-driven one.

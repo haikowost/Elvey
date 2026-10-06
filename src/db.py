@@ -11,6 +11,7 @@ SCHEMA = Path(__file__).with_name("schema.sql")
 
 # Columns added after the first release: existing databases are upgraded in place on connect.
 MIGRATIONS = {
+    "accounts": [("org_type", "TEXT")],   # enduser|consultant sub-type for the /graph view; NULL = from segment
     "contacts": [
         ("department", "TEXT"), ("department_source", "TEXT"),
         ("employment_status", "TEXT NOT NULL DEFAULT 'unknown'"), ("linkedin_current_company", "TEXT"),
