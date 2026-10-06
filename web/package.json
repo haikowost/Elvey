@@ -1,0 +1,29 @@
+{
+  "name": "elvey-deal-graph",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Deal Intelligence Graph front-end for the Elvey KYC app. Built into ../src/static/graph and served at /graph/.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "3d-force-graph": "1.80.1",
+    "d3-hierarchy": "3.1.2",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "three": "0.186.1",
+    "zustand": "5.0.15"
+  },
+  "devDependencies": {
+    "@types/d3-hierarchy": "3.1.7",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@types/three": "0.186.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "typescript": "5.9.3",
+    "vite": "8.3.3"
+  }
+}

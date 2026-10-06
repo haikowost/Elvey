@@ -1,0 +1,13 @@
+.env
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+data/
+chrome-profile/
+__pycache__/
+*.pyc
+.pytest_cache/
+to_enrich.csv
+*.xlsx
+web/node_modules/
