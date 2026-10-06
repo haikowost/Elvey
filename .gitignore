@@ -10,3 +10,4 @@ __pycache__/
 .pytest_cache/
 to_enrich.csv
 *.xlsx
+web/node_modules/

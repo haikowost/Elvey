@@ -7,6 +7,7 @@ A local, resumable KYC tool for Elvey Group's Projects/Pentagon division. It:
 3. **Enriches** contacts from LinkedIn: a face, a short summary and the last 3–5 roles. It drives your own logged-in browser, with a daily cap and a checkpoint after every contact.
 4. Serves a **local dashboard**: the People Tree (Competitors / Internal / Customers) and a Zoho **review-and-select** screen.
 5. **Syncs to Zoho CRM**. It first pulls Zoho and diffs it against the local DB (new / changed / in-sync). You pick the records and fields to send. It pushes only those, uploads photos, writes the Zoho IDs back and logs every write.
+6. Serves the **Deal Intelligence Graph** at `/graph/`: a read-only 3D / spider / organigram / investigate view of who works where, who does business with whom, and where the open opportunities are (see [below](#deal-intelligence-graph-graph)).
 
 Everything lives in one SQLite file (`elvey_kyc.db`). Every command can be re-run safely.
 
@@ -202,6 +203,7 @@ You can also override paths through env vars: `KYC_FOLDER`, `KYC_WORKBOOK`, `KYC
 python -m src.ingest                 # load accounts + contacts, print counts / coverage
 python -m src.images                 # match faces, write data/to_enrich.csv
 python -m src.dashboard              # http://127.0.0.1:8765  (People Tree + Zoho sync)
+                                     # http://127.0.0.1:8765/graph/  (Deal Intelligence Graph)
 python -m src.harvest --dry-run      # see the LinkedIn queue
 python -m src.harvest --test         # 5-contact test (browser opens; log in the first time)
 python -m src.harvest --report 5     # check what the test captured
@@ -423,6 +425,59 @@ python -m src.dashboard            # review: Needs review (moved), departments, 
 
 Repeat `python -m src.harvest` once a day. About 516 people at 40 a day is roughly two weeks of short runs. You can narrow a run with `--segment internal|competitor|customer` or `--limit 20`. Raising the cap with `--cap 60` is possible, but LinkedIn is more likely to show a security check at higher volumes.
 
+## Deal Intelligence Graph (`/graph`)
+
+Open **http://127.0.0.1:8765/graph/** while the dashboard is running. It's read-only: it never
+writes contacts or pushes to Zoho. Four views share one selection, one set of lenses and one
+drill-down trail, so switching views keeps the same entity in focus:
+
+* **Graph** — the 3D force graph. Faces / logos on the spheres (a monogram when there's no
+  photo), links coloured by relationship, amber particles flowing along opportunities. Drag to
+  orbit, scroll to zoom, hover for an insight card, click for the full dossier.
+* **Spider** — the everyday view: the selected entity in the middle, its neighbours on arcs grouped
+  by relationship, the people one step further out on a faint outer ring ("2 hops"). Click any
+  spoke to re-centre on it; the breadcrumb (top left) and ← take you back.
+* **Org** — an organigram: Our side → Integrators → Suppliers → End-users → Consultants →
+  Competitors. Click a card to expand its people, projects and served end-users; ✳ jumps to Spider,
+  ▤ to Investigate. Big tiers show the top 30 first, then "+N more".
+* **Investigate** — pick an account (rail → Account): its contacts, opportunities (its own, on its
+  links, and on its projects), projects, the consultants who specify those projects, linked
+  end-users, competitors on the same projects, and suggested next steps.
+
+The left rail also has **search** (Ctrl/Cmd+K), **lenses** (entity type, relationship, region,
+brand, opportunities-only — the 3D view dims what doesn't match, the 2D views leave it out),
+**saved views** (kept in this browser only) and a legend. The address bar carries the view and
+entity (e.g. `/graph/#spider:a12`), so a view can be bookmarked or shared.
+
+**Data.** `graph.source` in `config.yaml` picks where the graph comes from:
+
+* `live` (default) — the KYC database. Accounts, people, account roles and reporting lines are
+  there already, so Org and Investigate work straight away. Contacts the harvester hasn't reached
+  yet show **KYC pending** rather than a blank. Projects, products, opportunities and
+  company-to-company links aren't in any of the source sheets, so load them from a JSON file:
+
+  ```powershell
+  python -m src.graph import deals.json   # re-runnable: updates in place
+  python -m src.graph stats               # what the live graph currently holds
+  ```
+
+  `deals.json` has the same shape as `seed_data/graph_seed.json` (`nodes` + `links`). Companies
+  and people are matched to existing accounts/contacts **by name** (anything unmatched is listed
+  and skipped). Give a company `"group": "enduser"` or `"consultant"` to sub-type it. Projects and
+  products are created from the file, and their `opps` become opportunities. `works_at` links in
+  the file are ignored, because employment always comes from the KYC data itself.
+* `seed` — the illustrative demo dataset (Veracitech, Barloworld, Transnet ANPR, …), shown with a
+  **DEMO DATA** badge. For a one-off demo without editing the config:
+  `$env:ELVEY_GRAPH_SOURCE="seed"; python -m src.dashboard`.
+
+**Front-end source** is in `web/` (React + TypeScript + Vite). The built bundle is committed in
+`src/static/graph/`, so running it needs no Node. To change it:
+`cd web; npm ci; npm run build` (or `npm run dev` for hot reload against a running dashboard).
+
+API (all GET, JSON): `/api/graph` (optional `types`, `rels`, `regions`, `brands`, `opps` filters),
+`/api/entity/{id}`, `/api/entity/{id}/ego?depth=1|2`, `/api/account/{id}/investigate`,
+`/api/search?q=`, `/api/photo/{id}`.
+
 ## Growing past 500
 
 Nothing is hard-capped except the settings in `config.yaml`:
@@ -437,4 +492,4 @@ Nothing is hard-capped except the settings in `config.yaml`:
 pytest -q
 ```
 
-The fixtures are a synthetic workbook with the same layout as the real one, a fake Zoho, a fake LinkedIn driver, and real Chromium against mock markup for the in-page JavaScript. No real customer data is committed. `.gitignore` excludes `*.xlsx`, `*.db`, `.env`, `data/` and the browser profile.
+The fixtures are a synthetic workbook with the same layout as the real one, a fake Zoho, a fake LinkedIn driver, and real Chromium against mock markup for the in-page JavaScript. `tests/test_graph_ui.py` drives the built `/graph` front-end in real Chromium against the demo seed and checks the build brief's six acceptance criteria. No real customer data is committed. `.gitignore` excludes `*.xlsx`, `*.db`, `.env`, `data/` and the browser profile.
