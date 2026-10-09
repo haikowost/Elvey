@@ -22,7 +22,10 @@ MIGRATIONS = {
         ("category", "TEXT"), ("in_zoho", "TEXT"), ("in_makdb", "TEXT"),
         ("segment_override", "TEXT"), ("contact_class", "TEXT"), ("zoho_last_activity", "TEXT"),
         ("qreg_last_quote", "TEXT"), ("reports_to_id", "INTEGER REFERENCES contacts(id)"),
+        ("top500_rank", "INTEGER"),   # view_top500_contacts rank from the relational workbook (harvest order)
     ],
+    # Zoho deals from the relational workbook's fact_deals land in opportunities (all nullable)
+    "opportunities": [("amount", "REAL"), ("closing_date", "TEXT"), ("source", "TEXT")],
 }
 
 

@@ -2,14 +2,16 @@ import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '../store';
 import { GROUP_COLOR, GROUP_LABEL, REL_COLOR, REL_LABEL, RELS } from '../theme';
 import type { Group, View } from '../types';
+import KycProgress from './KycProgress';
 import Lenses from './Lenses';
 import SavedViews from './SavedViews';
 
+// Spider first (the default, flat and easy to navigate); the 3D graph stays available but last.
 export const VIEWS: { key: View; label: string; icon: string; help: string }[] = [
-  { key: 'graph', label: 'Graph', icon: '◉', help: 'Drag to orbit, scroll to zoom. Hover a sphere for its insight card; click for the full dossier.' },
-  { key: 'spider', label: 'Spider', icon: '✳', help: 'The selected entity sits in the middle. Click any spoke to re-centre on it; the breadcrumb takes you back.' },
+  { key: 'spider', label: 'Spider', icon: '✳', help: 'Opens centred on Elvey. Rings group neighbours by relationship; click any spoke to re-centre, the breadcrumb (or ⌂) takes you back.' },
   { key: 'org', label: 'Org', icon: '⊤', help: 'Our side → integrators → end-users → consultants → competitors. Click a card to expand it.' },
   { key: 'investigate', label: 'Investigate', icon: '▤', help: 'Pick an account: its reps, opportunities, projects and linked consultants / end-users.' },
+  { key: 'graph', label: '3D graph', icon: '◉', help: 'Everything at once. Drag to orbit, scroll to zoom; hover for the insight card, click for the dossier.' },
 ];
 
 const PICKER_ORDER: Group[] = ['elvey', 'customer', 'supplier', 'enduser', 'consultant', 'competitor'];
@@ -76,6 +78,7 @@ export default function Rail() {
         </select>
       </section>
 
+      <div className="rail-section-body"><KycProgress /></div>
       <div className="rail-section-body"><Lenses /></div>
       <div className="rail-section-body"><SavedViews /></div>
 

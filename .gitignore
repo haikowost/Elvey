@@ -11,3 +11,4 @@ __pycache__/
 to_enrich.csv
 *.xlsx
 web/node_modules/
+.venv/

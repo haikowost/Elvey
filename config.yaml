@@ -28,6 +28,13 @@ inputs:
   # 'auto' picks relational when a dim_contacts sheet exists, else flat.
   # Must be the .xlsx (a .gsheet file is only a Google Sheets shortcut and cannot be read).
   workbook: 'G:\.shortcut-targets-by-id\1ZYeE9cZf8VERsTP7Nq1jHVFXJvUgzThq\Elveygroup portfolio expert\Sales\Elvey Consolidated Sales Contacts - CLEANED.xlsx'
+  # The relational workbook (dim_accounts / dim_contacts / dim_reps / dim_brands / fact_sellout /
+  # fact_quotes / fact_deals / view_top50_projects / view_top500_contacts). `python -m src.ingest`
+  # (and scripts\run_kyc.ps1) loads THIS first — accounts, contacts, top-50/top-500 ranks, sellout
+  # by brand, quotes and open Zoho deals — then the cleaned flat sheet above on top of it.
+  # If a dated name doesn't exist, run_kyc.ps1 picks the newest 'Elvey Consolidated Relational
+  # Database *.xlsx' in the same folder. Env override: KYC_RELATIONAL.
+  relational_workbook: 'G:\.shortcut-targets-by-id\1ZYeE9cZf8VERsTP7Nq1jHVFXJvUgzThq\Elveygroup portfolio expert\Sales\Elvey Consolidated Relational Database 20260930.xlsx'
   format: auto
   sheet: 'Customers (import)'   # flat format only: sheet name (default = first sheet)
 
@@ -71,11 +78,11 @@ dashboard:
   relevant_departments: [Management, Sales, Technical, Projects, Procurement]
 
 graph:
-  # Deal Intelligence Graph at http://127.0.0.1:8765/graph/ (read-only).
-  #   live — the KYC database: accounts + people + reporting lines, plus projects / opportunities /
-  #          company links loaded with `python -m src.graph import deals.json`
-  #   seed — the illustrative demo dataset in seed_data/graph_seed.json (shown with a DEMO badge)
-  # The ELVEY_GRAPH_SOURCE env var overrides this (e.g. ELVEY_GRAPH_SOURCE=seed for a demo).
+  # Deal Intelligence Graph at http://127.0.0.1:8765/graph/ (read-only), always built from the KYC
+  # database: accounts, people, reporting lines, Elvey reps (account owners), brands from
+  # fact_sellout, open Zoho deals (fact_deals) as opportunities and quotes (fact_quotes) as weight.
+  # The illustrative demo dataset (seed_data/graph_seed.json, DEMO badge) only loads with the env
+  # flag ELVEY_GRAPH_SOURCE=seed — never from this file.
   source: live
 
 classification:

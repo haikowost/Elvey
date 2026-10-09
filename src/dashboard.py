@@ -213,6 +213,39 @@ def edit_contact(conn, contact_id: int, req: dict) -> dict:
     return db.one(conn, "SELECT * FROM contacts WHERE id = ?", [contact_id])
 
 
+def kyc_progress(conn, cfg) -> dict:
+    """Has the LinkedIn enrichment actually run? Counts over active contacts, per priority tier,
+    plus the last harvest run and today's use of the daily cap (the /graph rail + People Tree panel)."""
+    q = lambda sql, p=(): (conn.execute(sql, p).fetchone() or [None])[0]  # noqa: E731
+    active = "contact_status = 'active'"
+    url = "(coalesce(linkedin_profile_url, '') LIKE '%linkedin.com/in/%' OR coalesce(linkedin_contact_url, '') LIKE '%linkedin.com/in/%')"
+    tiers = []
+    for key, label in (("top50", "Top-50 accounts"), ("top500", "Top-500 contacts"), ("cat-a", "Category A")):
+        n = harvest.TIERS[key]
+        row = conn.execute(
+            f"SELECT count(*), sum(c.enrich_status = 'done'), sum(c.image_status IN ('downloaded','manual')) "
+            f"FROM contacts c LEFT JOIN accounts a ON a.id = c.account_id WHERE c.{active} AND ({harvest.TIER_SQL}) = ?",
+            [n]).fetchone()
+        tiers.append({"tier": key, "label": label, "total": row[0], "enriched": row[1] or 0, "photo": row[2] or 0})
+    last_run = db.jload((db.one(conn, "SELECT value FROM meta WHERE key = 'last_harvest_run'") or {}).get("value"))
+    last_visit = q("SELECT max(ts) FROM harvest_log")
+    return {
+        "contacts": q(f"SELECT count(*) FROM contacts WHERE {active}"),
+        "role_known": q(f"SELECT count(*) FROM contacts WHERE {active} AND coalesce(trim(role), '') != ''"),
+        "linkedin_url": q(f"SELECT count(*) FROM contacts WHERE {active} AND {url}"),
+        "photo": q(f"SELECT count(*) FROM contacts WHERE {active} AND image_status IN ('downloaded', 'manual')"),
+        "enriched": q(f"SELECT count(*) FROM contacts WHERE {active} AND enrich_status = 'done'"),
+        "no_profile": q(f"SELECT count(*) FROM contacts WHERE {active} AND enrich_status = 'no_profile'"),
+        "queued": len(harvest.queue(conn, cfg)),
+        "tiers": tiers,
+        "used_today": harvest.used_today(conn),
+        "daily_cap": int((cfg.get("harvest") or {}).get("daily_cap", 40)),
+        "last_harvest_run": last_run,
+        "last_linkedin_visit": last_visit,
+        "last_ingest": q("SELECT value FROM meta WHERE key = 'last_ingest'"),
+    }
+
+
 def create_app(cfg=None) -> FastAPI:
     cfg = cfg or load_config()
     conn = db.connect(cfg.db_path)
@@ -263,6 +296,11 @@ def create_app(cfg=None) -> FastAPI:
                     "unallocated": q("SELECT count(*) FROM contacts WHERE allocated = 0"),
                     "reps": reps, "categories": cats, "contact_classes": class_counts, "account_roles": role_counts,
                     "last_ingest": (conn.execute("SELECT value FROM meta WHERE key='last_ingest'").fetchone() or [None])[0]}
+
+    @app.get("/api/kyc/progress")
+    def progress():
+        with lock:
+            return kyc_progress(conn, cfg)
 
     @app.get("/api/analyze")
     def analyze_panels():
@@ -399,10 +437,10 @@ def create_app(cfg=None) -> FastAPI:
         return graph.dossier(gr, nid)
 
     @app.get("/api/entity/{nid}/ego")
-    def entity_ego(nid: str, depth: int = Query(1, ge=1, le=2)):
+    def entity_ego(nid: str, depth: int = Query(1, ge=1, le=2), limit: int = Query(graph.EGO_PER_GROUP, ge=0, le=2000)):
         gr = g()
         node_or_404(gr, nid)
-        return graph.ego(gr, nid, depth)
+        return graph.ego(gr, nid, depth, limit)
 
     @app.get("/api/account/{nid}/investigate")
     def account_investigate(nid: str):
@@ -441,8 +479,14 @@ def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--config")
     ap.add_argument("--port", type=int)
+    ap.add_argument("--progress", action="store_true", help="print the KYC progress counts and exit")
     args = ap.parse_args(argv)
     cfg = load_config(args.config)
+    if args.progress:
+        import json
+
+        print(json.dumps(kyc_progress(db.connect(cfg.db_path), cfg), indent=2, default=str))
+        return
     d = cfg.get("dashboard") or {}
     import uvicorn
 

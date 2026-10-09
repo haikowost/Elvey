@@ -26,6 +26,9 @@ nav button.on, .chip.on { background: var(--accent); color: var(--accent-ink); b
 main { padding: 16px 20px 60px; max-width: 1400px; margin: 0 auto; }
 .bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
 select { padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--ink); font: inherit; }
+.kycbox { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: baseline; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; margin: 0 0 12px; font-size: 13px; }
+.kycbox b { font-size: 15px; font-variant-numeric: tabular-nums; } .kycbox .muted { color: var(--muted); }
+.kycbox.stale { border-color: var(--warn-line); background: var(--warn-bg); }
 .warnbox { background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 8px; padding: 8px 10px; margin: 8px 0; font-size: 13px; }
 #chatlog { display: flex; flex-direction: column; gap: 10px; max-width: 760px; margin: 14px 0; }
 .bubble { padding: 10px 14px; border-radius: 12px; max-width: 88%; font-size: 14px; line-height: 1.4; }
@@ -116,12 +119,14 @@ dialog pre { white-space: pre-wrap; font-size: 12px; max-height: 55vh; overflow:
     <button data-view="analyze">Analyze</button>
     <button data-view="chat">Corrections<span id="chatbadge" class="tag hidden" style="margin-left:5px"></span></button>
     <button data-view="zoho">Zoho sync</button>
+    <a href="/graph/" style="margin-left:6px;color:var(--accent)">Deal graph ↗</a>
   </nav>
   <div class="stats" id="stats"></div>
 </header>
 
 <main>
   <section id="view-tree">
+    <div id="kycbox" class="kycbox" aria-live="polite" title="LinkedIn enrichment progress (scripts\run_kyc.ps1 runs the harvest)"></div>
     <div id="dqbox" class="warnbox hidden"></div>
     <div class="bar">
       <span id="branches"></span>
@@ -253,6 +258,25 @@ async function loadStats() {
     '<option value="__unalloc">Unallocated only</option>' + (s.reps || []).map(r => `<option>${esc(r)}</option>`).join('');
   $('#fcat').innerHTML = '<option value="">All categories</option>' +
     (s.categories || []).map(c => `<option>${esc(c)}</option>`).join('');
+}
+async function loadProgress() {
+  const box = $('#kycbox');
+  try {
+    const k = await api('/api/kyc/progress');
+    const pct = n => k.contacts ? ` <span class="muted">(${Math.round(100 * n / k.contacts)}%)</span>` : '';
+    const run = k.last_harvest_run;
+    const when = run ? new Date(run.at).toLocaleString('en-ZA') : 'never';
+    const days = run ? (Date.now() - new Date(run.at)) / 864e5 : Infinity;
+    box.classList.toggle('stale', days > 2);
+    box.innerHTML = `<strong>KYC progress</strong>
+      <span><b>${k.contacts}</b> contacts</span>
+      <span><b>${k.role_known}</b> role known${pct(k.role_known)}</span>
+      <span><b>${k.linkedin_url}</b> LinkedIn URL${pct(k.linkedin_url)}</span>
+      <span><b>${k.photo}</b> photo${pct(k.photo)}</span>
+      <span class="muted">${k.tiers.map(t => `${esc(t.label)} ${t.enriched}/${t.total}`).join(' · ')}</span>
+      <span class="muted">Last harvest: ${esc(when)}${run && run.stopped ? ' — stopped: ' + esc(run.stopped) : ''}
+        · today ${k.used_today}/${k.daily_cap} · ${k.queued} queued</span>`;
+  } catch (e) { box.textContent = 'KYC progress unavailable: ' + e.message; }
 }
 function statusOk(p, f) {
   if (f === 'all') return true;
@@ -884,7 +908,7 @@ $('#chatsend').onclick = () => chatSend($('#chatbox').value);
 $('#chatbox').addEventListener('keydown', e => { if (e.key === 'Enter') chatSend($('#chatbox').value); });
 $('#chatskip').onclick = () => chatSend('skip');
 
-loadStats(); loadTree(); loadVerify();
+loadStats(); loadProgress(); loadTree(); loadVerify();
 </script>
 </body>
 </html>

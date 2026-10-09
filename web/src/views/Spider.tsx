@@ -8,6 +8,12 @@ import { anchorOf, useSize } from '../useSize';
 
 interface Placed { n: EgoNode; x: number; y: number; a: number; r: number }
 const RING2_MAX = 80;
+const PER_GROUP = 16;        // spokes per relationship segment (server trims the rest, reported as "N of M")
+const PER_GROUP_MORE = 120;
+const RADIAL_LABELS_FROM = 28; // above this many spokes, labels run outward along the spoke so they don't collide
+const MAX_LABEL = 26;
+
+const short = (s: string) => (s.length > MAX_LABEL ? `${s.slice(0, MAX_LABEL - 1)}…` : s);
 
 function layout(ego: Ego, keep: (n: EgoNode) => boolean) {
   const ring1 = ego.nodes.filter((n) => n.ring === 1 && keep(n));
@@ -16,10 +22,10 @@ function layout(ego: Ego, keep: (n: EgoNode) => boolean) {
     .filter((n) => n.ring === 2 && n.parent && kept1.has(n.parent) && keep(n))
     .slice(0, RING2_MAX);
   const groups = ego.groups
-    .map((g) => ({ rel: g.rel, ids: g.ids.filter((id) => kept1.has(id)) }))
+    .map((g) => ({ rel: g.rel, ids: g.ids.filter((id) => kept1.has(id)), total: g.total ?? g.ids.length }))
     .filter((g) => g.ids.length);
   const N = ring1.length;
-  const R1 = Math.max(170, Math.min(340, 60 + N * 13));
+  const R1 = Math.max(170, Math.min(N > RADIAL_LABELS_FROM ? 520 : 340, 60 + N * (N > RADIAL_LABELS_FROM ? 6.5 : 13)));
   const R2 = R1 + 150;
   const byId = new Map(ring1.map((n) => [n.id, n]));
   const weights = groups.map((g) => Math.max(g.ids.length, 1.6));
@@ -27,11 +33,11 @@ function layout(ego: Ego, keep: (n: EgoNode) => boolean) {
   const gap = groups.length > 1 ? 0.12 : 0;
   const usable = Math.PI * 2 - gap * groups.length;
   const placed1: Placed[] = [];
-  const arcs: { rel: Rel; a0: number; a1: number; count: number }[] = [];
+  const arcs: { rel: Rel; a0: number; a1: number; count: number; total: number }[] = [];
   let a = -Math.PI / 2;
   groups.forEach((g, gi) => {
     const span = (usable * weights[gi]) / total;
-    arcs.push({ rel: g.rel, a0: a, a1: a + span, count: g.ids.length });
+    arcs.push({ rel: g.rel, a0: a, a1: a + span, count: g.ids.length, total: g.total });
     g.ids.forEach((id, i) => {
       const ang = a + (span * (i + 0.5)) / g.ids.length;
       const n = byId.get(id)!;
@@ -53,10 +59,29 @@ function layout(ego: Ego, keep: (n: EgoNode) => boolean) {
       placed2.push({ n, a: ang, x: rr * Math.cos(ang), y: rr * Math.sin(ang), r: 6 });
     });
   }
-  return { placed1, placed2, arcs, R1, R2 };
+  return { placed1, placed2, arcs, R1, R2, radial: N > RADIAL_LABELS_FROM };
 }
 
 const nodeSize = (n: EgoNode) => (n.type === 'company' ? 2.5 : n.type === 'project' ? 2 : 1.5);
+
+/** A spoke label: beside the node when there's room, else running outward along the spoke. */
+function SpokeLabel({ p, radial, ring2 }: { p: Placed; radial: boolean; ring2?: boolean }) {
+  const right = Math.cos(p.a) >= 0;
+  const gap = p.r + (ring2 ? 4 : 6);
+  if (!radial) {
+    return (
+      <text className={`spoke-label${ring2 ? ' r2' : ''}`} x={Math.cos(p.a) * gap} y={Math.sin(p.a) * gap + (ring2 ? 3 : 4)}
+        textAnchor={right ? 'start' : 'end'}>{short(p.n.label)}</text>
+    );
+  }
+  const deg = (p.a * 180) / Math.PI + (right ? 0 : 180);
+  return (
+    <text className={`spoke-label${ring2 ? ' r2' : ''}`} transform={`rotate(${deg.toFixed(1)})`} x={right ? gap : -gap} y={4}
+      textAnchor={right ? 'start' : 'end'}>{short(p.n.label)}</text>
+  );
+}
+
+const spokeWidth = (n: EgoNode) => 1.2 + Math.min(2.6, Math.log1p(n.w ?? 0));
 
 function arcPath(r: number, a0: number, a1: number) {
   const p = (t: number) => `${(r * Math.cos(t)).toFixed(1)} ${(r * Math.sin(t)).toFixed(1)}`;
@@ -68,10 +93,13 @@ export default function Spider() {
   const select = useStore((s) => s.select);
   const setHover = useStore((s) => s.setHover);
   const openDossier = useStore((s) => s.openDossier);
+  const root = useStore((s) => s.root);
   const byId = useStore((s) => s.byId);
   const hiddenRels = useStore((s) => s.lens.hiddenRels);
   const match = useMatcher();
-  const [depth, setDepth] = useState<1 | 2>(2);
+  // 1 hop by default: the flat "who's around this node" view; 2 hops is one click away
+  const [depth, setDepth] = useState<1 | 2>(1);
+  const [more, setMore] = useState(false);
   const [ego, setEgo] = useState<Ego | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [ref, size] = useSize<HTMLDivElement>();
@@ -82,9 +110,10 @@ export default function Spider() {
     if (!selectedId) return;
     let live = true;
     setErr(null);
-    api.ego(selectedId, depth).then((e) => live && setEgo(e)).catch((e) => live && setErr(String(e)));
+    api.ego(selectedId, depth, more ? PER_GROUP_MORE : PER_GROUP).then((e) => live && setEgo(e)).catch((e) => live && setErr(String(e)));
     return () => { live = false; };
-  }, [selectedId, depth]);
+  }, [selectedId, depth, more]);
+  useEffect(() => setMore(false), [selectedId]);
 
   const lay = useMemo(() => {
     if (!ego) return null;
@@ -92,10 +121,11 @@ export default function Spider() {
     return layout(ego, (n) => match(byId.get(n.id)) && (n.ring === 2 || (n.rels ?? [n.rel]).some((r) => !hiddenRels.includes(r))));
   }, [ego, match, byId, hiddenRels]);
 
-  const fit = lay && size.w ? Math.min(1.25, Math.min(size.w, size.h - 60) / (2 * ((depth === 2 && lay.placed2.length ? lay.R2 + 34 : lay.R1) + 120))) : 1;
+  const fit = lay && size.w ? Math.min(1.25, Math.min(size.w, size.h - 60) / (2 * ((depth === 2 && lay.placed2.length ? lay.R2 + 34 : lay.R1) + (lay.radial ? 170 : 120)))) : 1;
   useEffect(() => setZoom({ k: 1, x: 0, y: 0 }), [selectedId, depth]);
 
   if (!selectedId) return <Empty title="Nothing centred yet" text="Search (Ctrl/Cmd+K), pick an account, or click any node in another view to centre it here." />;
+  const trimmed = !!ego?.groups.some((g) => (g.total ?? g.ids.length) > g.ids.length);
   if (err) return <Empty title="Couldn't load this network" text={err} />;
 
   const k = fit * zoom.k;
@@ -138,7 +168,7 @@ export default function Spider() {
                   <path d={arcPath(lay.R1 + 22, g.a0 + 0.02, g.a1 - 0.02)} fill="none" stroke={REL_COLOR[g.rel]} strokeOpacity={0.55}
                     strokeWidth={3} strokeLinecap="round" />
                   <text className="arc-label" x={lr * Math.cos(mid)} y={lr * Math.sin(mid)} textAnchor="middle" fill={REL_COLOR[g.rel]}>
-                    {REL_LABEL[g.rel]} · {g.count}
+                    {REL_LABEL[g.rel]} · {g.total > g.count ? `${g.count} of ${g.total}` : g.count}
                   </text>
                 </g>
               );
@@ -151,7 +181,7 @@ export default function Spider() {
               const opp = p.n.rel === 'opportunity';
               return (
                 <line key={`l1-${p.n.id}`} x1={0} y1={0} x2={p.x} y2={p.y} stroke={REL_COLOR[p.n.rel]}
-                  strokeWidth={opp ? 2.6 : 1.3} strokeOpacity={opp ? 0.95 : 0.55} className={opp ? 'flow' : undefined}
+                  strokeWidth={opp ? 2.6 : spokeWidth(p.n)} strokeOpacity={opp ? 0.95 : 0.55} className={opp ? 'flow' : undefined}
                   filter={opp ? 'url(#spider-glow)' : undefined} />
               );
             })}
@@ -161,10 +191,8 @@ export default function Spider() {
                 onClick={(e) => { e.stopPropagation(); select(p.n.id); }} data-id={p.n.id}>
                 <circle r={p.r} fill={GROUP_COLOR[p.n.group]} fillOpacity={0.35} stroke={GROUP_COLOR[p.n.group]} />
                 <circle r={p.r + 5} fill="transparent" role="button" aria-label={`Re-centre on ${p.n.label}`} />
-                {lay.placed2.length <= 40 ? (
-                  <text className="spoke-label r2" x={Math.cos(p.a) * (p.r + 4)} y={Math.sin(p.a) * (p.r + 4) + 3}
-                    textAnchor={Math.cos(p.a) >= 0 ? 'start' : 'end'}>{p.n.label}</text>
-                ) : null}
+                <title>{p.n.label}</title>
+                {lay.placed2.length <= 40 ? <SpokeLabel p={p} radial ring2 /> : null}
               </g>
             ))}
             {lay.placed1.map((p) => (
@@ -174,8 +202,8 @@ export default function Spider() {
                 {p.n.oppCount ? <circle r={p.r + 4} fill="none" stroke="#f5a524" strokeWidth={2} filter="url(#spider-glow)" /> : null}
                 <circle r={p.r} fill="#0b1326" stroke={GROUP_COLOR[p.n.group]} strokeWidth={2.5} />
                 <image href={photoUrl(p.n.id)} x={-p.r + 2} y={-p.r + 2} width={2 * p.r - 4} height={2 * p.r - 4} clipPath="url(#spider-circle)" />
-                <text className="spoke-label" x={Math.cos(p.a) * (p.r + 6)} y={Math.sin(p.a) * (p.r + 6) + 4}
-                  textAnchor={Math.cos(p.a) >= 0 ? 'start' : 'end'}>{p.n.label}</text>
+                <title>{p.n.label}{p.n.sub ? ` — ${p.n.sub}` : ''}</title>
+                <SpokeLabel p={p} radial={lay.radial} />
                 <circle r={p.r + 4} fill="transparent" role="button" aria-label={`Re-centre on ${p.n.label}`} />
               </g>
             ))}
@@ -192,6 +220,15 @@ export default function Spider() {
         ) : null}
       </svg>
       <div className="depth-toggle glass" style={{ position: 'absolute', right: 14, bottom: 14 }}>
+        {root && root !== selectedId ? (
+          <button className="btn small" onClick={() => select(root)} title="Re-centre on the home node">⌂ {byId.get(root)?.label ?? 'Home'}</button>
+        ) : null}
+        {trimmed || more ? (
+          <button className={`btn small${more ? ' primary' : ''}`} onClick={() => setMore(!more)}
+            title="Each relationship ring shows its most important spokes first (open deals, quotes, sellout)">
+            {more ? 'Top only' : 'Show more'}
+          </button>
+        ) : null}
         <button className={`btn small${depth === 1 ? ' primary' : ''}`} onClick={() => setDepth(1)}>1 hop</button>
         <button className={`btn small${depth === 2 ? ' primary' : ''}`} onClick={() => setDepth(2)}>2 hops</button>
         <button className="btn small" onClick={() => setZoom({ k: 1, x: 0, y: 0 })}>Fit</button>

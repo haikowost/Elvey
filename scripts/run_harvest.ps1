@@ -12,5 +12,7 @@ $log = Join-Path $repo "data\harvest_schedule.log"
 $stamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
 
 "`n[$stamp] starting (limit=$Limit)" | Add-Content -Path $log
-python -m src.harvest --limit $Limit *>> $log
+$py = Join-Path $repo ".venv\Scripts\python.exe"   # the venv scripts\run_kyc.ps1 sets up, else PATH python
+if (-not (Test-Path $py)) { $py = "python" }
+& $py -m src.harvest --limit $Limit *>> $log
 "[$stamp] exit code $LASTEXITCODE" | Add-Content -Path $log

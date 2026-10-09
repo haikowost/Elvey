@@ -12,7 +12,9 @@ from __future__ import annotations
 
 import argparse
 import csv
+import glob
 import json
+import re
 from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any, Iterable
@@ -64,7 +66,7 @@ ACCOUNT_FIELDS = ("name", "accno", "segment", "division", "cluster", "branch", "
                   "brand_focus", "allocation", "kyc_status", "linkedin_company_url", "source")
 CONTACT_FIELDS = ("full_name", "first_name", "last_name", "role", "role_source", "email", "tel", "cell",
                   "linkedin_contact_url", "segment", "org_group", "allocated_rep", "allocated", "category",
-                  "in_zoho", "in_makdb")
+                  "in_zoho", "in_makdb", "top500_rank")
 AUTHORITATIVE = ("rank", "priority")  # ordering is owned by the source, None is allowed to clear
 
 
@@ -196,14 +198,21 @@ def load_relational(sheets: dict[str, list[dict]], cfg: dict, all_rows: bool = F
                 role = role or clean(rep.get("role"))
                 org_group = clean(rep.get("branch")) or clean(rep.get("cluster"))
         role, role_source = resolve_role(role)
+        acct_row = raw_accounts.get(aid) or {}
+        am = clean(acct_row.get("allocation_proposed")) or clean(acct_row.get("am_code"))
+        allocated = 0 if seg == "customer" and (not am or am.lower() == "unallocated") else 1
+        category = clean(c.get("category"))
         contacts.append(finish_contact({
+            "allocated_rep": am if seg == "customer" else None, "allocated": allocated, "category": category,
             "source_id": cid, "account_source_id": aid, "full_name": full_name,
             "first_name": first, "last_name": last or None, "role": role, "role_source": role_source,
             "email": (clean(c.get("email")) or "").lower() or None,
             "tel": clean(c.get("tel")), "cell": clean(c.get("cell")),
             "linkedin_contact_url": linkedin_url(c.get("linkedin_url")),
             "segment": seg, "org_group": org_group,
-            "priority": rank if seg == "customer" else 0,
+            "priority": rank if seg == "customer" else 0, "top500_rank": rank if seg == "customer" else None,
+            # unranked customers fall back to call cadence (A before B ...), same as the flat sheet
+            **({"priority": category_rank(category)} if seg == "customer" and rank is None and category else {}),
             "image_filename": clean(c.get("image_filename")),
             "city": clean(c.get("city")), "province": clean(c.get("province")), "country": clean(c.get("country")),
             "extra": _compact({"category": clean(c.get("category")), "role_status": clean(c.get("role_status")),
@@ -249,6 +258,122 @@ def load_relational(sheets: dict[str, list[dict]], cfg: dict, all_rows: bool = F
     return accounts, contacts
 
 
+_CLOSED_DEAL = re.compile(r"^\s*(closed|paid|lost|won|cancel)", re.IGNORECASE)
+
+
+def _iso_date(v: Any) -> str | None:
+    if v in (None, ""):
+        return None
+    if hasattr(v, "strftime"):
+        return v.strftime("%Y-%m-%d")
+    return clean(v)[:10] if clean(v) else None
+
+
+def load_facts(sheets: dict[str, list[dict]]) -> dict[str, list[dict]]:
+    """fact_sellout / fact_quotes / fact_deals rows, keyed by the workbook's own account_id.
+    Deals: only the still-open Zoho pipeline (stage blank or not Closed/Paid/Lost) becomes an
+    opportunity — a closed-won deal is history, not an opportunity."""
+    brands = {clean(b.get("brand_id")): b for b in sheets.get("dim_brands", []) if clean(b.get("brand_id"))}
+    sellout = []
+    for s in sheets.get("fact_sellout", []):
+        b = brands.get(clean(s.get("brand_id"))) or {}
+        fy25, fy26 = parse_money(s.get("fy25")), parse_money(s.get("fy26"))
+        if clean(s.get("account_id")) and (fy25 or fy26):
+            sellout.append({"account": clean(s["account_id"]), "brand": clean(b.get("brand")) or clean(s.get("brand_id")),
+                            "portfolio": 1 if (clean(b.get("portfolio_flag")) or "").upper() == "Y" else 0,
+                            "fy25": fy25, "fy26": fy26})
+    quotes = []
+    for q in sheets.get("fact_quotes", []):
+        qid = clean(q.get("quote_id")) or clean(q.get("q_no"))
+        if not qid:
+            continue
+        quotes.append({"source_key": f"Q:{qid}", "q_no": clean(q.get("q_no")), "rep": clean(q.get("rep")),
+                       "quote_date": _iso_date(q.get("date")), "for_contact": clean(q.get("for_contact")),
+                       "ref": clean(q.get("ref")), "account": clean(q.get("account_id")),
+                       "value": parse_money(q.get("value")), "gp": parse_money(q.get("gp"))})
+    deals = []
+    for d in sheets.get("fact_deals", []):
+        did, stage = clean(d.get("deal_id")), clean(d.get("stage"))
+        if not did or not clean(d.get("deal_name")) or (stage and _CLOSED_DEAL.match(stage)):
+            continue
+        amount = parse_money(d.get("amount"))
+        deals.append({"source_key": f"ZD:{did}", "title": clean(d["deal_name"]), "stage": stage or "Open",
+                      "amount": amount, "value": f"R {amount:,.0f}" if amount else None,
+                      "closing_date": _iso_date(d.get("closing_date")), "account": clean(d.get("account_id"))})
+    return {"sellout": sellout, "quotes": quotes, "deals": deals}
+
+
+def _account_resolver(conn, sheets: dict[str, list[dict]]):
+    """workbook account_id -> DB accounts.id, the same way upsert() matched them (source id, then
+    account number, then normalised name), so a deduped/merged account still gets its facts."""
+    by_src, by_accno, by_norm = {}, {}, {}
+    for a in db.rows(conn, "SELECT id, source_id, accno, name_norm FROM accounts ORDER BY id"):
+        if a["source_id"]:
+            by_src.setdefault(a["source_id"], a["id"])
+        if a["accno"]:
+            by_accno.setdefault(a["accno"], a["id"])
+        by_norm.setdefault(a["name_norm"], a["id"])
+    raw = {clean(a.get("account_id")): a for a in sheets.get("dim_accounts", []) if clean(a.get("account_id"))}
+
+    def resolve(aid: str | None) -> int | None:
+        if not aid:
+            return None
+        if aid in by_src:
+            return by_src[aid]
+        a = raw.get(aid) or {}
+        return by_accno.get(clean(a.get("accno"))) or by_norm.get(norm_company(a.get("company")))
+    return resolve
+
+
+def upsert_facts(conn, sheets: dict[str, list[dict]], facts: dict[str, list[dict]]) -> dict:
+    """Sellout, quotes and open Zoho deals into sellout / quotes / opportunities. Idempotent:
+    keyed rows are replaced in place; deals that have since closed are removed."""
+    resolve = _account_resolver(conn, sheets)
+    stats = Counter()
+    rep_names = {clean(r.get("am_code")): clean(r.get("name")) for r in sheets.get("dim_reps", [])
+                 if clean(r.get("am_code")) and clean(r.get("name"))}
+    with conn:
+        if rep_names:  # AM code -> name, so the graph can show 'Siresen Naidoo' where a sheet only says 'SN'
+            conn.execute("INSERT OR REPLACE INTO meta(key, value) VALUES ('rep_names', ?)", [json.dumps(rep_names)])
+        conn.execute("DELETE FROM sellout")  # a full snapshot every time: the workbook owns it
+        for s in facts["sellout"]:
+            aid = resolve(s["account"])
+            if not aid:
+                stats["sellout_unmatched"] += 1
+                continue
+            conn.execute("INSERT INTO sellout (account_id, brand, portfolio, fy25, fy26) VALUES (?,?,?,?,?) "
+                         "ON CONFLICT (account_id, brand) DO UPDATE SET fy25 = coalesce(fy25,0) + coalesce(excluded.fy25,0), "
+                         "fy26 = coalesce(fy26,0) + coalesce(excluded.fy26,0), portfolio = max(portfolio, excluded.portfolio)",
+                         [aid, s["brand"], s["portfolio"], s["fy25"], s["fy26"]])
+            stats["sellout"] += 1
+        for q in facts["quotes"]:
+            conn.execute("INSERT INTO quotes (source_key, q_no, rep, quote_date, for_contact, ref, account_id, value, gp) "
+                         "VALUES (?,?,?,?,?,?,?,?,?) ON CONFLICT (source_key) DO UPDATE SET q_no=excluded.q_no, "
+                         "rep=excluded.rep, quote_date=excluded.quote_date, for_contact=excluded.for_contact, "
+                         "ref=excluded.ref, account_id=excluded.account_id, value=excluded.value, gp=excluded.gp",
+                         [q["source_key"], q["q_no"], q["rep"], q["quote_date"], q["for_contact"], q["ref"],
+                          resolve(q["account"]), q["value"], q["gp"]])
+            stats["quotes"] += 1
+        keep = []
+        for d in facts["deals"]:
+            aid = resolve(d["account"])
+            if not aid:
+                stats["deals_unmatched"] += 1
+                continue
+            conn.execute("INSERT INTO opportunities (title, stage, value, amount, closing_date, account_id, source, source_key) "
+                         "VALUES (?,?,?,?,?,?, 'zoho_deal', ?) ON CONFLICT (source_key) DO UPDATE SET title=excluded.title, "
+                         "stage=excluded.stage, value=excluded.value, amount=excluded.amount, "
+                         "closing_date=excluded.closing_date, account_id=excluded.account_id, source=excluded.source",
+                         [d["title"], d["stage"], d["value"], d["amount"], d["closing_date"], aid, d["source_key"]])
+            keep.append(d["source_key"])
+            stats["open_deals"] += 1
+        if facts["deals"] or "fact_deals" in sheets:
+            marks = ",".join("?" * len(keep)) or "''"
+            stats["deals_closed_removed"] = conn.execute(
+                f"DELETE FROM opportunities WHERE source = 'zoho_deal' AND source_key NOT IN ({marks})", keep).rowcount
+    return dict(stats)
+
+
 def _seed_account_id(c: dict, seg: str, seg_cfg: dict, token_to_competitor: dict, by_norm: dict,
                      synthetic: dict) -> str:
     if seg == "internal":
@@ -279,6 +404,18 @@ def load_flat(rows: list[dict], cfg: dict, all_rows: bool = False) -> tuple[list
     get = lambda r, f: r.get(colmap[f]) if colmap.get(f) else None  # noqa: E731
     top_c = None if all_rows else (cfg.get("scope") or {}).get("top_contacts")
 
+    seg_cfg = cfg.get("segments") or {}
+    internal_names = {norm_company(n) for n in seg_cfg.get("internal_accounts") or []}
+    competitor_names = {norm_company(n) for n in (seg_cfg.get("competitor_accounts") or {})}
+
+    def seg_for(row, company) -> str:
+        """The sheet's own Segment column when it has one; else Elvey/competitor names from config,
+        so ingesting this sheet after the relational workbook never re-labels Elvey as a customer."""
+        if colmap.get("segment") and clean(get(row, "segment")):
+            return segment_of(get(row, "segment"))
+        n = norm_company(company)
+        return "internal" if n in internal_names else "competitor" if n in competitor_names else "customer"
+
     accounts: dict[str, dict] = {}
     contacts: list[dict] = []
     for i, r in enumerate(rows, 1):
@@ -288,13 +425,14 @@ def load_flat(rows: list[dict], cfg: dict, all_rows: bool = False) -> tuple[list
         if not company or not full or (top_c is not None and (explicit_rank or i) > top_c):
             continue
         key = f"FLAT:{norm_company(company)}"
-        acct = accounts.setdefault(key, {"source_id": key, "name": company, "segment": segment_of(get(r, "segment")),
+        acct = accounts.setdefault(key, {"source_id": key, "name": company, "segment": seg_for(r, company),
                                          "source": "flat", "extra": {}})
         for f in ("accno", "division", "cluster", "branch", "rep", "brand_focus", "allocation", "kyc_status"):
             acct[f] = acct.get(f) or clean(get(r, f))
         acct["latest_sellout"] = acct.get("latest_sellout") or parse_money(get(r, "latest_sellout"))
         acct["linkedin_company_url"] = acct.get("linkedin_company_url") or linkedin_url(get(r, "linkedin_company_url"))
-        acct["rank"] = acct.get("rank") or as_int(get(r, "account_rank"))
+        if colmap.get("account_rank"):  # no Account Rank column = leave the relational top-50 rank alone
+            acct["rank"] = acct.get("rank") or as_int(get(r, "account_rank"))
         for f in ("axis_partner", "milestone_partner", "installer_category"):
             v = clean(get(r, f))
             if v:
@@ -317,7 +455,7 @@ def load_flat(rows: list[dict], cfg: dict, all_rows: bool = False) -> tuple[list
             "email": (clean(get(r, "email")) or "").lower() or None,
             "tel": clean(get(r, "tel")), "cell": clean(get(r, "cell")),
             "linkedin_contact_url": linkedin_url(get(r, "linkedin_contact_url")),
-            "segment": segment_of(get(r, "segment")), "org_group": None, "priority": priority,
+            "segment": seg_for(r, company), "org_group": None, "priority": priority,
             "image_filename": clean(get(r, "image_filename")), "extra": None,
             "allocated_rep": allocated_rep, "allocated": allocated, "category": category,
             "in_zoho": yn(get(r, "in_zoho")), "in_makdb": yn(get(r, "in_makdb")),
@@ -469,6 +607,9 @@ def summary(conn) -> dict:
         "allocated": q("SELECT count(*) FROM contacts WHERE allocated = 1"),
         "unallocated": q("SELECT count(*) FROM contacts WHERE allocated = 0"),
         "role_pending": q("SELECT count(*) FROM contacts WHERE role IS NULL"),
+        "sellout_rows": q("SELECT count(*) FROM sellout"),
+        "quotes": q("SELECT count(*) FROM quotes"),
+        "open_deals": q("SELECT count(*) FROM opportunities WHERE source = 'zoho_deal'"),
         "in_zoho_y": q("SELECT count(*) FROM contacts WHERE in_zoho = 'Y'"),
         "in_makdb_y": q("SELECT count(*) FROM contacts WHERE in_makdb = 'Y'"),
         "by_category": dict(conn.execute(
@@ -484,8 +625,46 @@ def summary(conn) -> dict:
     }
 
 
+_DATED = re.compile(r"[\s_-]*\d{8}$")
+
+
+def latest_like(path: Path) -> Path:
+    """The configured file if it exists, else the newest sibling with the same name minus a
+    trailing date — 'Elvey Consolidated Relational Database 20260930.xlsx' still resolves after
+    the 20261015 build replaces it, and an undated config name finds the dated exports."""
+    try:
+        if path.exists() or not path.parent.is_dir():
+            return path
+        base = _DATED.sub("", path.stem)
+        cands = [p for p in path.parent.glob(f"{glob.escape(base)}*{path.suffix}")
+                 if not p.name.startswith("~$") and _DATED.sub("", p.stem) == base]
+        return max(cands, key=lambda p: p.stat().st_mtime) if cands else path
+    except OSError:
+        return path
+
+
 def run(cfg, file: str | None = None, all_rows: bool = False) -> dict:
-    path = Path(file) if file else cfg.path("inputs", "workbook")
+    """Ingest `file`, or — with no --file — every configured input in order: the relational
+    workbook first (accounts, contacts, sellout, quotes, Zoho deals), then the cleaned flat
+    contacts sheet on top (it carries the hand-synced allocation). Either may be absent."""
+    if file:
+        return run_one(cfg, Path(file), all_rows)
+    paths = [latest_like(p) for p in (cfg.path("inputs", "relational_workbook"), cfg.path("inputs", "workbook")) if p]
+    found = [p for p in paths if p.exists()]
+    if not found:
+        raise SystemExit("No input found. Set inputs.relational_workbook and/or inputs.workbook in config.yaml "
+                         f"(or KYC_RELATIONAL / KYC_WORKBOOK / --file). Looked for: {', '.join(map(str, paths)) or '(none set)'}")
+    runs = [run_one(cfg, p, all_rows) for p in found]
+    out = dict(runs[-1])  # the last run's summary is the DB's current state
+    if len(runs) > 1:
+        out["runs"] = [{k: r[k] for k in ("input", "format", "loaded", "upsert", "facts")} for r in runs]
+    missing = [str(p) for p in paths if not p.exists()]
+    if missing:
+        out["missing_inputs"] = missing
+    return out
+
+
+def run_one(cfg, path: Path, all_rows: bool = False) -> dict:
     if path and path.suffix.lower() == ".gsheet":
         raise SystemExit(f"{path.name} is a Google Sheets shortcut, not a spreadsheet file.\n"
                          "Open it in Drive -> File -> Download -> Microsoft Excel (.xlsx), save it in the same folder, "
@@ -494,21 +673,24 @@ def run(cfg, file: str | None = None, all_rows: bool = False) -> dict:
         raise SystemExit(f"Input not found: {path}\nSet inputs.workbook in config.yaml (or KYC_WORKBOOK / --file).")
     fmt = (cfg.get("inputs") or {}).get("format", "auto")
     sheets = read_workbook(path) if path.suffix.lower() in (".xlsx", ".xlsm") else {}
-    if fmt == "relational" or (fmt == "auto" and "dim_contacts" in sheets):
+    relational = fmt == "relational" or (fmt == "auto" and "dim_contacts" in sheets)
+    if relational:
         accounts, contacts = load_relational(sheets, cfg, all_rows)
     else:
         rows = read_table(path, (cfg.get("inputs") or {}).get("sheet"))
         accounts, contacts = load_flat(rows, cfg, all_rows)
     conn = db.connect(cfg.db_path)
     stats = upsert(conn, accounts, contacts)
+    fact_stats = upsert_facts(conn, sheets, load_facts(sheets)) if relational else {}
     roles = orgchart.sync_account_roles(conn)
-    return {"input": str(path), "loaded": {"accounts": len(accounts), "contacts": len(contacts)}, "upsert": stats,
-            "account_roles": roles, "db": summary(conn)}
+    return {"input": str(path), "format": "relational" if relational else "flat",
+            "loaded": {"accounts": len(accounts), "contacts": len(contacts)}, "upsert": stats,
+            "facts": fact_stats, "account_roles": roles, "db": summary(conn)}
 
 
 def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--file", help="consolidation output (xlsx/csv); default config inputs.workbook")
+    ap.add_argument("--file", help="one input (xlsx/csv); default: inputs.relational_workbook then inputs.workbook from config.yaml")
     ap.add_argument("--all", action="store_true", help="load every row, ignoring scope.top_* limits")
     ap.add_argument("--config")
     args = ap.parse_args(argv)

@@ -50,6 +50,7 @@ CREATE TABLE IF NOT EXISTS contacts (
     zoho_last_activity   TEXT,               -- 'Last Activity Time' from a Zoho Contacts export (v4 §2)
     qreg_last_quote      TEXT,               -- latest Quote Date from a rep's QReg sheet (v4 §2)
     reports_to_id        INTEGER REFERENCES contacts(id),  -- contact-level org chart, any account (v4 §3)
+    top500_rank          INTEGER,            -- view_top500_contacts rank (relational workbook), drives harvest order
     email                TEXT,
     tel                  TEXT,
     cell                 TEXT,
@@ -174,3 +175,28 @@ CREATE TABLE IF NOT EXISTS graph_links (
     ex      TEXT,                           -- JSON extras, e.g. {"owner": "Quin"}
     UNIQUE (source, target, rel)
 );
+
+-- Relational-workbook facts (Elvey Consolidated Relational Database: fact_sellout / fact_quotes).
+-- Loaded by src/ingest.py on every run, keyed so re-ingest updates in place (idempotent).
+CREATE TABLE IF NOT EXISTS sellout (
+    account_id INTEGER NOT NULL REFERENCES accounts(id),
+    brand      TEXT NOT NULL,               -- dim_brands.brand, e.g. 'IQSIGHT / Bosch'
+    portfolio  INTEGER NOT NULL DEFAULT 0,  -- 1 = one of Haiko's portfolio brands (dim_brands.portfolio_flag)
+    fy25       REAL,
+    fy26       REAL,
+    PRIMARY KEY (account_id, brand)
+);
+
+CREATE TABLE IF NOT EXISTS quotes (
+    id          INTEGER PRIMARY KEY,
+    source_key  TEXT UNIQUE,                -- 'Q:<quote_id>' from fact_quotes
+    q_no        TEXT,
+    rep         TEXT,
+    quote_date  TEXT,                       -- YYYY-MM-DD
+    for_contact TEXT,
+    ref         TEXT,
+    account_id  INTEGER REFERENCES accounts(id),
+    value       REAL,
+    gp          REAL
+);
+CREATE INDEX IF NOT EXISTS ix_quotes_account ON quotes(account_id);

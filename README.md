@@ -11,6 +11,44 @@ A local, resumable KYC tool for Elvey Group's Projects/Pentagon division. It:
 
 Everything lives in one SQLite file (`elvey_kyc.db`). Every command can be re-run safely.
 
+### v5 (2026-10-09): Spider first, real data in the graph, one command that actually harvests
+
+**Why the People Tree stayed empty:** the LinkedIn harvester drives *your own logged-in browser on
+your PC*. Code changes made from a cloud session never ran it, so 1,488 of 1,565 contacts still say
+`lookup pending (KYC app)` and none has a real LinkedIn URL (only the `in ›` placeholder). The fix is
+operational as much as code: **one command on your PC** that does everything, in priority order.
+
+- **`scripts\run_kyc.ps1`** (double-click → *Run with PowerShell*): creates `.venv` + installs
+  requirements (and Playwright Chromium) if missing → ingests both workbooks from `config.yaml` →
+  matches faces → harvests LinkedIn in batches **top-50 accounts → top-500 contacts → category A**
+  (daily cap, pacing and checkpoint stops unchanged) → exports
+  `data\exports\Elvey KYC enriched contacts <date>.xlsx` + `data\exports\faces\` → starts the
+  dashboard and opens `/graph/`. First run: log into LinkedIn in the browser window that opens, then
+  press Enter in the PowerShell window. Log: `data\run_kyc.log`. Switches: `-SkipHarvest`,
+  `-NoDashboard`, `-BatchLimit N`, `-Tiers top50,top500`.
+- **Relational workbook ingest** (`inputs.relational_workbook`): `python -m src.ingest` now loads it
+  first, then the CLEANED flat sheet on top. New: `fact_sellout` → `sellout` (per account × brand),
+  `fact_quotes` → `quotes`, open `fact_deals` (stage blank / not Closed/Paid/Lost) → `opportunities`
+  (closed ones are removed on the next ingest), `view_top500_contacts` rank → `contacts.top500_rank`,
+  `dim_reps` → AM-code → name. Contacts inherit the account's resolved owner + call category. Re-runs
+  update in place. A dated filename that no longer exists falls back to the newest matching export.
+  Two fixes found on the real data: the flat sheet no longer wipes the top-50 account rank or
+  re-labels Elvey as a customer; negative (credit-note) sellout no longer breaks the graph.
+- **Graph = live DB only.** Accounts, contacts (works_at), Elvey → customer `does_business_with`
+  carrying the owner rep + quote count/last quote, brands from sellout as product nodes, open Zoho
+  deals as opportunities. The demo seed loads **only** with the env flag `ELVEY_GRAPH_SOURCE=seed`.
+- **Spider is the default view**, centred on Elvey (or the top account by sellout). Each
+  relationship ring keeps its most important spokes (sellout, quotes, open deals) and says "16 of
+  1060"; *Show more* widens it. Labels run along the spoke on busy rings; click to re-centre,
+  breadcrumbs / ⌂ to go back. 1 hop by default, 2 hops one click away. 3D is still there, listed last.
+- **Harvest priority + search fallback:** `python -m src.harvest --tier top50|top500|cat-a|all`.
+  A stored value is only used as a LinkedIn URL when it's a real `/in/` profile; blanks, `in ›` and
+  company/search links fall through to the existing *name + company* search. A browser that can't
+  start now stops the run cleanly instead of crashing.
+- **KYC progress** panel (People Tree header and the /graph rail; `GET /api/kyc/progress`;
+  `python -m src.dashboard --progress`): contacts, role known, LinkedIn URL, photo, per-tier
+  enrichment, last harvest run and today's cap use — so you can see at a glance whether it ran.
+
 ### v3 (2026-09-30): the cleaned Consolidated Sales Contacts sheet
 
 The authoritative source is now the **cleaned, hand-synced Consolidated Sales Contacts sheet**
@@ -198,6 +236,9 @@ Edit `config.yaml`:
 You can also override paths through env vars: `KYC_FOLDER`, `KYC_WORKBOOK`, `KYC_DB`.
 
 ## Run order
+
+The short version: `powershell -ExecutionPolicy Bypass -File scripts\run_kyc.ps1` does all of the
+below in order. The individual steps:
 
 ```powershell
 python -m src.ingest                 # load accounts + contacts, print counts / coverage

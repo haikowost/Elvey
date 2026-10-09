@@ -24,7 +24,7 @@ import re
 import sys
 import time
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 from typing import Protocol
 from urllib.parse import quote
@@ -612,7 +612,10 @@ class LinkedInDriver:
         return None, how, "\n\n".join(debug)
 
     def fetch(self, contact: dict, need_face: bool) -> Result:
-        url = contact.get("linkedin_profile_url") or contact.get("linkedin_contact_url")
+        # a stored value is only trusted when it's an actual /in/ profile; blanks, the sheet's 'in ›'
+        # placeholder or a company/search URL all fall through to the name + company search
+        url = next((u for u in (contact.get("linkedin_profile_url"), contact.get("linkedin_contact_url"))
+                    if is_profile_url(u)), None)
         how, search_photo, search_debug = "stored url", None, ""
         if not url:
             url, how, search_debug = self._search(contact)
@@ -655,6 +658,12 @@ class LinkedInDriver:
             self._pw.stop()
 
 
+def is_profile_url(url: str | None) -> bool:
+    """A real linkedin.com/in/<slug> profile URL (not blank, not the 'in ›' placeholder, not a
+    search or company page)."""
+    return bool(url) and re.search(r"linkedin\.com/in/[^/?#\s]+", str(url), re.IGNORECASE) is not None
+
+
 def find_contact(conn, who: str) -> dict | None:
     """A contact by id, or the best name match — used by --diagnose and --set-url."""
     return db.one(conn, """SELECT c.*, a.name AS company FROM contacts c LEFT JOIN accounts a ON a.id = c.account_id
@@ -682,7 +691,23 @@ def set_manual_url(conn, contact_id: int, url: str) -> dict:
 
 # --------------------------------------------------------------------------- run loop (driver-agnostic)
 
-def queue(conn, cfg, limit: int | None = None, ids: list[int] | None = None, segment: str | None = None) -> list[dict]:
+# Harvest order: the accounts and people that matter most commercially first, so each day's
+# capped batch is spent where it counts. Tier 0 = contacts at the top-50 accounts (by account
+# rank), 1 = the top-500 contacts, 2 = call-cadence 'A' contacts, 3 = Elvey staff + competitors,
+# 4 = everyone else.
+TIERS = {"top50": 0, "top500": 1, "cat-a": 2, "all": 4}
+TIER_SQL = """CASE
+    WHEN c.segment = 'customer' AND a.rank IS NOT NULL AND a.rank <= 50 THEN 0
+    WHEN c.top500_rank IS NOT NULL AND c.top500_rank <= 500 THEN 1
+    WHEN upper(substr(coalesce(c.category, ''), 1, 1)) = 'A' THEN 2
+    WHEN c.segment IN ('internal', 'competitor') THEN 3
+    ELSE 4 END"""
+
+
+def queue(conn, cfg, limit: int | None = None, ids: list[int] | None = None, segment: str | None = None,
+          tier: str | None = None) -> list[dict]:
+    """Who to enrich next. `tier` ('top50' | 'top500' | 'cat-a' | 'all') limits the queue to that
+    priority band and everything above it, which is how scripts/run_kyc.ps1 batches a day's cap."""
     max_attempts = (cfg.get("harvest") or {}).get("max_attempts", 2)
     where = ["(c.image_status = 'none' OR c.enrich_status = 'pending' OR (c.enrich_status = 'failed' AND c.enrich_attempts < ?))",
              "c.enrich_status != 'no_profile'", "c.contact_status = 'active'"]
@@ -693,8 +718,15 @@ def queue(conn, cfg, limit: int | None = None, ids: list[int] | None = None, seg
     if segment:
         where.append("c.segment = ?")
         params.append(segment)
-    sql = (f"SELECT c.*, a.name AS company FROM contacts c LEFT JOIN accounts a ON a.id = c.account_id "
-           f"WHERE {' AND '.join(where)} ORDER BY c.priority IS NULL, c.priority, c.id")
+    if tier and tier != "all":
+        if tier not in TIERS:
+            raise ValueError(f"unknown tier {tier!r} (use one of {', '.join(TIERS)})")
+        where.append(f"({TIER_SQL}) <= ?")
+        params.append(TIERS[tier])
+    sql = (f"SELECT c.*, a.name AS company, ({TIER_SQL}) AS tier FROM contacts c LEFT JOIN accounts a ON a.id = c.account_id "
+           f"WHERE {' AND '.join(where)} "
+           f"ORDER BY tier, CASE WHEN tier = 0 THEN a.rank END, c.top500_rank IS NULL, c.top500_rank, "
+           f"c.priority IS NULL, c.priority, c.id")
     if limit:
         sql += f" LIMIT {int(limit)}"
     return db.rows(conn, sql, params)
@@ -825,17 +857,30 @@ def apply_result(conn, cfg, contact: dict, res: Result, need_face: bool) -> str:
     return label
 
 
+def record_run(conn, stats: dict) -> None:
+    """Remember the last harvest run (time + outcome) for the dashboard's KYC progress panel."""
+    with conn:
+        conn.execute("INSERT OR REPLACE INTO meta(key, value) VALUES ('last_harvest_run', ?)",
+                     [json.dumps({"at": datetime.now().isoformat(timespec="seconds"), **stats}, default=str)])
+
+
 def run(conn, cfg, driver_factory, limit: int | None = None, cap: int | None = None, ids=None, segment=None,
-        sleep=time.sleep, log=print) -> dict:
+        sleep=time.sleep, log=print, tier: str | None = None) -> dict:
+    stats = _run(conn, cfg, driver_factory, limit, cap, ids, segment, sleep, log, tier)
+    record_run(conn, {**stats, **({"tier": tier} if tier else {})})
+    return stats
+
+
+def _run(conn, cfg, driver_factory, limit, cap, ids, segment, sleep, log, tier) -> dict:
     h = cfg.get("harvest") or {}
     cap = int(cap if cap is not None else h.get("daily_cap", 40))
     remaining = cap - used_today(conn)
     if remaining <= 0:
         log(f"Daily cap of {cap} reached — come back tomorrow (or pass --cap).")
         return {"processed": 0, "stopped": "daily cap"}
-    todo = queue(conn, cfg, min(limit or remaining, remaining), ids, segment)
+    todo = queue(conn, cfg, min(limit or remaining, remaining), ids, segment, tier)
     if not todo:
-        log("Nothing to enrich.")
+        log("Nothing to enrich" + (f" in tier '{tier}'." if tier else "."))
         return {"processed": 0}
     stats: dict = {"processed": 0}
     try:
@@ -843,6 +888,10 @@ def run(conn, cfg, driver_factory, limit: int | None = None, cap: int | None = N
     except StopHarvest as e:
         log(f"STOPPED before starting: {e}")
         return {**stats, "stopped": str(e)}
+    except Exception as e:  # browser missing / failed to launch: report it, don't crash the whole script
+        msg = f"browser could not start: {str(e).splitlines()[0][:200]}"
+        log(f"STOPPED before starting: {msg}")
+        return {**stats, "stopped": msg}
     try:
         for n, c in enumerate(todo, 1):
             need_face = c["image_status"] == "none"
@@ -1045,6 +1094,8 @@ def main(argv: list[str] | None = None) -> None:
     ap.add_argument("--cap", type=int, help="override harvest.daily_cap for today")
     ap.add_argument("--ids", help="comma-separated contact ids")
     ap.add_argument("--segment", choices=["customer", "competitor", "internal"])
+    ap.add_argument("--tier", choices=list(TIERS),
+                    help="only this priority band and above: top50 accounts' contacts, top500 contacts, cat-a, all")
     ap.add_argument("--dry-run", action="store_true", help="print the queue only")
     ap.add_argument("--retry", "--retry-empty", dest="retry", action="store_true",
                     help="re-queue everyone without a summary yet (no profile found, failed, or came back empty)")
@@ -1058,6 +1109,8 @@ def main(argv: list[str] | None = None) -> None:
                         "(also runs automatically, quietly, at the start of every normal run)")
     ap.add_argument("--no-fix", action="store_true", help="with --verify, only report — don't re-queue anything")
     ap.add_argument("--headless", action="store_true", help="not recommended (LinkedIn is stricter)")
+    ap.add_argument("--exit-code", action="store_true",
+                    help="for scripts: exit 3 when the daily cap is reached, 2 when LinkedIn stopped the run")
     ap.add_argument("--config")
     args = ap.parse_args(argv)
     cfg = load_config(args.config)
@@ -1095,9 +1148,9 @@ def main(argv: list[str] | None = None) -> None:
         if not (args.test or args.limit):
             return
     if args.dry_run:
-        rows = queue(conn, cfg, limit or 50, ids, args.segment)
+        rows = queue(conn, cfg, limit or 50, ids, args.segment, args.tier)
         for r in rows:
-            print(f"{r['id']:>5}  p={r['priority']}  {r['segment']:<10} {r['full_name']:<30} {r.get('company') or ''}"
+            print(f"{r['id']:>5}  t={r['tier']} p={r['priority']}  {r['segment']:<10} {r['full_name']:<30} {r.get('company') or ''}"
                   f"  face={'need' if r['image_status'] == 'none' else r['image_status']}  summary={r['enrich_status']}")
         print(f"\n{len(rows)} shown · used today: {used_today(conn)}/{(cfg.get('harvest') or {}).get('daily_cap', 40)}")
         return
@@ -1109,8 +1162,10 @@ def main(argv: list[str] | None = None) -> None:
     if gave_up:
         print(f"(self-check: gave up on {gave_up} contact(s) — bad data every time even after repeated "
               f"fixes; marked 'failed', left for --set-url or the dashboard, not another auto-retry)")
-    stats = run(conn, cfg, factory, limit, args.cap, ids, args.segment)
+    stats = run(conn, cfg, factory, limit, args.cap, ids, args.segment, tier=args.tier)
     print(json.dumps(stats, indent=2))
+    if args.exit_code and stats.get("stopped"):
+        sys.exit(3 if stats["stopped"] == "daily cap" else 2)
 
 
 if __name__ == "__main__":

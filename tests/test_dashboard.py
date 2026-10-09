@@ -20,8 +20,8 @@ def test_dashboard_endpoints(cfg, loaded):
     assert anna["company"] == "Acme Security (Pty) Ltd" and anna["mobile"] == "+27 82 000 0001" and "enriched_at" in anna
     assert c.get("/faces/..%2Fconsolidated.xlsx").status_code == 404
     assert {g["title"] for g in tree["competitor"]} == {"Duxbury", "Reditron"}
-    # v3: rows without an AM/allocation column (this old relational fixture) count as allocated
-    assert anna["allocated"] is True and anna["allocated_rep"] is None
+    # relational workbook: a customer contact inherits its account's resolved owner (allocation_proposed)
+    assert anna["allocated"] is True and anna["allocated_rep"] == "SN"
     # v4: Acme's installer_category 'SubD' -> also tagged supplier; the group carries its account_roles
     assert acme["account_roles"] == ["customer", "supplier"]
     assert anna["contact_class"] is None and anna["reports_to"] is None
@@ -32,7 +32,7 @@ def test_dashboard_endpoints(cfg, loaded):
 
     stats = c.get("/api/stats").json()
     assert stats["contacts"] == 6 and stats["live_enabled"] is False
-    assert stats["allocated"] == 6 and stats["unallocated"] == 0 and stats["reps"] == [] and stats["categories"] == []
+    assert stats["allocated"] == 6 and stats["unallocated"] == 0 and stats["reps"] == ["HW", "SN"] and stats["categories"] == ["A", "B", "D"]
     assert stats["contact_classes"] == {"unclassified": 6}
     assert stats["account_roles"]["customer"] == 2 and stats["account_roles"]["supplier"] == 1
 
