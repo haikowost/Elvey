@@ -11,7 +11,7 @@ function RowTools({ id }: { id: string }) {
   return (
     <span className="row-tools">
       <button className="btn small" title="Centre in Spider" aria-label="Spider" onClick={() => select(id, { view: 'spider' })}>✳</button>
-      <button className="btn small" title="Show in Graph" aria-label="Graph" onClick={() => select(id, { view: 'graph' })}>◉</button>
+      <button className="btn small" title="Show in Spider" aria-label="Spider" onClick={() => select(id, { view: 'spider' })}>✳</button>
       <button className="btn small" title="Details" aria-label="Details" onClick={() => select(id, { dossier: true })}>ⓘ</button>
     </span>
   );

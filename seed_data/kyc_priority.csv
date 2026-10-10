@@ -1,0 +1,1584 @@
+kyc_order,contact_id,account_id,full_name,company,email,tier,key_reason,score
+1,C00656,A0735,Merven van der Walt,Elvey,merven.vanderwalt@elvey.co.za,Key: Internal,Elvey staff (org chart),59.3
+2,C00044,A0001,Charlotte Chetty,Fidelity ADT,charlottec@fidelity-services.com,Key: Internal,Elvey staff (org chart),58.7
+3,C01022,A0735,Corne Henning,Elvey,corne.henning@elvey.co.za,Key: Internal,Elvey staff (org chart),57.0
+4,C00642,A0735,Aasif Mather,Elvey,aasif.mather@elvey.co.za,Key: Internal,Elvey staff (org chart),55.6
+5,C01021,A0735,Douglas van Rooyen,Elvey,douglas.vanrooyen@elvey.co.za,Key: Internal,Elvey staff (org chart),54.8
+6,C01055,A0735,Alan Govender,Elvey,alan.govender@elvey.co.za,Key: Internal,Elvey staff (org chart),54.7
+7,C00659,A0735,Henk Jacobs,Elvey,henk.jacobs@elvey.co.za,Key: Internal,Elvey staff (org chart),54.6
+8,C00608,A0735,Werner Venter,Elvey,werner.venter@elvey.co.za,Key: Internal,Elvey staff (org chart),50.0
+9,C00668,A0259,Charlotte Chetty,Pentagon,charlotte@pentagon.africa,Key: Internal,Elvey staff (org chart),44.8
+10,C01049,A0735,Carl Heldsinger,Elvey,carl.heldsinger@elvey.co.za,Key: Internal,Elvey staff (org chart),44.2
+11,C00662,A0735,Quin Wilsenach,Elvey,quin@elveygroup.com,Key: Internal,Elvey staff (org chart),43.2
+12,C01053,A0735,Donovan Botha,Elvey,donovan.botha@elvey.co.za,Key: Internal,Elvey staff (org chart),42.0
+13,C01066,A0735,Seelan Pillay,Elvey,seelan.pillay@elvey.co.za,Key: Internal,Elvey staff (org chart),41.5
+14,C00600,A0735,Sander Stassen,Elvey,sander.stassen@elvey.co.za,Key: Internal,Elvey staff (org chart),41.4
+15,C01052,A0735,Leon Leach,Elvey,leon.leach@elvey.co.za,Key: Internal,Elvey staff (org chart),41.4
+16,C00603,A0735,Jacobus De Jager,Elvey,jacobus.dejager@elvey.co.za,Key: Internal,Elvey staff (org chart),40.0
+17,C00592,A0735,Colin Witten,Elvey,colin.witten@elvey.co.za,Key: Internal,Elvey staff (org chart),39.8
+18,C00698,A0785,Charlotte Chetty,Fidelity Sec Serv (Pty) Ltd,charlottec@fidelity-adt.co.za,Key: Internal,Elvey staff (org chart),35.7
+19,C00604,A0735,James Grobbelaar,Elvey,james.grobbelaar@elvey.co.za,Key: Internal,Elvey staff (org chart),28.0
+20,C00663,A0735,Siegfried Pautsch,Elvey,siegfried@elveygroup.com,Key: Internal,Elvey staff (org chart),28.0
+21,C00667,A0259,Siresen Naidoo,Pentagon,Siresen@pentagon.africa,Key: Internal,Elvey staff (org chart),28.0
+22,C00669,A0259,Emlyn Cook,Pentagon,emlyn@pentagon.africa,Key: Internal,Elvey staff (org chart),28.0
+23,C01067,A0259,Wayne Schneeberger,Pentagon,wayne@pentagon.africa,Key: Internal,Elvey staff (org chart),28.0
+24,C00590,A0735,Pragasen Karruppen,Elvey,pragasen.karruppen@elvey.co.za,Key: Internal,Elvey staff (org chart),26.0
+25,C00597,A0735,Bryan Krause,Elvey,bryan.krause@elvey.co.za,Key: Internal,Elvey staff (org chart),26.0
+26,C00598,A0735,Charlene Du Preez,Elvey,charlene.dupreez@elvey.co.za,Key: Internal,Elvey staff (org chart),26.0
+27,C00606,A0735,Eamon Nel,Elvey,eamon.nel@elvey.co.za,Key: Internal,Elvey staff (org chart),26.0
+28,C00607,A0735,Rudi Kuhn,Elvey,rudi.kuhn@elvey.co.za,Key: Internal,Elvey staff (org chart),26.0
+29,C00609,A0735,Eureka Smit,Elvey,eureka.smit@elvey.co.za,Key: Internal,Elvey staff (org chart),26.0
+30,C00655,A0735,Timothy Steyn,Elvey,timothy.steyn@elvey.co.za,Key: Internal,Elvey staff (org chart),26.0
+31,C00658,A0735,Corne Koen,Elvey,corne.koen@elvey.co.za,Key: Internal,Elvey staff (org chart),26.0
+32,C00660,A0735,Bianca van Rooyen,Elvey,bianca.vanrooyen@elvey.co.za,Key: Internal,Elvey staff (org chart),26.0
+33,C00665,A0735,Richard Esterhuizen,Elvey,richard@elveygroup.com,Key: Internal,Elvey staff (org chart),26.0
+34,C01019,A0735,Hilgard Ackerman,Elvey,hilgard.ackermann@elvey.co.za,Key: Internal,Elvey staff (org chart),26.0
+35,C01050,A0735,Edward Hall,Elvey,Edward.Hall@elvey.co.za,Key: Internal,Elvey staff (org chart),26.0
+36,C01051,A0735,Peet Van Wyk,Elvey,peet.vanwyk@elvey.co.za,Key: Internal,Elvey staff (org chart),26.0
+37,C01054,A0735,Phillip Storm,Elvey,phillip.storm@elvey.co.za,Key: Internal,Elvey staff (org chart),26.0
+38,C01056,A0735,Prithi Rajaram,Elvey,prithi.rajaram@elvey.co.za,Key: Internal,Elvey staff (org chart),26.0
+39,C01062,A0735,Matthew de Gersigny,Elvey,matthew@elveygroup.com,Key: Internal,Elvey staff (org chart),26.0
+40,C01065,A0735,Wayne Krause,Elvey,wayne.krause@elveygroup.com,Key: Internal,Elvey staff (org chart),26.0
+41,C00601,A0735,Andre Smit,Elvey,andre.smit@elvey.co.za,Key: Internal,Elvey staff (org chart),24.0
+42,C00657,A0735,Izak Gouws,Elvey,izak.gouws@elvey.co.za,Key: Internal,Elvey staff (org chart),24.0
+43,C00675,A0735,Nico Slabbert,Elvey,nico@pentagon.africa,Key: Internal,Elvey staff (org chart),24.0
+44,C00724,A0513,Emlyn Cook,Thorburn,ecook@thorburn.co.za,Key: Internal,Elvey staff (org chart),21.0
+45,C00557,A0735,Robyn-Lee Grove,Elvey,robyn-lee@elveygroup.com,Key: Internal,Elvey staff (org chart),15.0
+46,C00539,A0735,Tasha Smith,Elvey,tasha@elveygroup.com,Key: Internal,Elvey staff (org chart),13.0
+47,C00545,A0735,Jaco Moolman,Elvey,jaco@elveygroup.com,Key: Internal,Elvey staff (org chart),13.0
+48,C00559,A0735,Angus Fritz,Elvey,angus@elveygroup.com,Key: Internal,Elvey staff (org chart),13.0
+49,C00640,A0735,Haiko Wostmann,Elvey,haiko@elveygroup.com,Key: Internal,Elvey staff (org chart),13.0
+50,C01556,,Carlos Esteves,,,Key: Internal,Elvey staff (org chart),13.0
+51,C01557,,Corne Henning,,,Key: Internal,Elvey staff (org chart),13.0
+52,C01558,,Haiko Wostmann,,,Key: Internal,Elvey staff (org chart),13.0
+53,C01559,,Jaco Moolman,,,Key: Internal,Elvey staff (org chart),13.0
+54,C01560,,James Grobbelaar,,,Key: Internal,Elvey staff (org chart),13.0
+55,C01561,,Merven van der Walt,,,Key: Internal,Elvey staff (org chart),13.0
+56,C01562,,Michael Brett,,,Key: Internal,Elvey staff (org chart),13.0
+57,C01563,,Robyn Lee Grove,,,Key: Internal,Elvey staff (org chart),13.0
+58,C01564,,Siegfried Pautsch,,,Key: Internal,Elvey staff (org chart),13.0
+59,C01565,,Tasha Smith,,,Key: Internal,Elvey staff (org chart),13.0
+60,C00508,A0735,Vashna Naidoo,Elvey,vashna@elveygroup.com,Key: Internal,Elvey staff (org chart),11.0
+61,C00533,A0735,Dave Waywell,Elvey,dave@elveygroup.com,Key: Internal,Elvey staff (org chart),11.0
+62,C00673,A0735,Siresen Naidoo,Elvey,siresen@elveygroup.com,Key: Internal,Elvey staff (org chart),11.0
+63,INT-001,,Valerie Bingham,Elvey Group,,Key: Internal,Elvey staff (org chart),
+64,INT-002,,Vicki,Elvey Group,,Key: Internal,Elvey staff (org chart),
+65,INT-003,,Anita,Elvey Group,,Key: Internal,Elvey staff (org chart),
+66,INT-004,,Terrence,Elvey Group,,Key: Internal,Elvey staff (org chart),
+67,INT-005,,Eamon,Elvey Group,,Key: Internal,Elvey staff (org chart),
+68,INT-006,,Tinus J van Vuuren,Elvey Group,,Key: Internal,Elvey staff (org chart),
+69,INT-007,,Hendrik Visagie,Elvey Group,,Key: Internal,Elvey staff (org chart),
+70,INT-008,,Charlton Hector,Elvey Group,,Key: Internal,Elvey staff (org chart),
+71,INT-009,,Eugene Timothy,Elvey Group,,Key: Internal,Elvey staff (org chart),
+72,INT-010,,Bernie McDonald,Elvey Group,,Key: Internal,Elvey staff (org chart),
+73,INT-011,,Jolandi Pretorius,Elvey Group,,Key: Internal,Elvey staff (org chart),
+74,INT-012,,Tshegofatso Letsholo,Elvey Group,,Key: Internal,Elvey staff (org chart),
+75,INT-013,,Shaun Winson,Elvey Group,,Key: Internal,Elvey staff (org chart),
+76,C01020,A0735,Kobus Delport,Elvey,kobus.delport@elvey.co.za,Key: Supplier,Sub-distributor (buys from and supplies us),44.9
+77,C00654,A0735,Lance van Niekerk,Elvey,lance.vanniekerk@elvey.co.za,Key: Supplier,Sub-distributor (buys from and supplies us),41.5
+78,C00661,A0735,Basile Akiy,Elvey,Basile@elveygroup.com,Key: Supplier,Sub-distributor (buys from and supplies us),29.0
+79,C00595,A0735,Siegfried Pautsch,Elvey,siegfried.pautsch@elvey.co.za,Key: Supplier,Sub-distributor (buys from and supplies us),28.1
+80,C00666,A0735,Michael Brett,Elvey,Michaelb@elveygroup.com,Key: Supplier,Sub-distributor (buys from and supplies us),28.0
+81,C00628,A0735,Alta Muller,Elvey,alta.muller@elvey.co.za,Key: Supplier,Sub-distributor (buys from and supplies us),26.6
+82,C00591,A0735,Leroy Younie,Elvey,leroy.younie@elvey.co.za,Key: Supplier,Sub-distributor (buys from and supplies us),26.0
+83,C00602,A0735,Hendrik Visagie,Elvey,Hendrik.Visagie@elvey.co.za,Key: Supplier,Sub-distributor (buys from and supplies us),26.0
+84,C00605,A0735,Tinus Jvan Vuuren,Elvey,tinus.jvanvuuren@elvey.co.za,Key: Supplier,Sub-distributor (buys from and supplies us),26.0
+85,C00610,A0735,Inel Bertram,Elvey,inel.bertram@elvey.co.za,Key: Supplier,Sub-distributor (buys from and supplies us),26.0
+86,C01180,A0196,Adrian,Automated Control Solutions,adrian@acontrols.co.za,Key: Supplier,Sub-distributor (buys from and supplies us),19.8
+87,C01457,A0291,Craig Lewis,Rush Distribution,craig@rushdistribution.co.za,Key: Supplier,Sub-distributor (buys from and supplies us),16.0
+88,C00618,A0412,Tyron Reed,Adi,tyron.reed@adiglobal.com,Key: Supplier,Sub-distributor (buys from and supplies us),15.0
+89,C00619,A0777,Leandro Da Cunha,Duxbury,ldacunha@duxnet.co.za,Key: Supplier,Sub-distributor (buys from and supplies us),15.0
+90,C00593,A0959,Craig Turner,Compass Security,craig@compasssecurity.co.za,Key: Supplier,Sub-distributor (buys from and supplies us),13.0
+91,C00594,A0959,Cedric Greeves,Compass Security,cedric@compasssecurity.co.za,Key: Supplier,Sub-distributor (buys from and supplies us),13.0
+92,C00596,A0735,Riekert Swart,Elvey,riekert.swart@elvey.co.za,Key: Supplier,Sub-distributor (buys from and supplies us),13.0
+93,C00620,A0959,Sedric Bischoff,Compass Security,sedric@compasssecurity.co.za,Key: Supplier,Sub-distributor (buys from and supplies us),13.0
+94,C00621,A0412,Varsha Dessai Jangbahadoor,Adi,Varsha.Dessai@ADIGlobal.com,Key: Supplier,Sub-distributor (buys from and supplies us),13.0
+95,C00625,A0735,Jason Kurten,Elvey,Jason.kurten@elvey.co.za,Key: Supplier,Sub-distributor (buys from and supplies us),13.0
+96,C00626,A0735,Jaco Van Der Merwe,Elvey,jaco.vandermerwe@elvey.co.za,Key: Supplier,Sub-distributor (buys from and supplies us),13.0
+97,C00627,A0735,Darryll Putzier,Elvey,darryll.putzier@elvey.co.za,Key: Supplier,Sub-distributor (buys from and supplies us),13.0
+98,C00632,A0959,Kirk Stephenson,Compass Security,Kirk@compasssecurity.co.za,Key: Supplier,Sub-distributor (buys from and supplies us),13.0
+99,C01237,A0628,Bradley Cabral,Dark Horse Distribution,brad@dhdistribution.co.za,Key: Supplier,Sub-distributor (buys from and supplies us),13.0
+100,C01448,A0959,Prabashni Parthasarady,Compass Security,prabashni@compasssecurity.co.za,Key: Supplier,Sub-distributor (buys from and supplies us),13.0
+101,C01449,A0735,Siya Mahloele,Elvey,Siya.Mahloele@elvey.co.za,Key: Supplier,Sub-distributor (buys from and supplies us),13.0
+102,C01461,A0735,Marco Cronje,Elvey,marco.cronje@elvey.co.za,Key: Supplier,Sub-distributor (buys from and supplies us),13.0
+103,C01483,A0719,Nico Croeser,3 D,nico@three-d.co.za,Key: Supplier,Sub-distributor (buys from and supplies us),13.0
+104,C01488,A0780,Jané de Kock,First Distribution,Jane.deKock@firstdistribution.com,Key: Supplier,Sub-distributor (buys from and supplies us),13.0
+105,C01489,A0777,Raquel  Lewis,Duxbury,rlewis@duxnet.co.za,Key: Supplier,Sub-distributor (buys from and supplies us),13.0
+106,C01490,A0777,Christina Naidoo,Duxbury,cnaidoo@duxnet.co.za,Key: Supplier,Sub-distributor (buys from and supplies us),13.0
+107,C01491,A0959,Travis De Gouveia,Compass Security,travis@compasssecurity.co.za,Key: Supplier,Sub-distributor (buys from and supplies us),13.0
+108,C01496,A0735,Hanli Naude,Elvey,hanli.naude@elvey.co.za,Key: Supplier,Sub-distributor (buys from and supplies us),13.0
+109,C01497,A0735,Christo Janse van Rensburg,Elvey,christo.jansevanrensburg@elvey.co.za,Key: Supplier,Sub-distributor (buys from and supplies us),13.0
+110,C01498,A0735,Amanda van der Lith,Elvey,amanda.vanderlith@elvey.co.za,Key: Supplier,Sub-distributor (buys from and supplies us),13.0
+111,C01502,A0187,Catherine Sampson,Sensor,Catherine@sensorsecurity.co.za,Key: Supplier,Sub-distributor (buys from and supplies us),13.0
+112,C01503,A0959,Hema Naidoo,Compass Security,hema@compasssecurity.co.za,Key: Supplier,Sub-distributor (buys from and supplies us),13.0
+113,SUP-MS-1,,George Psoulis,Milestone Systems (SA),,Key: Supplier,Vendor team — Milestone SA (doc 12),
+114,SUP-MS-2,,Arlette Yomi,Milestone Systems (SA),,Key: Supplier,Vendor team — Milestone SA (doc 12),
+115,SUP-MS-3,,Melinda Fernihough,Milestone Systems (SA),,Key: Supplier,Vendor team — Milestone SA (doc 12),
+116,SUP-MS-4,,Rikus Terblanche,Milestone Systems (SA),,Key: Supplier,Vendor team — Milestone SA (doc 12),
+117,SUP-MS-5,,Llewellyn Davies,Milestone Systems (SA),,Key: Supplier,Vendor team — Milestone SA (doc 12),
+118,C00117,A0005,Wilfried Ouedraogo,IAMGOLD ESSAKANE SA,RWilfried_Ouedraogo@iamgold.com,Key: BD,End user (BD map),65.8
+119,C01493,A0253,Jeff Van Rensburg,Proftech,jeff@proftech.co.za,Key: BD,Consulting engineer (BD map),44.6
+120,C00118,A0005,Aziz Bari-Sankara,IAMGOLD ESSAKANE SA,Aziz_Bari-Sankara@iamgold.com,Key: BD,End user (BD map),33.6
+121,C00119,A0005,Awaline Sandi KONE,IAMGOLD ESSAKANE SA,Awalinesandi_kone@iamgold.com,Key: BD,End user (BD map),33.6
+122,C00765,A0846,Henre Gerber,Capitec,henregerber@capitecbank.co.za,Key: BD,End user (BD map),23.4
+123,C01356,A0402,Ludwig Sabor,WSP,Ludwig.Sabor@wsp.com,Key: BD,Consulting engineer (BD map),23.0
+124,C01351,A0683,Tony Leca,Ethnic Consulting,tony@ethnic.co.za,Key: BD,Consulting engineer (BD map),20.0
+125,C01494,A0342,Tjibbe Spoelstra,"TT Spoelstra PrEng, T Square Technologies Pty Ltd",westra@iafrica.com,Key: BD,Consulting engineer (BD map),20.0
+126,C00713,A0849,Eben Barnard,Nurizon Consulting Engineers,eben@nurizon.co.za,Key: BD,Consulting engineer (BD map),18.5
+127,C00714,A0849,Stefan Coetzee,Nurizon Consulting Engineers,stefan@nurizon.co.za,Key: BD,Consulting engineer (BD map),18.5
+128,C00817,A0934,Phiwa Nkosi,MA Dlamini Consulting,phiwa@madlamini.co.sz,Key: BD,Consulting engineer (BD map),18.5
+129,C01270,A0918,Kai Concepts,KAI CONCEPTS,byron@kaiconcepts.co.za,Key: BD,Consulting engineer (BD map),17.3
+130,C00900,A0841,Brinton Mooneelal,One Zero Consulting,brinton@onezero.co.za,Key: BD,Consulting engineer (BD map),17.2
+131,C00814,A0849,Dietmar Marggraff,Nurizon Consulting Engineers,dietmar@nurizon.co.za,Key: BD,Consulting engineer (BD map),16.5
+132,C00899,A0541,Christie Venter,Talani QS,cventer@talani.co.za,Key: BD,Consulting engineer (BD map),13.0
+133,C01038,A0941,Logan Naidoo,CKR Consulting Engineers,lnaidoo@ckr.co.za,Key: BD,Consulting engineer (BD map),13.0
+134,C01105,A0622,Willem DuPreez,Delportdupreez,willemdp@delportdupreez.co.za,Key: BD,Consulting engineer (BD map),13.0
+135,C01134,A0218,Etiene Snyman,Secelec Consulting Engineers,etiennesnyman@secelec.co.za,Key: BD,Consulting engineer (BD map),13.0
+136,C01135,A0217,Justin Blignaut,Secelec,justinblignaut@secelec.co.za,Key: BD,Consulting engineer (BD map),13.0
+137,C01136,A0217,Gerrie Swart,Secelec,gerrieswart@secelec.co.za,Key: BD,Consulting engineer (BD map),13.0
+138,C01179,A0221,Lesang Morele,Bakone,lesang@bakonegroup.co.za,Key: BD,Consulting engineer (BD map),13.0
+139,C01196,A0933,Mlamuli M. Dlamini,MA Dlamini Consulting Engineers,mlamuli@madlamini.co.sz,Key: BD,Consulting engineer (BD map),13.0
+140,C01501,A0401,Anton Hochleutner,EES Live,anton.hochleutner@eeslive.com,Key: BD,Consulting engineer (BD map),13.0
+141,C01522,A0217,Jeff Van Rensburg,Secelec,jeffvanrensburg@secelec.co.za,Key: BD,Consulting engineer (BD map),13.0
+142,C00517,A0217,Anton Adlam,Secelec,antonadlam@secelec.co.za,Key: BD,Consulting engineer (BD map),11.0
+143,C00583,A0402,Johann Duvenhage,WSP,Johann.Duvenhage@wsp.com,Key: BD,Consulting engineer (BD map),11.0
+144,C01538,,Brandon Devine,,,Key: Competitor,Competitor (curated),13.0
+145,C01539,,Leandro da Cunha,,,Key: Competitor,Competitor (curated),13.0
+146,C01540,,Luned Merifield,,,Key: Competitor,Competitor (curated),13.0
+147,C01541,,Martin Annandale,,,Key: Competitor,Competitor (curated),13.0
+148,C01542,,Pieter Smit,,,Key: Competitor,Competitor (curated),13.0
+149,C01543,,Pradhesh Roopnarain,,,Key: Competitor,Competitor (curated),13.0
+150,C01544,,Thandeka Hlomuka,,,Key: Competitor,Competitor (curated),13.0
+151,C01545,,Warren Pelman,,,Key: Competitor,Competitor (curated),13.0
+152,C01546,,Christine Vickery,,,Key: Competitor,Competitor (curated),13.0
+153,C01547,,Disha Mothupi,,,Key: Competitor,Competitor (curated),13.0
+154,C01548,,Gordon Moore,,,Key: Competitor,Competitor (curated),13.0
+155,C01549,,Kade Frahm,,,Key: Competitor,Competitor (curated),13.0
+156,C01550,,Kristi van Eeden,,,Key: Competitor,Competitor (curated),13.0
+157,C01551,,Nathan Avenant,,,Key: Competitor,Competitor (curated),13.0
+158,C01552,,Rudi Van Zyl,,,Key: Competitor,Competitor (curated),13.0
+159,C01553,,Travis Roberts,,,Key: Competitor,Competitor (curated),13.0
+160,C01554,,Tyron Reed,,,Key: Competitor,Competitor (curated),13.0
+161,C01555,,Willem van Deventer,,,Key: Competitor,Competitor (curated),13.0
+162,C00105,A0003,Maurice Liebenberg,Procurex Advisory,maurice@procurex.co.za,P1 Key,,84.8
+163,C00055,A0002,Franz Kersen,Bidvest Protea Coin,kerstenf@proteacoin.co.za,P1 Key,,82.9
+164,C00133,A0015,Louis Nel,Veracitech,louis@veracitech.co.za,P1 Key,,82.2
+165,C00047,A0002,Rob Gold,Bidvest Protea Coin,GoldR@proteacoin.co.za,P1 Key,,81.2
+166,C00134,A0015,Michal Van Heerden,Veracitech,michal@veracitech.co.za,P1 Key,,80.7
+167,C00172,A0022,Debra Coetzer,G4S Secure Solutions (SA) (Pty) Ltd,debra.coetzer@za.g4s.com,P1 Key,,78.2
+168,C00068,A0002,Abongile Zweni,Bidvest Protea Coin,zwenia@proteacoin.co.za,P1 Key,,77.8
+169,C00131,A0015,Francois Malan,Veracitech,francois@veracitech.co.za,P1 Key,,77.7
+170,C00011,A0001,Calvin Govindasami,Fidelity ADT,calving@fidelity-services.com,P1 Key,,74.5
+171,C00138,A0015,Marius Crail,Veracitech,marius@veracitech.co.za,P1 Key,,74.5
+172,C00053,A0002,Joe Bettoni,Bidvest Protea Coin,BettoniJ@proteacoin.co.za,P1 Key,,74.4
+173,C00051,A0002,Ingrid Phakate,Bidvest Protea Coin,PhakateI@proteacoin.co.za,P1 Key,,73.6
+174,C00112,A0004,Warren Korkie,iOCO SBT,warren.korkie@iOCO.tech,P1 Key,,72.1
+175,C00054,A0002,Gareth Davies,Bidvest Protea Coin,DaviesG@proteacoin.co.za,P1 Key,,71.5
+176,C00206,A0058,Rondin de Waal,NV Technologies,rondin@nvtechnologies.co.za,P1 Key,,70.8
+177,C00058,A0002,Chantel Muller,Bidvest Protea Coin,mullerc@proteacoin.co.za,P1 Key,,70.7
+178,C00145,A0015,Jeff Witthal,Veracitech,jeff@veracitech.co.za,P1 Key,,70.6
+179,C00082,A0002,Akheel James,Bidvest Protea Coin,JamesA@proteacoin.co.zar,P1 Key,,70.3
+180,C00114,A0004,Trust Rikhotso,iOCO SBT,trust.rikhotso@ioco.tech,P1 Key,,70.3
+181,C00043,A0001,Trevin Pillay,Fidelity ADT,Trevinp@fidelity-services.com,P1 Key,,69.2
+182,C00108,A0004,Daniel Leshaba,iOCO SBT,daniel.leshaba@iOCO.tech,P1 Key,,69.1
+183,C00402,A0526,Sanet Pretorius,STG Africa,sanetp@stgafrica.com,P1 Key,,68.9
+184,C01516,A0322,Shaun Thome,Bona Electonic Solutions,shaun@basixgroup.co.za,P1 Key,,68.7
+185,C00195,A0047,Sharon Johnstone,Easi-Card,sharon@easi-card.co.za,P1 Key,,68.2
+186,C00056,A0002,Libute Maqungo,Bidvest Protea Coin,MaqungoL@proteacoin.co.za>,P1 Key,,67.9
+187,C00026,A0001,Sashen Naidoo,Fidelity ADT,sashenn@fidelity-services.com,P1 Key,,67.8
+188,C00076,A0002,Terence Tsebenhlane,Bidvest Protea Coin,TsebennlaneM@proteacoin.co.za,P1 Key,,67.6
+189,C00078,A0002,Benito Kroutz,Bidvest Protea Coin,KroutzB@proteacoin.co.za,P1 Key,,67.5
+190,C00916,A0565,Tasmin Lawrenson,IDTek Solutions,tasmin@idtek.co.za,P1 Key,,67.3
+191,C00045,A0001,Roland Pillay,Fidelity ADT,rolandp@fidelity-services.com,P1 Key,,67.2
+192,C00182,A0031,zinhle@fs-systems.co.za,FS Systems,zinhle@fs-systems.co.za,P1 Key,,66.7
+193,C00096,A0002,Prakash Hasaram,Bidvest Protea Coin,Hasaramp@proteacoin.co.za,P1 Key,,66.3
+194,C00102,A0002,Akshay Jagasar,Bidvest Protea Coin,JagasarA@proteacoin.co.za,P1 Key,,66.3
+195,C00205,A0058,Nicole Van Vollenhoven,NV Technologies,nicole@nvtechnologies.co.za,P1 Key,,65.9
+196,C00149,A0015,Kasandra Craill,Veracitech,kasandra@veracitech.co.za,P1 Key,,65.6
+197,C00209,A0058,Gudani Simani,NV Technologies,gudani@nvtechnologies.co.za,P1 Key,,65.4
+198,C00918,A0565,Mariska Van Der Merwe,IDTek Solutions,mariska@idtek.co.za,P1 Key,,65.2
+199,C00197,A0054,Louise Brittz,ML Technologies,,P1 Key,,64.6
+200,C00198,A0054,Jacques Blignaut,ML Technologies,jacques@mlasset.co.za,P1 Key,,64.6
+201,C01396,A0398,Oloff Crous,ABEC AI,oloff.crous@abecai.co.za,P1 Key,,64.6
+202,C00033,A0001,Dovan Kumalpersad,Fidelity ADT,dovank@fidelity-services.com,P1 Key,,64.3
+203,C00061,A0002,Akeel James,Bidvest Protea Coin,jamesa@proteacoin.co.za,P1 Key,,64.1
+204,C00189,A0040,Tasneem Hassem,Predic (PTY) LTD,tasneem.predic@outlook.com,P1 Key,,64.1
+205,C00040,A0001,Arinao Cliffort Tharaga,Fidelity ADT,arinaot@fidelity-services.com,P1 Key,,63.6
+206,C00167,A0022,GLEN BAPTISTE,G4S Secure Solutions (SA) (Pty) Ltd,glen.baptiste@za.g4s.com,P1 Key,,63.3
+207,C00137,A0015,Leor Flaum,Veracitech,leor@veracitech.co.za,P1 Key,,63.1
+208,C01531,A0974,Winston Chettiar,MASC Solutions,WinstonC@mascsolutions.com,P1 Key,,63.1
+209,C01150,A0652,Monte Viljoen,Intersec Access,monte@intersecaccess.co.za,P1 Key,,62.9
+210,C01471,A0215,Wayne Victor,Securitas RSA,wayne.victor@securitas-rsa.co.za,P1 Key,,62.9
+211,C01536,A0974,Tim Reynolds,MASC Solutions,timr@mascsolutions.com,P1 Key,,62.8
+212,C01535,A0974,John Murray,MASC Solutions,john@mascsolutions.com,P1 Key,,62.3
+213,C00028,A0001,Vishaal Lutchman,Fidelity ADT,vishaall@fidelity-services.com,P1 Key,,61.7
+214,C00113,A0004,Beatrice Saal,iOCO SBT,Beatrice.saal@iOCO.tech,P1 Key,,60.9
+215,C01532,A0974,Dieter Zimmermann,MASC Solutions,dieterz@mascsolutions.com,P1 Key,,60.5
+216,C01485,A0198,Kevin Abrahams,Basix group,KevinA@basixgroup.co.za,P1 Key,,60.3
+217,C00180,A0031,Desiree Theledi,FS Systems,Desiree@fs-systems.co.za,P1 Key,,60.2
+218,C00129,A0015,Hein Mouton,Veracitech,hein@veracitech.com.na,P1 Key,,60.1
+219,C00150,A0017,JD,Deltrolux,Jd@deltrolux.co.za,P1 Key,,60.0
+220,C00110,A0004,Morne De Lange,iOCO SBT,Morne.DeLange@iOCO.tech,P1 Key,,59.9
+221,C00116,A0004,Kim Dellis,iOCO SBT,Kim.Dellis@iOCO.tech,P1 Key,,59.8
+222,C00095,A0002,Ashley Fish,Bidvest Protea Coin,,P1 Key,,59.3
+223,C00892,A0565,Craig Moore,IDTek Solutions,craig@idtek.co.za,P1 Key,,59.3
+224,C00021,A0001,Brandon Naidoo,Fidelity ADT,brandonn@fidelity-services.com,P1 Key,,59.1
+225,C00388,A0224,Theodore Van Der Walt,BROADVISION,theodore.vanderwalt@broadvision.co.za,P1 Key,,58.8
+226,C00097,A0002,Doris Sithole,Bidvest Protea Coin,SitholeD@proteacoin.co.za,P1 Key,,58.7
+227,C00267,A0110,Sharon Johnstone,Card Monster,sharon@cardmonster.co.za,P1 Key,,58.5
+228,C00244,A0091,Nazeem Samodien,Regend Services,nazeem.samodien@regend.co.za,P1 Key,,58.4
+229,C00034,A0001,Clinton Jacobs,Fidelity ADT,clintonj@fidelity-services.com,P1 Key,,58.0
+230,C00060,A0002,Jacque Smuts,Bidvest Protea Coin,smutsj@proteacoin.co.za,P1 Key,,57.9
+231,C01160,A0322,Robert Groenewald,Bona Electonic Solutions,robert@basixgroup.co.za,P1 Key,,57.8
+232,C01005,A0336,Mike Lotter,Ubuntu Technologies,mike@ubuntusa.co.za,P1 Key,,57.7
+233,C00277,A0128,Gavin Schroeder,GK SECURITY SOLUTIONS,gkssolutions1@outlook.com,P1 Key,,57.6
+234,C01391,A0247,Belinda Ruhls,Protea Coin,Ruhlb@proteacoin.co.za,P1 Key,,57.6
+235,C01504,A0743,Michael Sherrif,Eltron,michael@eltron.co.za,P1 Key,,57.3
+236,C00063,A0002,Amar Rajmoney,Bidvest Protea Coin,RajmoneyA@proteacoin.co.za,P1 Key,,56.9
+237,C00168,A0022,David Arrikum,G4S Secure Solutions (SA) (Pty) Ltd,david.arrikum@za.g4s.com,P1 Key,,56.0
+238,C00030,A0001,Karabo Modise,Fidelity ADT,karabomod@fidelity-services.com,P1 Key,,55.9
+239,C00059,A0002,Adriaan De Beer,Bidvest Protea Coin,debeera@proteacoin.co.za,P1 Key,,55.9
+240,C00099,A0002,Sias Oosthuizen,Bidvest Protea Coin,oosthuizens2@proteacoin.co.za,P1 Key,,55.9
+241,C00100,A0002,Seellan Gounden,Bidvest Protea Coin,GoundenS@proteacoin.co.za,P1 Key,,55.9
+242,C00163,A0022,Jacques Steyn,G4S Secure Solutions (SA) (Pty) Ltd,jacques.steyn@za.g4s.com,P1 Key,,55.4
+243,C00746,A0890,Karuna Govender,KGT Enterprises,k.govender@kgtenterprises.co.za,P1 Key,,55.3
+244,C00234,A0083,Davey Gora,Johanne Security Systems,daveygora27@gmail.com,P1 Key,,55.0
+245,C01530,A0974,Mohamed Ebrahim,MASC Solutions,MohamedE@mascsolutions.com,P1 Key,,55.0
+246,C00697,A0701,Biniam Hiwet,EXP452E-US - Avicom Trading Plc,biniam@avicomtrading.com,P2 Active,,54.8
+247,C00919,A0565,Kenneth Harris,IDTek Solutions,kennethh@idtek.co.za,P2 Active,,54.6
+248,C00002,A0001,Tristan Delport,Fidelity ADT,TristanD@fidelity-services.com,P2 Active,,54.5
+249,C00109,A0004,Brandan-Lee Barnard,iOCO SBT,Brandan-Lee.Barnard@iOCO.tech,P2 Active,,54.4
+250,C00128,A0015,Frans Burger,Veracitech,frans@veracitech.co.za,P2 Active,,54.3
+251,C00135,A0015,Jan Steenkamp,Veracitech,jan@veracitech.co.za,P2 Active,,54.3
+252,C00141,A0015,Reinhardt Van Der Westhuizen,Veracitech,reinhardt@veracitech.co.za,P2 Active,,54.3
+253,C00147,A0015,Modisa Manyake,Veracitech,modisa@veracitech.co.bw,P2 Active,,54.3
+254,C00242,A0088,Errol Boolkin,Data Connectivity Solutions,errolb@dcsafrica.co.za,P2 Active,,54.3
+255,C00325,A0232,Vikash Augnu,Brinks,Vikash.Augnu@brinksinc.com,P2 Active,,54.3
+256,C00440,A0322,Chantel Geldenhuys,Bona Electonic Solutions,chantel@basixgroup.co.za,P2 Active,,54.0
+257,C00358,A0564,Emmanuel Likiti,HSC Systems Limited,emmanuel.likiti@hsc.co.ke,P2 Active,,53.7
+258,C00199,A0054,Menelisi Dlamini,ML Technologies,menelisi@mlasset.co.za,P2 Active,,53.5
+259,C00081,A0002,Rosh Doolabh,Bidvest Protea Coin,doolabhr@proteacoin.co.za,P2 Active,,53.4
+260,C00208,A0058,Craig Naidoo,NV Technologies,craig@nvtechnologies.co.za,P2 Active,,53.4
+261,C01318,A0224,Rudeshnee Singaram,BROADVISION,rudeshnee@braodvision.co.za,P2 Active,,53.3
+262,C00124,A0010,Cheryl Chellan,Bona Electronic Solutions,cheryl@basixgroup.co.za,P2 Active,,53.2
+263,C00809,A0753,Michael Koen,G4S NAMIBIA (EXP582-E),michael.koen@na.g4s.com,P2 Active,,53.2
+264,C00472,A0558,Dean Tapuch,Digiport (Pty) Ltd t/a Integrated Home and Office,dean@integratedhomes.co.za,P2 Active,,53.1
+265,C00036,A0001,Jamie Mahabeer,Fidelity ADT,jmahabeer@fidelity-services.com,P2 Active,,53.0
+266,C00048,A0002,Sailesh Jeevan,Bidvest Protea Coin,JeevanS@proteacoin.co.za,P2 Active,,52.9
+267,C00049,A0002,Shannon Thomas,Bidvest Protea Coin,ThomasS@proteacoin.co.za,P2 Active,,52.9
+268,C00050,A0002,Stephan Botha,Bidvest Protea Coin,BothaS2@proteacoin.co.za,P2 Active,,52.9
+269,C00052,A0002,Joh Mphaga,Bidvest Protea Coin,mphagaj@proteacoin.co.za,P2 Active,,52.9
+270,C00057,A0002,Dawie Pieterse,Bidvest Protea Coin,pietersed2@proteacoin.co.za,P2 Active,,52.9
+271,C00062,A0002,Alex Penhaligon,Bidvest Protea Coin,penhaligona@proteacoin.co.za,P2 Active,,52.9
+272,C00064,A0002,Gonasagren Govender,Bidvest Protea Coin,govenderg@proteacoin.co.za,P2 Active,,52.9
+273,C00065,A0002,Justin Chetty,Bidvest Protea Coin,ChettyJ@proteacoin.co.za,P2 Active,,52.9
+274,C00066,A0002,Mashupye Masemola,Bidvest Protea Coin,masemolam@proteacoin.co.za,P2 Active,,52.9
+275,C00067,A0002,Melinda Van Der Walt,Bidvest Protea Coin,vanderWaltL1@proteacoin.co.za,P2 Active,,52.9
+276,C00069,A0002,Anil Manilall,Bidvest Protea Coin,manilalla@proteacoin.co.za,P2 Active,,52.9
+277,C00070,A0002,Ash Kovalpersad,Bidvest Protea Coin,kovalpersada@proteacoin.co.za,P2 Active,,52.9
+278,C00071,A0002,Ayrton Matthews,Bidvest Protea Coin,mathewsa@proteacoin.co.za,P2 Active,,52.9
+279,C00075,A0002,Tenson Kobue,Bidvest Protea Coin,KobueT@proteacoin.co.za,P2 Active,,52.9
+280,C00077,A0002,Tshegofatso Mokgabudi,Bidvest Protea Coin,mokgabudit@proteacoin.co.za,P2 Active,,52.9
+281,C00079,A0002,Byron Newberry,Bidvest Protea Coin,NewberryB@proteacoin.co.za,P2 Active,,52.9
+282,C00084,A0002,Kgomotso Tau,Bidvest Protea Coin,tauk@proteacoin.co.za,P2 Active,,52.9
+283,C00085,A0002,Mmushi Kekana,Bidvest Protea Coin,KekanaM@proteacoin.co.za,P2 Active,,52.9
+284,C00086,A0002,Nico Kortdom,Bidvest Protea Coin,KortdomN@proteacoin.co.za,P2 Active,,52.9
+285,C00088,A0002,Freddie Perkins,Bidvest Protea Coin,PerkinsF@proteacoin.co.za,P2 Active,,52.9
+286,C00089,A0002,Yashika Harilall,Bidvest Protea Coin,harilallY@proteacoin.co.za,P2 Active,,52.9
+287,C00092,A0002,Sangitha Chunder,Bidvest Protea Coin,chunders@proteacoin.co.za,P2 Active,,52.9
+288,C00094,A0002,Rejoice Mthembu,Bidvest Protea Coin,mthembur@proteacoin.co.za,P2 Active,,52.9
+289,C00098,A0002,Siya Mbekela,Bidvest Protea Coin,MbekelaS@proteacoin.co.za,P2 Active,,52.9
+290,C00101,A0002,Tebogo Mojadibe,Bidvest Protea Coin,mojadibeT@proteacoin.co.za,P2 Active,,52.9
+291,C00103,A0002,Olebogeng Mosadi,Bidvest Protea Coin,MosadiO@proteacoin.co.za,P2 Active,,52.9
+292,C00104,A0002,Sean Willemse,Bidvest Protea Coin,WillemseS@proteacoin.co.za,P2 Active,,52.9
+293,C00207,A0058,Danie Knight,NV Technologies,danie@nvtechnologies.co.za,P2 Active,,52.8
+294,C00320,A0768,Liezel Botha,Geckoprime,lbotha@geckoprime.com,P2 Active,,52.6
+295,C01508,A0629,Jason Kampel,Delve Systems,jason@delve.systems,P2 Active,,52.6
+296,C00405,A0526,Jacques Lerm,STG Africa,jacquesl@stgafrica.com,P1 Key,,52.5
+297,C00201,A0054,Ria Oosthuizen,ML Technologies,technology@mlasset.co.za,P2 Active,,52.4
+298,C01514,A0582,Johan Opperman,Grit Procurement,Secure@gritprocurement.co.za,P1 Key,,52.4
+299,C00029,A0001,Jason Strauss,Fidelity ADT,JasonStr@fidelity-services.com,P2 Active,,52.0
+300,C00024,A0001,Nevashan Govender,Fidelity ADT,nevashang@fidelity-services.com,P2 Active,,51.8
+301,C00165,A0022,Hendrik Van Wyk,G4S Secure Solutions (SA) (Pty) Ltd,hendrik.vanwyk@za.g4s.com,P2 Active,,51.6
+302,C00166,A0022,Andre Ally,G4S Secure Solutions (SA) (Pty) Ltd,andre.ally@za.g4s.com,P2 Active,,51.6
+303,C00723,A0513,Francois Herselman,Thorburn,FHerselman@thorburn.co.za,P1 Key,,51.5
+304,C01133,A0215,Sean Steyn,Securitas RSA,sean.steyn@securitas-rsa.co.za,P2 Active,,51.5
+305,C00115,A0004,Jeff Greef,iOCO SBT,Jeff.Greeff@iOCO.tech,P2 Active,,51.4
+306,C00139,A0015,Martin Van Der Westhuizen,Veracitech,martinv@veracitech.co.za,P2 Active,,51.3
+307,C00142,A0015,Rodney Rayner,Veracitech,rodney@veracitech.co.za,P2 Active,,51.3
+308,C00146,A0015,Ibrahim Kaija,Veracitech,ibrahim@veracitech.co.za,P2 Active,,51.3
+309,C00352,A0782,Olivier Janse van Rensburg,Fang,olivier@fang.co.za,P1 Key,,51.1
+310,C00261,A0106,Madelein Stoneman,DCS,madelein@dcsafrica.co.za,P2 Active,,50.9
+311,C01512,A0571,Arno Maritz,Infocus,arnom@infocus.technology,P2 Active,,50.7
+312,C00106,A0004,Angelo Williams,iOCO SBT,angelo.williams@iOCO.tech,P2 Active,,50.6
+313,C00337,A0156,Misheck Banda,Safeguard,admin.alarms@safeguard.co.zw,P2 Active,,50.6
+314,C00035,A0001,Joshua Cowling,Fidelity ADT,joshuac@fidelity-services.com,P2 Active,,50.5
+315,C00190,A0042,Sergio Pedregal,Mustek,Sergiop@mstprojects.co.za,P2 Active,,50.5
+316,C00164,A0022,LEONIE MANGOLD,G4S Secure Solutions (SA) (Pty) Ltd,Leonie Mangold <leonie.mangold@za.g4s.com>,P2 Active,,50.2
+317,C00169,A0022,ETIENNE JANSE V RENSBURG,G4S Secure Solutions (SA) (Pty) Ltd,Etienne.jansevanrensburg@za.g4s.com,P2 Active,,50.2
+318,C00170,A0022,Debra Davis,G4S Secure Solutions (SA) (Pty) Ltd,Debra Davis <debra.davis@za.g4s.com>,P2 Active,,50.2
+319,C00173,A0022,Gerhard Coetzee,G4S Secure Solutions (SA) (Pty) Ltd,gerhard.coetzee@za.g4s.com,P2 Active,,50.2
+320,C00174,A0022,SHAUN GATES,G4S Secure Solutions (SA) (Pty) Ltd,Shaun Gates <shaun.gates@za.g4s.com>,P2 Active,,50.2
+321,C00175,A0022,Jacques Bester,G4S Secure Solutions (SA) (Pty) Ltd,jacques.bester@za.g4s.com,P2 Active,,50.2
+322,C00193,A0047,Richard Johnstone,Easi-Card,richard@easi-card.co.za,P2 Active,,49.8
+323,C00019,A0001,Hendrik Engelbrecht,Fidelity ADT,hendrike@fidelity-services.com,P2 Active,,49.6
+324,C01506,A0883,Jeff Greef,Nextec,jeff.greef@eoh.co.za,P1 Key,,49.6
+325,C00355,A0861,Bruno Ciapparelli,Ovitech,Bruno.ciapparelli@gmail.com,P2 Active,,49.5
+326,C00676,A0748,Jack Knight,Gardaworld Nigeria,Jack.Knight@Garda.com,P2 Active,,49.4
+327,C00437,A0830,Natalie,Mikes Alarms,natalie@mikealarms.co.zw,P2 Active,,49.3
+328,C01399,A0322,Belinda Smit,Bona Electonic Solutions,belinda@basixgroup.co.za,P2 Active,,49.1
+329,C00136,A0015,Amy Barnard,Veracitech,amy@veracitech.co.za,P2 Active,,49.0
+330,C00237,A0085,Leonard Mlotshwa,Hyper Building Technologies,leonardm@hyperbuildingtech.co.za,P1 Key,,49.0
+331,C00255,A0106,Marius Munnik,DCS,mariusm@dcsafrica.co.za,P2 Active,,48.8
+332,C00830,A0163,Jameel Moosa,Bearing Corporate,jameel@bearingcorporation.com,P2 Active,,48.7
+333,C00123,A0010,Mosedi Moahlodi,Bona Electronic Solutions,mosedi@basixgroup.co.za,P2 Active,,48.6
+334,C00240,A0088,Brent Drotsky,Data Connectivity Solutions,brent@dcsafrica.co.za,P2 Active,,48.5
+335,C00462,A0233,Paul J Lewis,Pro-Tech,lewispj@realnet.co.sz,P2 Active,,48.5
+336,C01336,A0883,Albertus Botes,Nextec,Albertus.Botes@iOCO.tech,P1 Key,,48.4
+337,C00107,A0004,Andrew Blanchard,iOCO SBT,andrew.blanchard@iOCO.tech,P2 Active,,48.3
+338,C00178,A0031,Daniel Tshikandu,FS Systems,Daniel@fs-systems.co.za>,P2 Active,,48.3
+339,C00778,A0417,Frans Mukulu (Visiontek - Namibia),Visiontek Investments,frans@visiontek2.com,P2 Active,,48.2
+340,C01149,A0834,Phillip Grobler,Open access dc,Phillippus.Grobler@openaccessdc.net,P1 Key,,48.2
+341,C00210,A0060,Daniel de Ricquebourg,Vitech Electronics Limited,daniel@vitechmauritius.com,P2 Active,,48.1
+342,C00046,A0001,Denver Naidu,Fidelity ADT,dnaidu@fidelity-services.com,P2 Active,,48.0
+343,C00829,A0888,Kabelo Seeletso,KNS-BW,kseeletso@knstechbw.com,P2 Active,,47.9
+344,C01285,A0882,Clinton Shanley,Nextec / iOCO SBT,clinton.shanley@iOCO.tech,P2 Active,,47.8
+345,C01499,A0898,Nozibusiso Mncwango,LCS Holdings,nozibusiso@lcsholdings.co.za,P2 Active,,47.8
+346,C00120,A0006,Aloise Chibaya,STG Botswana (Pty) Ltd,,P2 Active,,47.5
+347,C00317,A0878,Alfred Nissen (Freddy),Nistech,alfred@nistechnamibia.com,P2 Active,,47.5
+348,C00909,A0723,Duaine vd Merwe,Zentech Integrated Security Solutions,duaine@zentechiss.co.za,P2 Active,,47.4
+349,C00229,A0081,Vuyisile Nkosi,Multi-Net Systems,vuyisile@multinetsystems.co.za,P1 Key,,47.3
+350,C00278,A0131,Julian Pillay,Evolution Trading and Plant Hire,Evotrading32@gmail.com,P2 Active,,47.3
+351,C00225,A0081,Anné Vermaak,Multi-Net Systems,annec@multinetsystems.co.za,P1 Key,,47.1
+352,C00316,A0215,Warren Pretorius,Securitas RSA,warren.pretorius@securitas-rsa.co.za,P2 Active,,47.1
+353,C00737,A0397,Dino Gympies,Abecai,dino.gympies@abecai.co.za,P2 Active,,47.1
+354,C01513,A0566,Shaheem Martin,IDTek,shaheem@idtek.co.za,P2 Active,,47.1
+355,C00251,A0098,Charlton Taylor,SSA Engineering Projects,charlton@ssaengprojects.co.za,P2 Active,,46.9
+356,C01453,A0917,Regan Davids,JFE,regan@jfegroup.co.za,P2 Active,,46.8
+357,C00009,A0001,Vincent Fanfoni,Fidelity ADT,vincentf@fidelity-services.com,P2 Active,,46.6
+358,C00014,A0001,Fidelity ADT,Fidelity ADT,tvanrooyen@fidelity-services.com,P2 Active,,46.6
+359,C00015,A0001,Ardish Maharaj,Fidelity ADT,ardishm@fidelity-services.com,P2 Active,,46.6
+360,C00016,A0001,Nalendran Vencatasu,Fidelity ADT,nvencatasu@fidelity-services.com,P2 Active,,46.6
+361,C00017,A0001,Leon Gobhurdan,Fidelity ADT,leong@fidelity-services.com,P2 Active,,46.6
+362,C00018,A0001,Kegan Reddy,Fidelity ADT,keganr@fidelity-services.com,P2 Active,,46.6
+363,C00020,A0001,Rikus Terblanche,Fidelity ADT,rikuste@fidelity-services.com,P2 Active,,46.6
+364,C00022,A0001,Stiaan Nel,Fidelity ADT,stiaann@fidelity-services.com,P2 Active,,46.6
+365,C00616,A0411,Richard Chasara,Vidac (Zimbabwe) - EXP271,,P2 Active,,46.5
+366,C01012,A0383,Isaac Ellis,Wright Surveillance,isaac@wholdings.co.za,P2 Active,,46.4
+367,C00144,A0015,Alvin Flaum,Veracitech,alvin@veracitech.co.za,P2 Active,,46.3
+368,C00192,A0047,Justin Johnstone,Easi-Card,justin@easi-card.co.za,P2 Active,,46.3
+369,C00378,A0322,Belinda Assur,Bona Electonic Solutions,belindaa@basixgroup.co.za,P2 Active,,46.3
+370,C00257,A0106,Sangwani Khonje,DCS,sangwani@dcs.co.zm,P2 Active,,46.1
+371,C00730,A0818,Stuart Lawson,MCM,stuart@mcool.co.za,P2 Active,,46.1
+372,C00090,A0002,Libute Maqungo,Bidvest Protea Coin,MaqungoL@proteacoin.co.za,P2 Active,,45.9
+373,C01313,A0767,Nolan Moodley,GIS Associates,nolan@gisassociates.co.za,P2 Active,,45.8
+374,C00788,A0524,Bheki Sifundza,Swaziland Electrical - Eswatini,sesaccounts@mormond.co.sz,P2 Active,,45.7
+375,C01450,A0202,Charles Harrison,Secu-Exports,charles@secuexports.com,P2 Active,,45.3
+376,C01533,A0974,Dylan Saunders,MASC Solutions,dylans@mascsolutions.com,P2 Active,,45.2
+377,C00368,A0809,Schalk Klem,National Observation Systems,schalk@noscctv.co.za,P2 Active,,45.1
+378,C00200,A0054,Regardt Kruger,ML Technologies,regardt@mlasset.co.za,P2 Active,,45.0
+379,C00389,A0391,Karishka Maharaj,Access and Beyond,karishka.maharaj@accessandbeyond.com,P2 Active,,44.9
+380,C00700,A0391,Karen Naidoo,Access and Beyond,karen.naidoo@accessandbeyond.com,P2 Active,,44.8
+381,C01162,A0530,Harry Van Niekerk,Suiderkruis security,harry@suiderkruissecurity.co.za,P1 Key,,44.8
+382,C00140,A0015,Leor Flaum,Veracitech,leor@veracitech.co.zar,P2 Active,,44.3
+383,C00148,A0015,Hein Mouton,Veracitech,hein@veracitech.co.za,P2 Active,,44.3
+384,C00346,A0748,Jaco Erasmus,Gardaworld Nigeria,Erasmus.Jaco@garda.com,P2 Active,,44.3
+385,C00349,A0198,Nisha Bailey,Basix group,nisha@basixgroup.co.za,P2 Active,,44.3
+386,C01380,A0670,Viresh Deochand,Integrated controls,vireshdeochand@integratedcontrols.co.za,P2 Active,,44.3
+387,C00311,A0754,Amandio Jamisse,G4S - Mozambique,amandio.jamisse@mz.g4s.com,P2 Active,,44.2
+388,C00323,A0768,Stephan Grobbelaar,Geckoprime,spgrobbelaar@geckoprime.com,P2 Active,,44.2
+389,C00726,A0268,Cindy Snayer-Fisher,PDIT,cindy@pdit.co.za,P2 Active,,44.1
+390,C00827,A0569,Rose Mwangi,IGS Security,info@igs-security.org,P2 Active,,44.1
+391,C01385,A0563,Elizabeth Gayle,HINC GROUP (PTY) LTD,elizabeth.gayle@hincgroup.com,P2 Active,,44.1
+392,C00322,A0527,Roezanke Thomson,Supplytech (Pty) Ltd,sales1@supplytech.co.za,P2 Active,,44.0
+393,C00072,A0002,Joe Betonni,Bidvest Protea Coin,BettoniJ@proteacoin.co.zar,P2 Active,,43.9
+394,C00083,A0002,Gareth Davies,Bidvest Protea Coin,DaviesG@proteacoin.co.zar,P2 Active,,43.9
+395,C00087,A0002,Ingrid Phakate,Bidvest Protea Coin,PhakateI@proteacoin.co.zar,P2 Active,,43.9
+396,C00449,A0952,Zoleka Nkohla,Liyana,zoleka@liyana.co.za,P2 Active,,43.8
+397,C00171,A0022,Nicholas Naidoo,G4S Secure Solutions (SA) (Pty) Ltd,nicholas.naidoo@za.g4s.com,P2 Active,,43.6
+398,C00211,A0060,Yashin Owasil,Vitech Electronics Limited,yashin@vitech.intnet.mu,P2 Active,,43.5
+399,C00288,A0150,Simpson David,Quatro Security Services,david@svsolutions.co.za,P2 Active,,43.5
+400,C00333,A0285,Reuben Tshwene,REUDAN RISK MANAGEMENT SOLUTIONS,reubent@reudan.co.za,P2 Active,,43.5
+401,C00476,A0651,Dewaldt Steyn,Intervid,dewaldt@intervid-africa.co.za,P2 Active,,43.3
+402,C00287,A0148,Abigail Kolbe,Integrated IP Solutions,admin@iipsolutions.co.za,P2 Active,,43.2
+403,C00037,A0001,Dianne Blom,Fidelity ADT,dianneb@fidelity-services.com,P2 Active,,43.1
+404,C00042,A0001,Christo Potas,Fidelity ADT,christopo@fidelity-services.com,P2 Active,,43.1
+405,C00717,A0969,Riley Healy,Computronics Systems,riley@computronics.sz,P2 Active,,43.1
+406,C00073,A0002,Ivan Bekker,Bidvest Protea Coin,bekkeri@proteacoin.co.za,P2 Active,,42.9
+407,C00074,A0002,Reaaz Munga,Bidvest Protea Coin,MungaR@proteacoin.co.za,P2 Active,,42.9
+408,C00080,A0002,David de Winnaar,Bidvest Protea Coin,Davidd@mustek.co.za,P2 Active,,42.9
+409,C00160,A0020,Ashlee Boodram,Thorburn Security Solutions,Aboodram@tsebo.com,P2 Active,,42.8
+410,C00353,A0881,Edgar Chissico,Net world,echissico@networldlda.com,P2 Active,,42.7
+411,C00179,A0031,Tshiamo Rampa,FS Systems,tshiamo@fs-systems.co.za,P2 Active,,42.5
+412,C00181,A0031,Daniel Tshikandu,FS Systems,Daniel@fs-systems.co.za,P2 Active,,42.5
+413,C00183,A0031,Daniel Tshikandu,FS Systems,Daniel@fs-systems.co.zar,P2 Active,,42.5
+414,C00417,A0552,Vincent Magwaza,Dimension Data Botswana,vincent.magwaza@dimensiondata.com,P2 Active,,42.5
+415,C00716,A0397,Nomsa Hleza,Abecai,nomsa.hleza@abecai.co.za,P2 Active,,42.4
+416,C00825,A0488,Anthony O'Dwyer,Smart Security,anthony@smart-security.co,P2 Active,,42.4
+417,C01190,A0367,Ilonka Germishuys,Trendsa,ilonka@trendsa.co.za,P2 Active,,42.4
+418,C00130,A0015,Alvin Flaum,Veracitech,,P2 Active,,42.3
+419,C00289,A0150,Gustav Venter,Quatro Security Services,gustav@quatro.co.za,P2 Active,,42.3
+420,C00406,A0526,Graeme O'Reilly,STG Africa,graemeo@stgafrica.com,P2 Active,,42.3
+421,C00408,A0526,Daan Britz,STG Africa,daanb@stgafrica.com,P2 Active,,42.3
+422,C00722,A0513,Nelendran Pillay,Thorburn,npillay@thorburn.co.za.,P1 Key,,42.2
+423,C01023,A0565,Duane Viljoen,IDTek Solutions,duane@idtek.co.za,P2 Active,,42.1
+424,C00248,A0097,Tumelo Gosalamang,Security Systems,tgosalamang@securitysystems.co.bw,P2 Active,,41.9
+425,C00041,A0001,Anton Bothma,Fidelity ADT,antonb@fidelity-services.com,P2 Active,,41.6
+426,C00121,A0007,Johan Opperman,Grit Secure(Pty) Ltd,johan@gritprocurement.co.za,P2 Active,,41.6
+427,C00111,A0004,Kizito Okeke,iOCO SBT,Kizito.Okeke@ioco.tech,P2 Active,,41.4
+428,C00143,A0015,Chantal Lotz,Veracitech,chantal@veracitech.co.za,P2 Active,,41.3
+429,C00327,A0245,Joshua Wakobwa,BM Security,jwakobwa@bmsecurity.com,P2 Active,,41.2
+430,C00025,A0001,Sean Sandford,Fidelity ADT,seans@fidelity-services.com,P2 Active,,41.1
+431,C00027,A0001,Merran Naidu,Fidelity ADT,merrann@fidelity-services.com,P2 Active,,41.1
+432,C00326,A0429,Moi Bongoma,Watson & French,smb@watsonfrench.com,P2 Active,,41.1
+433,C01036,A0317,Cindy Celliers,QDE,cindy@qde.co.za,P2 Active,,41.1
+434,C01045,A0944,Sihle Magwala,Clayton Communications,sihle@clayton.africa,P2 Active,,40.9
+435,C00156,A0020,Nico Van Eden,Thorburn Security Solutions,nvaneden@thorburn.co.za,P2 Active,,40.8
+436,C00157,A0020,Reuben Muller,Thorburn Security Solutions,rmuller@thorburn.co.za,P2 Active,,40.8
+437,C00158,A0020,JP Swanepoel,Thorburn Security Solutions,JSwanepoel@thorburn.co.za,P2 Active,,40.8
+438,C00235,A0084,Alexandre Moamba,Nesc Technology,amoamba@nesc.co.mz,P2 Active,,40.7
+439,C01422,A0311,Greg Davey,Quantum CCTV,greg@quantumcctv.co.za,P2 Active,,40.7
+440,C00125,A0010,Shaun Bubb,Bona Electronic Solutions,shaunb@basixgroup.co.za,P2 Active,,40.6
+441,C00203,A0058,Gudani Simani,NV Technologies,gudani@nvtechnogies.co.za,P2 Active,,40.6
+442,C01247,A0240,Bouwer Terblanch,Brandis and Staefa,bouwert@staefa.co.za,P2 Active,,40.6
+443,C00132,A0015,Hein Mouton,Veracitech,,P2 Active,,40.3
+444,C00321,A0747,Gael Kayiranga,Gardaworld - Rwanda,Gael.Kayiranga@garda.com,P2 Active,,40.3
+445,C00318,A0222,Emmanuel Kalize,Broslink,emmanuel@broslink.co.bw,P2 Active,,40.2
+446,C01411,A0470,Hassan Omar,AUA Industria,hassan@aua.co.ke,P2 Active,,40.2
+447,C00834,A0533,Malcolm Jardine,Sterling,malcolm@sterling-exp.co.za,P2 Active,,40.0
+448,C00091,A0002,Belinda Ruhl,Bidvest Protea Coin,,P2 Active,,39.9
+449,C00093,A0002,Joe Bettoni,Bidvest Protea Coin,,P2 Active,,39.9
+450,C00259,A0106,Dave Coker,DCS,dcoker@dcs.co.zm,P2 Active,,39.8
+451,C00282,A0142,Barend van der Linden,Project X Solutions,barend@projectxsolutions.co.za,P2 Active,,39.8
+452,C00832,A0472,Estêvão A. Charles,SISMOC,sismoc@sismoc.co.mz,P2 Active,,39.8
+453,C00680,A0809,Adriaan Berowski,National Observation Systems,info@noscctv.co.za,P2 Active,,39.7
+454,C00005,A0001,Monique Ludik,Fidelity ADT,moniquel@fidelity-adt.co.za,P2 Active,,39.6
+455,C00006,A0001,Lawrence Mosadi,Fidelity ADT,lawrencem@fidelity-services.com,P2 Active,,39.6
+456,C00007,A0001,Jo-Anne Diesel,Fidelity ADT,jod@fidelity-services.com,P2 Active,,39.6
+457,C00008,A0001,Wayne van Wyk,Fidelity ADT,waynev@fidelitysecurity.co.za,P2 Active,,39.6
+458,C00010,A0001,Steven Meyer,Fidelity ADT,Stevenme@fidelity-services.com,P2 Active,,39.6
+459,C00012,A0001,David Arrikum,Fidelity ADT,davidiana@fidelity-adt.co.za,P2 Active,,39.6
+460,C00013,A0001,Malcolm Gordon,Fidelity ADT,malcolmg@fidelity-services.com,P2 Active,,39.6
+461,C00023,A0001,Steven Mcdonald,Fidelity ADT,stevenmc@fidelity-services.com,P2 Active,,39.6
+462,C00031,A0001,Fidelity ADT,Fidelity ADT,princetonm@fidelity-services.com,P2 Active,,39.6
+463,C00032,A0001,Fidelity ADT,Fidelity ADT,rojhayd@fidelity-services.com,P2 Active,,39.6
+464,C00038,A0001,Fidelity ADT,Fidelity ADT,lynetteb@fidelity-services.com,P2 Active,,39.6
+465,C00039,A0001,Owendhrin Naicker,Fidelity ADT,Owendhrin.Naicker@wits.ac.za,P2 Active,,39.6
+466,C00357,A0967,Clifford Licupa,Comsec,clifford@comsec.co.tz,P2 Active,,39.6
+467,C01287,A0911,Zaheer Pahad,Johnson Controls,zaheer.pahad@jci.com,P2 Active,,39.5
+468,C00314,A0549,George Mavhunga,System Designs,george@systemsdesign.biz,P2 Active,,39.4
+469,C00401,A0526,Theo Shiluvani,STG Africa,theos@stgafrica.com,P2 Active,,39.3
+470,C00413,A0526,Jaun Slabbert,STG Africa,jaunsp@stgafrica.com,P2 Active,,39.3
+471,C01300,A0526,Erik Nel,STG Africa,erikn@stgafrica.com,P2 Active,,39.3
+472,C01338,A0632,Mariaan Loubser,Infocus Technology,mariaanl@infocus.technology,P2 Active,,39.3
+473,C00891,A0565,Julian Thorrold,IDTek Solutions,julian@idtek.co.za,P2 Active,,39.2
+474,C00489,A0668,Jacques Van Der Sandt,Integrated Home and Office,jacques@integratedhomes.co.za,P2 Active,,39.1
+475,C00859,A0451,John Human,SmartProtect,john@smartprotect.co.za,P1 Key,,39.1
+476,C00272,A0119,Thabiso Maisela,Control Systems Integration,thabisom@controlsi.co.za,P2 Active,,39.0
+477,C01392,A0359,Nicolas Barnard,The Surveillance Factory,nick@sfactory.co.za,P2 Active,,39.0
+478,C00194,A0047,Tatum Ruiters,Easi-Card,tatum@easi-card.co.za,P2 Active,,38.9
+479,C00258,A0106,Tiza Mumbi,DCS,tiza@dcs.co.zm,P2 Active,,38.8
+480,C01219,A0363,FRANCOIS,TimeTec SA (Pty) Ltd,francois@timetec.co.za,P1 Key,,38.8
+481,C01529,A0974,Anthony Gwilt,MASC Solutions,anthony@mascsolutions.com,P2 Active,,38.8
+482,C00151,A0017,ERIK VAN ZYL,Deltrolux,erik@deltrolux.co.za,P2 Active,,38.6
+483,C00152,A0017,Dwayne Lodi Kloppers,Deltrolux,dwayne@deltrolux.co.za,P2 Active,,38.6
+484,C00768,A0553,Lesole Ngakane,Dimension Data,lesole.ngakane@dimensiondata.com,P2 Active,,38.6
+485,C00153,A0019,Werner Majcen,ABEC Advanced Infrastructure (Pty) Ltd,Werner.Majcen@abecai.co.za,P2 Active,,38.5
+486,C00906,A0723,Stephan van der Merwe,Zentech Integrated Security Solutions,stephan@zentechiss.co.za,P2 Active,,38.5
+487,C00721,A0579,Franck,Hyper Building Tech,franck@hyperbuildingtech.co.za,P2 Active,,38.3
+488,C01393,A0963,Winnie Ramafifi,Comsoft (PTY) LTD,wramafifi@comsoft.co.bw,P2 Active,,38.3
+489,C01394,A0229,Razika Petersen,Bright Idea Projects,sales@bipsa.co.za,P2 Active,,38.3
+490,C00412,A0186,Wayne Rowntree,Selectrics,wayne@trendsa.co.za,P2 Active,,38.2
+491,C00863,A0312,Nico Van Eden,Quatro,nicov@quatro.co.za,P2 Active,,38.2
+492,C00394,A0453,Robyn Scott,Stallion Security Group,RobynS@stallion.co.za,P2 Active,,38.1
+493,C00736,A0397,Clinton Yoko,Abecai,clinton.yoko@abecai.co.za,P2 Active,,38.1
+494,C00155,A0020,Brian Nortje,Thorburn Security Solutions,Bnortje@thorburn.co.za,P2 Active,,37.8
+495,C00159,A0020,Elouise Viljoen,Thorburn Security Solutions,eviljoen@thorburn.co.za,P2 Active,,37.8
+496,C00162,A0020,Olebogeng Mosadi,Thorburn Security Solutions,omosadi@thorburn.co.za,P2 Active,,37.8
+497,C00004,A0001,Anton BI,Fidelity ADT,antonb@fidelity-adt.co.za,P2 Active,,37.6
+498,C00177,A0031,Martin Unknown,FS Systems,martin@fs-systems.co.za,P2 Active,,37.5
+499,C01346,A0763,Rene Van As,G4S,rene.vanas@za.g4s.com,P1 Key,,37.4
+500,C00728,A0526,Laurie James,STG Africa,lauriej@stgafrica.com,P2 Active,,37.3
+501,C00265,A0109,Vincent Koness,G4S Kenya,vincent.koness@ke.g4s.com,P2 Active,,37.2
+502,C01518,A0801,Pieter M,MSEC,pieterm@msec.co.za,P2 Active,,37.1
+503,C00754,A0224,Rene Naidoo,BROADVISION,rene@broadvision.co.za,P2 Active,,37.0
+504,C01377,A0393,George Obel,Wells Fargo,George.Obel@Fargo.Co.Ke,P2 Active,,37.0
+505,C00482,A0241,Avitha Sewduth,Brandfin,avitha@brandfin.com,P1 Key,,36.7
+506,C00755,A0424,Neels Mostert,Advanced Infrastructure,neels.mostert@abecai.co.za,P2 Active,,36.7
+507,C01460,A0782,Edith Maneul,Fang,stores@fang.co.za,P1 Key,,36.7
+508,C00312,A0543,Albert Barasa,Synthesys Systems,abarasa@synthesyssystems.com,P2 Active,,36.6
+509,C01354,A0644,Armand Vuyk,Devtech,armand@devtechindustries.co.za,P2 Active,,36.6
+510,C00291,A0853,Christo Loods,Byers Security,christo@byerssecurity.co.za,P2 Active,,36.5
+511,C00339,A0397,Nicole Hattingh,Abecai,nicole.hattingh@abecai.co.za,P2 Active,,36.5
+512,C00692,A0665,Johan,Intellisec,johanv@intellisec.co.za,P1 Key,,36.4
+513,C01230,A0775,Monre Botha,Fidelity,monreb@fidelity-services.com,P2 Active,,36.4
+514,C00390,A0397,Walter Burger,Abecai,walter.burger@abecai.co.za,P2 Active,,36.3
+515,C00214,A0062,John,Phoenix LTD,john@iknowsecurity.com,P2 Active,,36.2
+516,C00917,A0565,Nancy Schroeder,IDTek Solutions,nancyh@idtek.co.za,P2 Active,,36.2
+517,C01024,A0565,Lindy Martins,IDTek Solutions,lindy@idtek.co.za,P2 Active,,36.2
+518,C01445,A0257,Fred Tolken,Pepler Alarms,technical@pepleralarms.co.za,P1 Key,,36.2
+519,C00226,A0081,Cliffort Tharaga,Multi-Net Systems,Cliffort@multinetsystems.co.za,P2 Active,,36.1
+520,C00227,A0081,Dirk Crafford,Multi-Net Systems,dirk@multinetsystems.co.za,P2 Active,,36.1
+521,C00228,A0081,Jaco Vermaak,Multi-Net Systems,Jaco Vermaak <Jacov@multinetsystems.co.za>,P2 Active,,36.1
+522,C00230,A0081,MAURO MANENTI,Multi-Net Systems,maurom@multinetsystems.co.za,P2 Active,,36.1
+523,C00233,A0081,Ninetté van Graan,Multi-Net Systems,ninette@multinetsystems.co.za,P2 Active,,36.1
+524,C01187,A0302,Nicholas Leighton,RT Systems,nicholas@rtsystems.co.za,P2 Active,,36.1
+525,C01384,A0802,Nkosinathi Khumalo,MRM,nkosinathik@mrms.co.za,P2 Active,,36.1
+526,C00677,A0273,Jon Green,Pos-Secure,jon@pos-secure.co.za,P2 Active,,36.0
+527,C00161,A0020,Leon Pillay,Thorburn Security Solutions,Lpillay@thorburn.co.za,P2 Active,,35.8
+528,C00224,A0080,Venetia Lombaard,Embane Electrical (Pty) Ltd,venetia@embane-electrical.co.za,P2 Active,,35.7
+529,C00344,A0545,Yuvish Rughoonandan,TakeNoteIT,yuvish.r@takenoteit.co.za,P2 Active,,35.6
+530,C00359,A0569,Paul Mungai,IGS Security,igs@igs-security.org,P2 Active,,35.6
+531,C01028,A0404,Byron Louw,Xone Integrated Security - Welgevonden,byron.louw@xone.co.za,P2 Active,,35.6
+532,C00154,A0019,Gerhard Scheepers,ABEC Advanced Infrastructure (Pty) Ltd,gerhard.scheepers@abecai.co.za,P2 Active,,35.5
+533,C00292,A0327,Sello Setenane,Refiloe It Solutions,ssetenane@refiloeitsolutions.co.za,P2 Active,,35.5
+534,C00501,A0793,Janco Wepener,FSI-System,Janco@fsi-systems.com,P2 Active,,35.5
+535,C01328,A0165,Ricardo Moniz,Becker Mining,ricardo.moniz@za.becker-mining.com,P2 Active,,35.5
+536,C01520,A0247,Yvette Venter,Protea Coin,VenterY@proteacoin.co.za,P2 Active,,35.5
+537,C00127,A0015,Unknown Unknown,Veracitech,info@oppnamibia.com.na,P4 Noise / generic,,35.3
+538,C00247,A0094,Gino Dos Santos,ISF SFP (Pty) Ltd,gino@sfp.co.za,P2 Active,,35.3
+539,C00336,A0323,Clint Odendaal,Bona,clint@basixgroup.co.za,P2 Active,,35.1
+540,C00623,A0194,Auth,Auth,,P4 Noise / generic,,35.1
+541,C00001,A0001,Craig Hanslo,Fidelity ADT,craigh@fidelity-services.com,P3 Reference,,34.9
+542,C00003,A0001,Duncan Nortje,Fidelity ADT,duncanno@fidelity-services.com,P3 Reference,,34.9
+543,C00263,A0109,Johnmark Awicho,G4S Kenya,johnmark.awicho@ke.g4s.com,P3 Reference,,34.9
+544,C00246,A0093,George Ngalyoma,Gency Technologies,george@gency.co.tz,P3 Reference,,34.8
+545,C00330,A0823,John Long,MNK Security,namsec@iway.na,P3 Reference,,34.8
+546,C00503,A0598,Lenon Mukaronda,Hawks Africa,lenon@hawksafrica.com,P3 Reference,,34.8
+547,C00807,A0438,Gregg Skelton,SOS Alarmtech (EXP593-E),greggs@sosalarmtech.co.zw,P3 Reference,,34.8
+548,C01058,A0944,Ross Court,Clayton Communications,ross@clayton.africa,P3 Reference,,34.8
+549,C01358,A0366,Myron Govender,Tri-Star Technology,myron@tristartech.co.za,P3 Reference,,34.8
+550,C01359,A0897,Riyaadh Bhyat,Crystal Electrical,Riyaadh@ceis.co.za,P3 Reference,,34.8
+551,C01526,A0974,Tim Reynolds,MASC Solutions,timr@mascsolutions.comr,P3 Reference,,34.8
+552,C01527,A0974,Claire Smit,MASC Solutions,claire@mascsolution.com,P3 Reference,,34.8
+553,C01528,A0974,Ephraim Nkosi,MASC Solutions,nkosi@mascsolutions.com,P3 Reference,,34.8
+554,C01534,A0974,Fabio Dias,MASC Solutions,fabio@mascsolutions.com,P3 Reference,,34.8
+555,C01537,A0974,Zweli Ndlazi,MASC Solutions,zwelin@mascsolutions.com,P3 Reference,,34.8
+556,C00340,A0681,Edson Dumbo,ESPAES,Edson.Dumbo@espaes.com,P3 Reference,,34.7
+557,C00483,A0322,Megandran Moodley,Bona Electonic Solutions,megandran@basixgroup.co.za,P3 Reference,,34.7
+558,C01360,A0247,Nicky Hansen,Protea Coin,HansenN@proteacoin.co.za,P3 Reference,,34.7
+559,C01389,A0397,Taryn Brorson,Abecai,Taryn.Brorson@abecai.co.za,P3 Reference,,34.7
+560,C00204,A0058,Takunda,NV Technologies,takunda@nvtechnologies.co.za,P3 Reference,,34.6
+561,C00319,A0296,Imtiyaz Goulamghoss,Rogers Capital,Imtiyaz Goulamghoss <imtiyaz.goulamghoss@rogerscapital.mu>,P3 Reference,,34.4
+562,C00995,A0963,Gokatweng Coach R Tshekiso,Comsoft (PTY) LTD,gokatweng@comsoft.co.bw,P3 Reference,,34.4
+563,C00241,A0088,Eugene Jansen,Data Connectivity Solutions,eugenej@dcsafrica .co.za,P3 Reference,,34.2
+564,C00243,A0088,Jorge Vasco,Data Connectivity Solutions,jorgev@dcsafrica.co.za,P3 Reference,,34.2
+565,C00747,A0565,Mike Van Der Spuy,IDTek Solutions,mike@idtek.co.za,P3 Reference,,34.2
+566,C00453,A0182,Michael Owen,Servest,MichaelO@servest.co.za,P3 Reference,,34.1
+567,C00961,A0227,John Steyn,PROFplus Automated Systems,john.steyn@profautosystems.com,P3 Reference,,34.0
+568,C00991,A0454,Nick Grange,Stallion,nickg@stallion.co.za,P3 Reference,,34.0
+569,C00382,A0198,Zeno Moyes,Basix group,zeno@basixgroup.co.za,P3 Reference,,33.8
+570,C01027,A0339,Jesse Govender,Africa Business Development Consulting Enterprises,jesse@abdce.co.za,P3 Reference,,33.7
+571,C01405,A0353,Manica Sanders,Ushaka Security & Fire Projects (PTY) LTD,manica@ushakatrading.co.za,P3 Reference,,33.7
+572,C00348,A0200,Neer Shah,Securex Agencies,neer.shah@securexafrica.com,P3 Reference,,33.6
+573,C00720,A0198,Werner Majcen,Basix group,werner@basixgroup.co.za,P3 Reference,,33.6
+574,C00254,A0104,Vernon Hurter,Neo Technologies,vernon@neo.co.za,P3 Reference,,33.4
+575,C00488,A0660,Imtiaz Khan,Integrated Mobility Solutions,quotes@imobility co.za,P3 Reference,,33.3
+576,C01387,A0525,Jean Du Plessis,SVS,jean@svsolutions.co.za,P3 Reference,,33.3
+577,C01398,A0322,Tarryn Lubbe,Bona Electonic Solutions,tarryn@basixgroup.co.za,P3 Reference,,33.3
+578,C00315,A0573,Kaylee Firstbrook,ID Tek,kaylee@idtek.co.za,P3 Reference,,33.0
+579,C01138,A0463,Casper Engelbrecht,Stefmet Technologies,casper@stefmet.co.za,P3 Reference,,33.0
+580,C00187,A0040,Grant Steenkamp,Predic (PTY) LTD,grant.predic@outlook.com,P3 Reference,,32.9
+581,C00188,A0040,Roy Lunga,Predic (PTY) LTD,roy.predic@outlook.com,P3 Reference,,32.9
+582,C00290,A0152,Nolan Moodley,GIS Integrations,nolan@gisint.org,P3 Reference,,32.7
+583,C00372,A0762,David Drummond,G4S Africa (Pty) Ltd,david.drummond@g4scommerce.com,P3 Reference,,32.7
+584,C01010,A0370,Corne Pienaar,Afritron Limited,corne@idtek.co.za,P3 Reference,,32.5
+585,C01521,A0247,Frans Prins,Protea Coin,PrinsF@proteacoin.co.za,P3 Reference,,32.5
+586,C00403,A0526,Jeff Witthal,STG Africa,jeffw@stgafrica.com,P3 Reference,,32.3
+587,C00710,A0526,Jaun Slabbert,STG Africa,jauns@stgafrica.com,P3 Reference,,32.3
+588,C00218,A0071,Alistair Thackeray,SMART LINE INTEGRATION,alistair@sligroup.co.za,P3 Reference,,32.2
+589,C00495,A0584,Abuba,GST Eng,gsteng@yahoo.com,P3 Reference,,32.2
+590,C00837,A0565,Tasmin Lawrenson,IDTek Solutions,tasmin@idtek.co.zar,P3 Reference,,32.2
+591,C01267,A0565,Ilze Roos,IDTek Solutions,ilze@idtek.co.za,P3 Reference,,32.2
+592,C00264,A0109,Samuel  Kigo,G4S Kenya,,P3 Reference,,32.0
+593,C00391,A0397,Don Rampersadh,Abecai,Don.Rampersadh@abecai.co.za,P3 Reference,,32.0
+594,C01388,A0538,Alanya Shaw,Storm Procurement,Alanya.Shaw@storm-procurement.com,P3 Reference,,32.0
+595,C01395,A0185,Adam Gouws,Sentry Tec,sales@sentrytec.co.za,P3 Reference,,32.0
+596,C00245,A0091,Robyn Hart,Regend Services,admin@regend.co.za,P4 Noise / generic,,31.6
+597,C00268,A0110,Sherry Monteiro,Card Monster,sherry@cardmonster.co.za,P3 Reference,,31.6
+598,C00789,A0853,Elaine Loots,Byers Security,elaine@byerssecurity.co.za,P3 Reference,,31.5
+599,C00702,A0224,Rudeshnee Singaram,BROADVISION,rudeshnee@broadvision.co.za,P3 Reference,,31.3
+600,C01278,A0224,Nelisha Sahadeo,BROADVISION,nelisha@broadvision.co.za,P3 Reference,,31.3
+601,C01397,A0570,Norman Clements,Imat,norman@imat.co.za,P3 Reference,,31.3
+602,C00690,A0397,Byron Govender,Abecai,byron.govender@abecai.co.za,P3 Reference,,31.2
+603,C00833,A0441,Saiyed Abbas Bukhari,Apsis,abbas@apsis.co.tz,P3 Reference,,31.2
+604,C01243,A0265,Quentin Van Zyl,Cable Network Specialists SA,quentin@cnssa.co.za,P3 Reference,,31.2
+605,C00332,A0763,Kevin Alfeu,G4S,kevin.alfeu@mz.g4s.com,P3 Reference,,31.1
+606,C01284,A0882,Kizito Okeke,Nextec / iOCO SBT,Kizito.Okeke@nextec.co.za,P3 Reference,,31.1
+607,C00300,A0580,Louis Cloete,Hybrid Systems (PTY) Ltd,louisc@eafrica.bw,P3 Reference,,30.8
+608,C00816,A0943,Ross Court,Clayton Communications Africa (Pty) Ltd,ross@claytontechnologies.com,P3 Reference,,30.6
+609,C01295,A0205,Nicolene Fick,SBMS,nicolene@s-bms.co.za,P3 Reference,,30.6
+610,C00256,A0106,Harris Mulenga,DCS,hmulenga@dcs.co.zm,P3 Reference,,30.5
+611,C01161,A0164,A-Jay Viljoen,Bearings International,a-jayv@bearings.co.za,P3 Reference,,30.5
+612,C00350,A0810,Bongani,Nation@Large,info@nationatlarge.net,P3 Reference,,30.4
+613,C01293,A0215,Marcel Mare,Securitas RSA,marcel.mare@securitas-rsa.co.za,P3 Reference,,30.2
+614,C00215,A0065,William Yeung,Zebo Asia Ltd,william.yeung@zeboasia.com,P3 Reference,,30.0
+615,C00801,A0226,Hentie Venter,Bosch SA (Keenfinity),Hentie.Venter@keenfinity-group.com,P3 Reference,,30.0
+616,C00802,A0226,Quinton Van Den Berg,Bosch SA (Keenfinity),Quintin.VanDenBerg@keenfinity-group.com,P3 Reference,,30.0
+617,C00803,A0226,Willem Diedericks,Bosch SA (Keenfinity),Willem.Diedericks@keenfinity-group.com,P3 Reference,,30.0
+618,C01263,A0614,louis,Ithongo Electronics,louis@ithongo.co.za,P3 Reference,,30.0
+619,C01370,A0527,Clinton Scheidel,Supplytech (Pty) Ltd,clinton@supplytech.co.za,P3 Reference,,30.0
+620,C00956,A0176,Patrick Niwagaba,Security Group Uganda Limited,pniwagaba@securitygroupug.com,P3 Reference,,29.9
+621,C01108,A0784,Greg,Faranani,greg@faranani.net,P3 Reference,,29.8
+622,C00186,A0037,Zoleka Nkhohla,NS Engineering Services (Pty) Ltd,,P3 Reference,,29.7
+623,C00213,A0062,John Metzger,Phoenix LTD,john@phoenix.tz,P3 Reference,,29.7
+624,C00285,A0146,Tony Santos,Swaziland Electrical Sales,procurement@eeh.co.sz,P3 Reference,,29.7
+625,C00480,A0224,Vela Suner,BROADVISION,vela.suner@broadvision.co.za,P3 Reference,,29.7
+626,C00484,A0322,Deshnie Harilal,Bona Electonic Solutions,deshnie@basixgroup.co.za,P3 Reference,,29.7
+627,C01095,A0785,Vincent Fanfoni,Fidelity Sec Serv (Pty) Ltd,,P3 Reference,,29.7
+628,C00624,A0906,Patrick Labonne,LA Hardware,,P3 Reference,,29.6
+629,C00679,A0665,Sharlene Mungaroo,Intellisec,sharlene@intellisec.co.za,P3 Reference,,29.5
+630,C00422,A0416,Nick Kelly,Visual Concepts Squared,nick@vc2.co.za,P3 Reference,,29.4
+631,C00434,A0804,Mark Naicker,MPROTECH,markeannaicker@gmail.com,P3 Reference,,29.4
+632,C00749,A0214,MJ Oosthuizen,Securitas,mj.oosthuizen@securitas-rsa.co.za,P3 Reference,,29.4
+633,C01382,A0570,Lisa Grieb,Imat,lisa@imat.co.za,P3 Reference,,29.4
+634,C00216,A0071,Sid Drew,SMART LINE INTEGRATION,stores@sligroup.co.za,P3 Reference,,29.2
+635,C00217,A0071,Kristopher de Bastos,SMART LINE INTEGRATION,krisb@sligroup.co.za,P3 Reference,,29.2
+636,C00219,A0071,George Duza,SMART LINE INTEGRATION,george@sligroup.co.za,P3 Reference,,29.2
+637,C01031,A0553,Lüdwig Sabor,Dimension Data,ludwig.sabor@dimensiondata.com,P3 Reference,,29.1
+638,C01032,A0553,Blessings Musamadia,Dimension Data,blessings.musamadia@Dimensiondata.com,P3 Reference,,29.1
+639,C01154,A0553,Taryn Atherton,Dimension Data,Taryn.Atherton@dimensiondata.com,P3 Reference,,29.1
+640,C01155,A0553,Oloff Crous,Dimension Data,Oloff.Crous@dimensiondata.com,P3 Reference,,29.1
+641,C01271,A0839,Pierre Malan,Omega Group,pierre@omegagroup.co.za,P3 Reference,,29.1
+642,C01365,A0553,Tate Skordis,Dimension Data,tate.skordis@dimensiondata.com,P3 Reference,,29.1
+643,C00222,A0075,Imraan Vaked,SFI Group (Pty) Ltd,,P3 Reference,,29.0
+644,C00841,A0452,Eric Owusu,ATBS (EXP595-E / EXP595E-US),atbslimited@yahoo.com,P3 Reference,,28.9
+645,C00269,A0112,William Pake,Omega Risk Solutions,WilliamPake@omegasol.com,P3 Reference,,28.7
+646,C00279,A0138,Kate Gray-Browne,The Surveillance Factory KZN,quotationskzn@sfactory.co.za,P3 Reference,,28.5
+647,C00347,A0586,Paul Van Der Westhuizen,GVSC COMMUNICATIONS,paulvdw@gvsc.co.za,P3 Reference,,28.5
+648,C01118,A0665,Wesley Atkins,Intellisec,wesley@intellisec.co.za,P3 Reference,,28.5
+649,C01119,A0665,Tyrone McMillan,Intellisec,tyrone@intellisec.co.za,P3 Reference,,28.5
+650,C01121,A0665,Lewellyn Muhl,Intellisec,lewellyn@intellisec.co.za,P3 Reference,,28.5
+651,C01125,A0665,Sandile Dlamini,Intellisec,sandile@intellisec.co.za,P3 Reference,,28.5
+652,C01127,A0665,Mitchel Adam,Intellisec,mitchel@intellisec.co.za,P3 Reference,,28.5
+653,C01131,A0665,Dane Nel,Intellisec,dane@intellisec.co.za,P3 Reference,,28.5
+654,C01153,A0665,Johna Pillay,Intellisec,purchasing@intellisec.co.za,P3 Reference,,28.5
+655,C01378,A0665,Jason Pretorius,Intellisec,jason@intellisec.co.za,P3 Reference,,28.5
+656,C00313,A0305,Gernot Bahr,Rolling Wheels Africa,rollingwheelsafrica@gmail.com,P3 Reference,,28.4
+657,C01246,A0224,Deenan Arnachellan,BROADVISION,deenan@broadvision.co.za,P3 Reference,,28.3
+658,C01253,A0643,Patric Mofokeng,Devtech Industries (Pty) Ltd,patric@devtechindustries.co.za,P3 Reference,,28.2
+659,C00122,A0009,Anusha Abraham,KVA RISK MANAGEMENT SERVICES,admin@kva-rms.co.za,P4 Noise / generic,,28.1
+660,C00345,A0474,Albert Kenyolwa,SGA Kenya,akenyolwa@sgasecurity.com,P3 Reference,,28.1
+661,C00351,A0460,Devin Viljoen,SSE Engineering,devin@ssenamibia.com,P3 Reference,,28.1
+662,C00858,A0451,Keegan Campbell,SmartProtect,keegan@smartprotect.co.za,P3 Reference,,28.0
+663,C00860,A0451,Jacques Fourie,SmartProtect,jacques@smartprotect.co.za,P3 Reference,,28.0
+664,C00881,A0451,Richard Burden,SmartProtect,richard@smartprotect.co.za,P3 Reference,,28.0
+665,C01004,A0451,Stephen Bezuidenhout,SmartProtect,stephen@smartprotect.co.za,P3 Reference,,28.0
+666,C00354,A0465,Allan N MWELWA,SPECTRUM TECHNOLOGIES LTD,allan.mwelwa@spectech.co.zm,P3 Reference,,27.9
+667,C00212,A0061,Benelize Taljaard,Structure Works Complete Security (PTY) Ltd,benelize.taljaard@structureworksinc.com,P3 Reference,,27.8
+668,C00377,A0631,Greg McVittie,Integra Tec,greg@integratec.co.bw,P3 Reference,,27.8
+669,C00202,A0055,Vincent Donald,HSM Group,vincent@hsmgroup.co.za,P3 Reference,,27.7
+670,C00239,A0086,Braam Combrinck,Infinitron,braam@infinitron.co.za,P3 Reference,,27.6
+671,C01035,A0280,Morne Mellet,Remote Entry Systems,morne@remoteentrysystems.co.za,P3 Reference,,27.6
+672,C00232,A0081,Wiets Engelbrecht,Multi-Net Systems,wiets@multinetsystems.co.za,P3 Reference,,27.5
+673,C00262,A0106,Marius Munnik,DCS,Marius@dcsafrica.co.za,P3 Reference,,27.5
+674,C00707,A0260,Portia,PC Net (Pty) Ltd,sales_1@pcnet.co.bw,P3 Reference,,27.5
+675,C00452,A0386,Zwelihle Worldght,Worldsight Pty Ltd,worldsight1@outlook.com,P3 Reference,,27.4
+676,C00383,A0198,Stephen Vermaak,Basix group,Stephen@basixgroup.co.za,P3 Reference,,27.3
+677,C00738,A0894,Colin Khan,Kestrel Distribution,colin@kestreldistribution.co.za,P3 Reference,,27.3
+678,C00879,A0454,Nico Van Eden,Stallion,nicov@stallion.co.za,P3 Reference,,27.3
+679,C01375,A0651,Elaine,Intervid,elaine@intervid-africa.co.za,P3 Reference,,27.3
+680,C01104,A0215,Sirino Govender,Securitas RSA,sirino.govender@securitas-rsa.co.za,P3 Reference,,27.2
+681,C01122,A0890,Kiren Govender,KGT Enterprises,kiren@kgtenterprises.co.za,P3 Reference,,27.2
+682,C00329,A0468,Elson Mwecha,Shopware,elson@shopware.co.zw,P3 Reference,,27.0
+683,C00782,A0732,Anthony Dintwa,ENS - Enterprise Network Solutions,addintwa@icloud.com,P3 Reference,,27.0
+684,C00786,A0724,Dauine VD Merwe,Zentech,Dauine@zentechiss.co.za,P3 Reference,,27.0
+685,C01216,A0424,Tate Skordis,Advanced Infrastructure,tate.skordis@abecai.co.za,P3 Reference,,26.9
+686,C00456,A0209,Anthony Osman,Satcom Malawi,tony@satcom-mw.com,P3 Reference,,26.8
+687,C00184,A0032,Danie Allers,First Armed Response,danie@ismstechnical.co.za,P3 Reference,,26.6
+688,C00309,A0354,Denise Hoelscher,US Embassy,HoelscherDR@state.gov,P3 Reference,,26.6
+689,C00324,A0491,Herve Sala-Malengo,SK Business,samherve12@gmail.com,P3 Reference,,26.6
+690,C00260,A0106,Dave Coker,DCS,,P3 Reference,,26.5
+691,C01245,A0275,Bernard De Lange,Buckler,bernard@buckler.co.za,P3 Reference,,26.4
+692,C00735,A0168,Siyabonga Mbuyisa,BCX,siyabonga.mbuyisa@bcx.co.za,P3 Reference,,26.2
+693,C00231,A0081,Marcel van Wyk,Multi-Net Systems,marcel@multinetsystems.co.za,P3 Reference,,26.1
+694,C00499,A0435,Abigail NS Opaye,Act ICT,office@act-ict.com,P3 Reference,,26.1
+695,C00779,A0564,Mercy (HSC - Kenya) Mungai,HSC Systems Limited,mercy.mungai@hsc.co.ke,P3 Reference,,26.1
+696,C00795,A0564,Charles Nyaga (HSC - Kenya) Presales Engineer - ICT,HSC Systems Limited,charles.nyaga@hsc.co.ke,P3 Reference,,26.1
+697,C01423,A0247,Mervyn Chetty,Protea Coin,ChettyM@proteacoin.co.za,P3 Reference,,26.1
+698,C00974,A0345,Willie Crywagen,TSI Communications,willie@tsicom.co.za,P3 Reference,,26.0
+699,C00977,A0345,Josh Griffin,TSI Communications,josh@tsicom.co.za,P3 Reference,,26.0
+700,C00979,A0345,Bjorn Pitt,TSI Communications,bjorn@tsicom.co.za,P3 Reference,,26.0
+701,C01006,A0345,Mynhardt Van Rooyen,TSI Communications,mynhardt@tsicom.co.za,P3 Reference,,26.0
+702,C01233,A0678,Marco Garcia,Ecco AS,marcog@ecco-as.com,P3 Reference,,26.0
+703,C00342,A0443,Tommy Klopper,Arkhe Risk Solutions,tommy.klopper@arkhesol.com,P3 Reference,,25.9
+704,C00463,A0276,Patricia Mabetha,Phendula Technologies,patricia@phendulatech.co.za,P3 Reference,,25.9
+705,C01519,A0786,Sihle Mngomezulu,First Technology Group,Sihle.Mngomezulu@ftechkzn.co.za,P3 Reference,,25.9
+706,C00185,A0033,ANDRE JOUBERT,CSG SECURITY,Andre Joubert <andre.joubert@csgsecurity.co.za>,P3 Reference,,25.8
+707,C00331,A0494,Vitor Guerra,ALTEL,vguerra@altel.co.mz,P3 Reference,,25.8
+708,C00343,A0624,William Jones,Jascom,peter@jascom.co.za,P3 Reference,,25.8
+709,C00847,A0172,Israel Yaniv,Belsgroup,izzy@belsgroup.com,P3 Reference,,25.7
+710,C00681,A0671,Nicholas Zakarian,Integratek,zak@integratek.co.za,P3 Reference,,25.6
+711,C01390,A0896,Aaqil Somauroo,CS Africa,aaqil@csafrica.mu,P3 Reference,,25.6
+712,C01026,A0665,Andries Deysel,Intellisec,andries@intellisec.co.za,P3 Reference,,25.5
+713,C01120,A0665,Malcolm Gordon,Intellisec,malcolm@intellisec.co.za,P3 Reference,,25.5
+714,C01124,A0665,Stephen Odayor,Intellisec,stephen@intellisec.co.za,P3 Reference,,25.5
+715,C01126,A0665,Patrick Law,Intellisec,patrick@intellisec.co.za,P3 Reference,,25.5
+716,C01129,A0665,Frans Deysel,Intellisec,frans@intellisec.co.za,P3 Reference,,25.5
+717,C01130,A0665,Evan Mabunda,Intellisec,gautengstores@intellisec.co.za,P3 Reference,,25.5
+718,C01143,A0665,Craig Lochner,Intellisec,craigh@intellisec.co.za,P3 Reference,,25.5
+719,C01165,A0665,Henry Van Der Berg,Intellisec,henry@intellisec.co.za,P3 Reference,,25.5
+720,C01255,A0665,Johan Van Stejin,Intellisec,johan@intellisec.co.za,P3 Reference,,25.5
+721,C01256,A0665,Clint Odendaal,Intellisec,clint@intellisec.co.za,P3 Reference,,25.5
+722,C01257,A0665,Calvin,Intellisec,calvin@intellisec.co.za,P3 Reference,,25.5
+723,C00828,A0728,Pierre Kammerlander,Engineered System Solutions,pierrek@engsys.co.za,P3 Reference,,25.4
+724,C00366,A0656,Brendon Hall,IOT Revolution Technologies,brendon@rev-tech.co.za,P3 Reference,,25.3
+725,C00500,A0794,Quinton Ferreira,Future Access,quinton@futureaccess.co.za,P3 Reference,,25.3
+726,C00467,A0301,Kai Brett,RPCK,kai@romanspizza.co.za,P3 Reference,,25.2
+727,C00715,A0924,Busi Dladla,Katorus Fire Systems,info@kfep.co.za,P3 Reference,,25.2
+728,C00774,A0296,Galen Amasay (Rogers Capital - Mauritius),Rogers Capital,galen.amasay@rogerscapital.rw,P3 Reference,,25.2
+729,C00450,A0473,Patrick Stonier,Sigma Security,pat@sigmasecurity.co.za,P3 Reference,,25.1
+730,C00705,A0525,Gareth Borrageiro,SVS,gareth@svsolutions.co.za,P3 Reference,,25.1
+731,C00706,A0525,Nicholas Luksich,SVS,nicholas@svsolutions.co.za,P3 Reference,,25.1
+732,C00718,A0525,Nic Curzon,SVS,nic.curzon@svsolutions.co.za,P3 Reference,,25.1
+733,C00813,A0415,Bruno Chamtyoo,Vitech,bruno@vitech.intnet.mu,P3 Reference,,25.0
+734,C00851,A0451,Gerhard Van Den Heever,SmartProtect,gerhard@smartprotect.co.za,P3 Reference,,25.0
+735,C00861,A0451,Gerhard Van Den Heever,SmartProtect,gerhardh@smartprotect.co.za,P3 Reference,,25.0
+736,C00882,A0451,Nikolai Friend,SmartProtect,nikolai@smartprotect.co.za,P3 Reference,,25.0
+737,C01069,A0232,Vikash Augnu,Brinks,,P3 Reference,,25.0
+738,C01372,A0538,Cheryl Muller,Storm Procurement,Cheryl.Muller@storm-procurement.com,P3 Reference,,25.0
+739,C00711,A0540,Godfrey (Talinda East Africa - Kenya) Wafula,Talinda East Africa LTD,gwafula@talinda.net,P3 Reference,,24.9
+740,C00364,A0956,Robert Kimani,LED Power,rklptechnology@gmail.com,P3 Reference,,24.8
+741,C00615,A0878,Freddy Nissen,Nistech,,P3 Reference,,24.8
+742,C00986,A0898,MJ Molefi,LCS Holdings,mojalefa@lcsholdings.co.za,P3 Reference,,24.8
+743,C01436,A0422,Nick Bayes,VIDAC Botswana,nick@vidac.co.bw,P3 Reference,,24.6
+744,C00236,A0084,Alexandre Moamba Moamba,Nesc Technology,chandaymoamba@gmail.com,P3 Reference,,24.5
+745,C00775,A0830,Mike Shallow (Mike’s Alarms - Zimbabwe) Shallow,Mikes Alarms,mikes@mikesalarms.co.zw,P3 Reference,,24.5
+746,C01261,A0911,Cammy Bazi,Johnson Controls,cammy.1.bazi@jci.com,P3 Reference,,24.5
+747,C00356,A0755,Domino Bucuane,G4S Moz,domino.bucuane@mz.g4s.com,P3 Reference,,24.4
+748,C00868,A0883,Johannes Engelbrecht,Nextec,johannes.engelbrecht@nextec.co.za,P3 Reference,,24.4
+749,C00965,A0605,Vikash Ramjada,Harel Mallac Technologies Ltd,vikash.ramjada@hmtechnologies.mu,P3 Reference,,24.4
+750,C00978,A0345,Josh Griffin,TSI Communications,joch@tsicom.co.za,P3 Reference,,24.4
+751,C01234,A0678,Macro Garcia,Ecco AS,marco@ecco-as.com,P3 Reference,,24.4
+752,C01110,A0907,Jenny Wittstock,Landis & Staefa Fire & Security,jennyw@staefa.co.za,P3 Reference,,24.1
+753,C00238,A0086,Annelize,Infinitron,annalize@infinitron.co.za,P3 Reference,,24.0
+754,C01310,A0258,Nadia Vlok,Pentagon Distribution,nadia@pentagon.africa,P3 Reference,,24.0
+755,C00479,A0262,Tatira Mufarowashe,Cableguysautomation,Tatira@cableguysautomation.co.za,P3 Reference,,23.9
+756,C00176,A0030,NITIN WADHWA,Securex Agencies (K) Ltd,rachna.sahni@securex.co.ke,P3 Reference,,23.8
+757,C00276,A0128,Gavin Schroeder,GK SECURITY SOLUTIONS,,P3 Reference,,23.8
+758,C00709,A0968,Benjamin Masereka,Comquest Projects,benjaminmasereka@comquestprojects.com,P3 Reference,,23.8
+759,C00824,A0968,Edward Odoki,Comquest Projects,edwardodoki@comquestprojects.com,P3 Reference,,23.8
+760,C00780,A0945,Harjeet - Master Power Singh,Master Power Systems Ltd,harjeet@masterpowers.com,P3 Reference,,23.7
+761,C00441,A0966,Sithembiso Tanase,Limtech,sithembiso.tanase@limtech.co.za,P3 Reference,,23.6
+762,C00835,A0309,Mark Berrington,Quantum Fire,mark@quantumfire.co.za,P3 Reference,,23.6
+763,C00373,A0791,Winston Udeh,G.E. Winston Integrated Services,epicgrp@gmail.com,P3 Reference,,23.5
+764,C00396,A0725,Emmanuel Etuk,2800 Network & Consulting Ltd.,emmanueletuk09@yahoo.com,P3 Reference,,23.5
+765,C00426,A0725,Nonny Onaku,2800 Network & Consulting Ltd.,2800network&consulting@gmail.com,P3 Reference,,23.5
+766,C00884,A0454,Kevin Monk,Stallion,kevinm@stallion.co.za,P3 Reference,,23.5
+767,C01205,A0297,Bernard De Lange,Robur Industries,bernard@robur.co.za,P3 Reference,,23.5
+768,C00846,A0709,Sachin Shedbalkar,EXP514-E - SGS BATEMAN,sachin.shedbalkar@sgs.com,P3 Reference,,23.4
+769,C00976,A0529,Paul Barnes,Suprema,paul@suprema.co.za,P3 Reference,,23.4
+770,C01201,A0907,Neil de Beer,Landis & Staefa Fire & Security,neild@staefa.co.za,P3 Reference,,23.3
+771,C01254,A0651,Adhir Kalichuran,Intervid,adhir.kalichuran@intervid-africa.co.za,P3 Reference,,23.3
+772,C00306,A0168,Thato Khala,BCX,thato.khala@bcx.co.za,P3 Reference,,23.2
+773,C00805,A0708,Charles Ekong,EXP558E-US - MACROTECH,charles.ekong@macrotechsarl.com,P3 Reference,,23.1
+774,C00304,A0385,Ludwig Erasmus,Worldwide Tech Solutions,ludwig@worldwidetech.co.za,P3 Reference,,23.0
+775,C00305,A0372,Kyle Dalton,Total Mining (Pty) Ltd,kyle@totalmining.co.za,P3 Reference,,23.0
+776,C00384,A0173,Theo Jansen van Rensburg,AVR Telecoms,theo@mstelecoms.co.za,P3 Reference,,23.0
+777,C00455,A0220,Vaughan Cellarius,Sec Pro,vc@secpro.co.za,P3 Reference,,23.0
+778,C00466,A0842,Nick Thakurdin,NT Consulting,Nikhilesh@live.co.za,P3 Reference,,23.0
+779,C00486,A0665,Bernard Lazarus,Intellisec,bernard@intellisec.co.za,P3 Reference,,23.0
+780,C00496,A0588,Ravael Maliva,Grupo FPB,r.mavila@grupofpb.co.mz,P3 Reference,,23.0
+781,C00629,A0583,Jacques Van Aswegen,GTSM,Jacques.vanAswegen@sibanyestillwater.com,P3 Reference,,23.0
+782,C00856,A0883,Sergio Da Silva,Nextec,sergio.dasilva@nextec.co.za,P3 Reference,,23.0
+783,C00987,A0883,Hilgard Dann,Nextec,hilgard.dann@nextec.co.za,P3 Reference,,23.0
+784,C00988,A0883,Eugene Nel,Nextec,eugene@nextec.co.za,P3 Reference,,23.0
+785,C01030,A0341,Zarina Osman,Tzars security Solutions,zarina@tzars.co.za,P3 Reference,,23.0
+786,C01047,A0534,Michael MacIntyre,Stone Three,michael.macintyre@stonethree.com,P3 Reference,,23.0
+787,C01057,A0341,Keith Williams,Tzars security Solutions,keith@tzars.co.za,P3 Reference,,23.0
+788,C01152,A0739,Derrick Horn,Energize Tech,derrick@energizetech.co.za,P3 Reference,,23.0
+789,C01164,A0739,Demi Mitchell,Energize Tech,demi@energizetech.co.za,P3 Reference,,23.0
+790,C01176,A0865,Samantha Beukes,CCTV SA,sam@cctvsa.co.za,P3 Reference,,23.0
+791,C01182,A0774,Dillan Alberts,Fidelity ADT Commercial,dillana@fidelity-services.com,P3 Reference,,23.0
+792,C01227,A0183,TIM REYNOLDS,SERVEST SECURITY,TimR@servest.co.za,P3 Reference,,23.0
+793,C01273,A0883,Neville Govender,Nextec,neville.govender@nextec.co.za,P3 Reference,,23.0
+794,C01274,A0883,Linda Glieman,Nextec,Linda.Glieman@nextec.co.za,P3 Reference,,23.0
+795,C01275,A0883,Kenneth Ball,Nextec,kenneth.ball@nextec.co.za,P3 Reference,,23.0
+796,C01276,A0883,Corleen Porter,Nextec,corleen.porter@nextec.co.za,P3 Reference,,23.0
+797,C01277,A0883,Belinda Gouws,Nextec,Belinda.Gouws@Nextec.co.za,P3 Reference,,23.0
+798,C01286,A0883,Rikus Terblance,Nextec,rikus.terblanche@nextec.co.za,P3 Reference,,23.0
+799,C01291,A0883,Albertus Botes,Nextec,albertus.Botes@nextec.co.za,P3 Reference,,23.0
+800,C01348,A0424,Erik Nel,Advanced Infrastructure,erik.nel@abecai.co.za,P3 Reference,,23.0
+801,C01371,A0538,Monique Potgieter,Storm Procurement,Monique.Potgieter@storm-procurement.com,P3 Reference,,23.0
+802,C01386,A0716,Adrian Carr,Zone Control Room Management,adrian.carr@xone.co.za,P3 Reference,,23.0
+803,C01428,A0816,Nashil Fortuin,MegaDrive Automation,Nashli.Fortuin@megadrive.co.za,P3 Reference,,23.0
+804,C01458,A0763,Nick Niemand,G4S,nick.niemand@za.g4s.com,P3 Reference,,23.0
+805,C01468,A0944,Petrus Geldenhuys,Clayton Communications,petrus@clayton.africa,P3 Reference,,23.0
+806,C01473,A0513,Raynier Vorster,Thorburn,Raynier.Vorster@tsebo.com,P3 Reference,,23.0
+807,C01474,A0513,Bianca Booysen,Thorburn,bbooysen@thorburn.co.za,P3 Reference,,23.0
+808,C01475,A0241,Sharlene Mungaroo,Brandfin,sharlene@brandfin.com,P3 Reference,,23.0
+809,C01492,A0739,Mike Pritchard,Energize Tech,mike@energizetech.co.za,P3 Reference,,23.0
+810,C01495,A0335,Adrienne du Plessis,Raid Risk,Adi@raidsecurity.co.za,P3 Reference,,23.0
+811,C01505,A0883,Kyle Faddel,Nextec,kyle.fadel@nextec.co.za,P3 Reference,,23.0
+812,C01507,A0883,Christo Kruger,Nextec,christo.kruger@nextec.co.za,P3 Reference,,23.0
+813,C01511,A0926,Norman Liebenberg,CNI Security,norman@cninstall.co.za,P3 Reference,,23.0
+814,C01523,A0583,Werner Fourie,GTSM,Werner.Fourie@sibanyestillwater.com,P3 Reference,,23.0
+815,C01524,A0583,Dhesan Naidoo,GTSM,Dhesan.Naidoo@sibanyestillwater.com,P3 Reference,,23.0
+816,C01525,A0582,Mark Hodgson,Grit Procurement,markh@gritprocurement.co.za,P3 Reference,,23.0
+817,C00494,A0700,João Boarqueiro,Extreme Security Systems Integration,joao@dna-securityprojects.com,P3 Reference,,22.9
+818,C01079,A0428,Moi Bongoma,Watson & French (ZCA176E),,P3 Reference,,22.9
+819,C00334,A0697,Carlos Rogério Lobo Ruas,Extin,eng@extin.co.mz,P3 Reference,,22.8
+820,C00471,A0608,Vivian Nkonda,Direct Material Supplies,sales@dmszambia.com,P3 Reference,,22.7
+821,C00932,A0501,Mario Strydom,Taylor Marine SA,mario.strydom@taylormarine.co.za,P3 Reference,,22.7
+822,C00731,A0671,Rene Hendricks,Integratek,stores@integratek.co.za,P3 Reference,,22.6
+823,C01003,A0454,Adrian Lotz,Stallion,adrianl@stallion.co.za,P3 Reference,,22.5
+824,C00551,A0566,Ellouise De Beer,IDTek,ellouise@idtek.co.za,P3 Reference,,22.4
+825,C01063,A0600,Moris,HMI,,P4 Noise / generic,,22.4
+826,C01078,A0303,Lillian Lillian (Riley Falcon - Kenya),Riley Falcon,,P3 Reference,,22.4
+827,C00771,A0702,Nuno Bento,"EXP414-E - G4S Secure Solutions Mozambique, Limitada",nuno.bento@mz.g4s.com,P3 Reference,,22.2
+828,C01100,A0397,Byron Govender,Abecai,,P3 Reference,,22.2
+829,C00685,A0156,Munya Maponga,Safeguard,gmtechnical@safeguard.co.zw,P3 Reference,,22.1
+830,C00777,A0477,Jackson SGA - Kenya,SGA,jmbuthia@sgasecurity.com,P3 Reference,,22.1
+831,C00812,A0225,Kutani Prosper,Prodick,mkkutani@st.knust.edu.gh,P3 Reference,,22.1
+832,C01327,A0165,Ruphus Morake,Becker Mining,ruphus.morake@za.becker-mining.com,P3 Reference,,22.1
+833,C00341,A0599,Kerry Peter,Hawk Eye Risk Solutions,admin@hawkeye.co.bw,P3 Reference,,22.0
+834,C00831,A0472,Estêvão A. Charles,SISMOC,echarles@sismoc.co.mz,P3 Reference,,22.0
+835,C00845,A0712,ALEXANDER MOAMBA,ZCA444E - Nesc Technology,amoamban@nesc.co.mz,P3 Reference,,22.0
+836,C01059,A0781,Johan van Wyk,Fang Fence and Guards,,P3 Reference,,22.0
+837,C00301,A0383,Melony Ali,Wright Surveillance,melony@wrightcms.co.za,P3 Reference,,21.8
+838,C00772,A0968,Seye Ogunrotimi,Comquest Projects,seye@comquestprojects.com,P3 Reference,,21.8
+839,C01087,A0743,Michael Sherrif,Eltron,,P3 Reference,,21.8
+840,C01362,A0161,Caesare Da Silva,SAFE Security and Fire Experts,caesare@safe-group.co.za,P3 Reference,,21.8
+841,C00266,A0109,Paul Kimotho G4S Kenya,G4S Kenya,,P3 Reference,,21.7
+842,C00764,A0516,Saasa Shamambo,Techserve,saasa@techserve.co.zm,P3 Reference,,21.7
+843,C00993,A0538,Jean Pierre Naude,Storm Procurement,Jean.Naude@storm-procurement.com,P3 Reference,,21.5
+844,C00806,A0158,Hilary Changwesha,Safemode,md@safemodesecurity.co.za,P3 Reference,,21.4
+845,C00913,A0168,Akash Sewpersadh,BCX,Akash.Sewpersadh@bcx.co.za,P3 Reference,,21.2
+846,C01075,A0156,Misheck Misheck,Safeguard,,P3 Reference,,21.1
+847,C00683,A0513,Shane van der Vorst,Thorburn,Svdvorst@thorburn.co.za,P3 Reference,,21.0
+848,C00196,A0052,Joshua Wakobwa,Bob Morgan Systems Limited,bm@bmsystems.com,P3 Reference,,20.9
+849,C00839,A0293,Justin Goldblatt,Runrite Electronics,justin@runrite-sa.com,P3 Reference,,20.9
+850,C01479,A0182,Tammy Lee Kelley,Servest,TammyLeeK@servest.co.za,P3 Reference,,20.9
+851,C01480,A0182,Heinrich Van Rooyen,Servest,heinrichv@servest.co.za,P3 Reference,,20.9
+852,C01204,A0298,Dan Sukdev,Royal Access Control,dan@royalaccess.co.za,P3 Reference,,20.8
+853,C00298,A0516,John Mwanza,Techserve,john.mwanza@techserve.co.zm,P3 Reference,,20.7
+854,C00570,A0268,Aubrey Unknown,PDIT,aubrey@pdit.co.za,P3 Reference,,20.7
+855,C00409,A0454,Eugene Lourens,Stallion,eugenel@stallion.co.zq,P3 Reference,,20.5
+856,C00708,A0454,Mpho Radiokana,Stallion,mphor@staiion.co.za,P3 Reference,,20.5
+857,C00838,A0454,Gareth Jackson,Stallion,garethj@stallion.co.za,P3 Reference,,20.5
+858,C00869,A0454,Tionne Frankson,Stallion,tionnef@stallion.co.za,P3 Reference,,20.5
+859,C00870,A0454,Theo Hunter,Stallion,theoh@stallion.co.za,P3 Reference,,20.5
+860,C00871,A0454,Stephen Taylor,Stallion,stephent@stallion.co.za,P3 Reference,,20.5
+861,C00873,A0454,Edgar Jenkins,Stallion,edgarj@stallion.co.za,P3 Reference,,20.5
+862,C00874,A0454,Dustin Nair,Stallion,dustinn@stallion.co.za,P3 Reference,,20.5
+863,C00875,A0454,Ronald Smith,Stallion,RonaldS@stallion.co.za,P3 Reference,,20.5
+864,C00876,A0454,Robert Mogakwe,Stallion,robertm@stallion.co.za,P3 Reference,,20.5
+865,C00877,A0454,Reuben Muller,Stallion,reubenm@stallion.co.za,P3 Reference,,20.5
+866,C00880,A0454,Nico Smit,Stallion,nicos@stallion.co.za,P3 Reference,,20.5
+867,C00883,A0454,Marco Delport,Stallion,marcod@stallion.co.za,P3 Reference,,20.5
+868,C00885,A0454,John Evans,Stallion,johnr@stallion.co.za,P3 Reference,,20.5
+869,C00886,A0454,Johan Roux,Stallion,johanr@stallion.co.za,P3 Reference,,20.5
+870,C00887,A0454,Gavaza Mashele,Stallion,gavazam@stallion.co.za,P3 Reference,,20.5
+871,C00888,A0454,Eudo Botha,Stallion,eudob@stallion.co.za,P3 Reference,,20.5
+872,C00889,A0454,Retief Bezuidenhout,Stallion,andrev@stallion.co.za,P3 Reference,,20.5
+873,C00941,A0454,Werner Van Niekerk,Stallion,wernervn@stallion.co.za,P3 Reference,,20.5
+874,C00984,A0454,Sean Sykes,Stallion,sean.sykes@stallion.co.za,P3 Reference,,20.5
+875,C00992,A0454,Mpho Radiokana,Stallion,mphor@stallion.co.za,P3 Reference,,20.5
+876,C00994,A0454,Seon Van Niekerk,Stallion,seonv@stallion.co.za,P3 Reference,,20.5
+877,C00999,A0454,Clint Odendaal,Stallion,clinto@stallion.co.za,P3 Reference,,20.5
+878,C01000,A0454,Andre Van Rensburg,Stallion,RetiefB@stallion.co.za,P3 Reference,,20.5
+879,C01002,A0454,Alex De Barros,Stallion,AlexDB@Stallion.co.za,P3 Reference,,20.5
+880,C01072,A0754,Kevin Kevin,G4S - Mozambique,,P3 Reference,,20.5
+881,C01438,A0554,Peter Benson,Digital Voice Processing (Pty) Ltd.,peter@dvpsa.co.za,P3 Reference,,20.5
+882,C00274,A0124,Ronelda Esau,Globescope,ronelda@globescope.co.za,P3 Reference,,20.4
+883,C00438,A0831,Miguel Matias,Mignite Mining Solutions,matiasmiguel822@gmail.com,P3 Reference,,20.4
+884,C00818,A0276,Chene Du Preez,Phendula Technologies,Chene@phendulatech.co.za,P3 Reference,,20.4
+885,C00843,A0333,Anton Rossouw,Radio2Radio,anton@radio2radio.co.za,P3 Reference,,20.4
+886,C00998,A0383,Christo Britz,Wright Surveillance,christo@wrightcms.co.za,P3 Reference,,20.4
+887,C00296,A0651,Swamynathan.K,Intervid,swamy@intervid.net,P3 Reference,,20.3
+888,C01407,A0647,Chaida Wales,Intergrated Security Solutions,admin@issgroup.co.za,P4 Noise / generic,,20.3
+889,C00220,A0075,Nicole Pearce,SFI Group (Pty) Ltd,Training@sfigroup.co.za,P3 Reference,,20.2
+890,C00221,A0075,Wesley Sapto,SFI Group (Pty) Ltd,wesley@sfigroup.co.za,P3 Reference,,20.2
+891,C00792,A0704,Delhausse Anthony,EXP336-E - Consulting Services Placement CSP,anthony@csp-secu.com,P3 Reference,,20.2
+892,C00622,A0477,Victor Victor (SGA - Kenya),SGA,,P3 Reference,,20.1
+893,C00776,A0392,Dennis Wandera,Acacia Satlink,Dennis.Wandera@acaciasatlink.net,P3 Reference,,20.1
+894,C00799,A0392,Edith Njoki (Acacia Satlink - Kenya) Customer Relations Manager,Acacia Satlink,edith.njoki@acaciasatlink.net,P3 Reference,,20.1
+895,C00840,A0705,Eloi Point,EXP330-E - N3T2S,dg@n3t2s.com,P3 Reference,,20.1
+896,C01070,A0477,Victor Victor,SGA,,P3 Reference,,20.1
+897,C01462,A0649,Hartmut Dennewill,Dennetek,hartmut@dennetek.com,P3 Reference,,20.1
+898,C00293,A0471,Theolan Naidoo,Simply IT,theolan@simplyitsa.net,P3 Reference,,20.0
+899,C00308,A0522,Gina  Chiesman,Surveillance factory,gina@sfactory.co.za,P3 Reference,,20.0
+900,C00328,A0741,Andries,Electro Maintenance,electro@mweb.com.na,P3 Reference,,20.0
+901,C00493,A0575,Francis Katabarwa,IBMS Africa,francis.k@ibmsafrica.com,P3 Reference,,20.0
+902,C00701,A0957,Carlos Antonio,Linkado,cantonio@linkadoangola.com,P3 Reference,,20.0
+903,C00703,A0699,Phenyo Gaboutloeloe,Eye-D System,phenyog@eyedsystems.co.bw,P3 Reference,,20.0
+904,C00822,A0930,Bone Mhaladi,Cloud Point,bone@cloudpoint.co.bw,P3 Reference,,20.0
+905,C00836,A0706,Olivier Gako,EXP587E-US - CFAO,ogakoj@cfao.com,P3 Reference,,20.0
+906,C00848,A0871,VJ van Rensburg,CBS,vj@cbsec.co.za,P3 Reference,,20.0
+907,C00849,A0871,Romeo Chanetsa,CBS,romeo@cbsec.co.za,P3 Reference,,20.0
+908,C00850,A0871,Jono Kruger,CBS,jono@cbsec.co.za,P3 Reference,,20.0
+909,C00914,A0424,Thabang Mooki,Advanced Infrastructure,thabang.mooki@pwc.com,P3 Reference,,20.0
+910,C01016,A0345,Sakkie,TSI Communications,sakkie@tsicom.co.za,P3 Reference,,20.0
+911,C01025,A0573,Justin Hendren,ID Tek,justin@idtek.co.za,P3 Reference,,20.0
+912,C01029,A0405,Etienne Jurgens,Xone Integrated Security,etienne.jurgens@xone.co.za,P3 Reference,,20.0
+913,C01037,A0789,Bevil Cupido,Freelance Electronics,bevil@freelanceelectronics.com,P3 Reference,,20.0
+914,C01041,A0949,Ryan Goodliffe,Coresol,Ryan@coresol.co.za,P3 Reference,,20.0
+915,C01068,A0837,Carla Kolbe,NTI Solutions,Carla@ntisolutions.co.za,P3 Reference,,20.0
+916,C01106,A0626,Louis Van den Berg,Datacentrix,LVanDenBerg@datacentrix.co.za,P3 Reference,,20.0
+917,C01112,A0915,David Van Niekerk,Johson Controls,david.van.niekerk@jci.com,P3 Reference,,20.0
+918,C01115,A0646,Kishore Korlam,Di-info,kishorek@di-info.co.za,P3 Reference,,20.0
+919,C01132,A0467,Erik Coetzer,SI Systems,erik@sisystems.co.za,P3 Reference,,20.0
+920,C01146,A0763,Justin Chetty,G4S,justin.chetty@za.g4s.com,P3 Reference,,20.0
+921,C01147,A0763,Barbara Prins,G4S,barbara.prins@za.g4s.com,P3 Reference,,20.0
+922,C01148,A0786,Dillon Wood,First Technology Group,dillonw@ftech.co.za,P3 Reference,,20.0
+923,C01166,A0911,Bongani Twala,Johnson Controls,bongani.t.twala@jci.com,P3 Reference,,20.0
+924,C01170,A0476,Gary Jordan,Audio Computer Rischardsbay,gary jordan <gary@audiocomputerworld.co.za>,P3 Reference,,20.0
+925,C01174,A0805,Christiaan De Waard,Checkitsystems,Christiaan@checkitsystems.com,P3 Reference,,20.0
+926,C01175,A0729,Chris Braund,Engie,christopher.braund@engie.com,P3 Reference,,20.0
+927,C01178,A0314,Gary Kemp,Biztecgroup,gary@biztechgroup.co.za,P3 Reference,,20.0
+928,C01181,A0774,Wayne Steyn,Fidelity ADT Commercial,waynes@fidelity-services.com,P3 Reference,,20.0
+929,C01185,A0676,Glen Allen,Excellerate,glen.allen@excellerate.co.za,P3 Reference,,20.0
+930,C01193,A0286,Christiaan Porter,Remez Security S.A,chrisp@remezsecuritysa.co.za,P3 Reference,,20.0
+931,C01206,A0911,Byron Senekal,Johnson Controls,byron.senekal-ext@jci.com,P3 Reference,,20.0
+932,C01208,A0424,Gerhard Scheepers,Advanced Infrastructure,gerhard.scheepers@abecai.com,P3 Reference,,20.0
+933,C01209,A0424,Ferdie Pienaar,Advanced Infrastructure,ferdie.pienaar@dimensiondata.com,P3 Reference,,20.0
+934,C01218,A0424,Matthew Marcus,Advanced Infrastructure,matthew.marcus@abecai.com,P3 Reference,,20.0
+935,C01223,A0763,Malcolm Pillay,G4S,malcolm.pillay@za.g4s.com,P3 Reference,,20.0
+936,C01225,A0786,Anisha Chattergoon,First Technology Group,Anishac@ftechkzn.co.za,P3 Reference,,20.0
+937,C01228,A0424,Rui De Miranda,Advanced Infrastructure,Rui.DeMiranda@dimensiondata.com,P3 Reference,,20.0
+938,C01231,A0676,Kevin Matthews,Excellerate,kevin.matthews@excellerate.co.za,P3 Reference,,20.0
+939,C01232,A0731,Barry Coetzee,Ensure security,barryc@ensuresecurity.co.za,P3 Reference,,20.0
+940,C01238,A0911,Ashley Schlosz,Johnson Controls,ashley.schlosz@jci.com,P3 Reference,,20.0
+941,C01249,A0892,Thaven Pillay,CST tech,thaven@csttech.co.za,P3 Reference,,20.0
+942,C01259,A0461,Hertzog Spence,SSC Infrasek ( P t y) Lt d,logistics@ssc1.co.za,P3 Reference,,20.0
+943,C01260,A0911,Clayton Malaza,Johnson Controls,clayton.malaza-ext@jci.com,P3 Reference,,20.0
+944,C01269,A0461,Leonie Nigrini,SSC Infrasek ( P t y) Lt d,installations@ssc1.co.za,P3 Reference,,20.0
+945,C01280,A0424,Hanler Van Eck,Advanced Infrastructure,hanler.vaneck@dimensiondata.com,P3 Reference,,20.0
+946,C01294,A0205,Pierre Borlase,SBMS,pierreb@s-bms.co.za,P3 Reference,,20.0
+947,C01296,A0205,Johan Basson,SBMS,bossie@s-bms.co.za,P3 Reference,,20.0
+948,C01297,A0205,Erik Coetzer,SBMS,erik@s-bms.co.za,P3 Reference,,20.0
+949,C01330,A0424,Tiaan Van Der Vyver,Advanced Infrastructure,tiaan.vandervyver@dimensiondata.com,P3 Reference,,20.0
+950,C01331,A0424,Marc Waterman,Advanced Infrastructure,marc.waterman@dimensiondata.com,P3 Reference,,20.0
+951,C01332,A0424,Justin Jonas,Advanced Infrastructure,justin.jonas@abecai.co.za,P3 Reference,,20.0
+952,C01344,A0589,Kumesh Naidoo,GrowthGen Solutions,kumesh@growthgensol.co.za,P3 Reference,,20.0
+953,C01349,A0424,Brandon Davids,Advanced Infrastructure,Brandon.Davids@dimensiondata.com,P3 Reference,,20.0
+954,C01369,A0522,Deon Chiesman,Surveillance factory,deon@sfactory.co.za,P3 Reference,,20.0
+955,C01381,A0670,Rowan Van Wyk,Integrated controls,rowanvanwyk@integratedcontrols.co.za,P3 Reference,,20.0
+956,C01419,A0171,Ravesh Rugnunen,Saco Bidvest Protea coin,ravesh@saco.co.za,P3 Reference,,20.0
+957,C01426,A0874,Bhisham Kishnapersadh,National Security & Fire,Bhsishamk@national.co.za,P3 Reference,,20.0
+958,C01427,A0798,Brendon Thorpe,Multivision,brendon@multivisiont.com,P3 Reference,,20.0
+959,C01440,A0946,Nishan Ramdayal,Marschall Security/Optistar,nishan@marshallsecurity.co.za,P3 Reference,,20.0
+960,C01443,A0389,Jacques Blommeart,Xone,jacques.blommaert@xone.co.za,P3 Reference,,20.0
+961,C01470,A0865,Dylan,CCTV SA,dylan@cctvsa.co.za,P3 Reference,,20.0
+962,C01476,A0241,Alistair,Brandfin,alistair@brandfin.com,P3 Reference,,20.0
+963,C00815,A0332,Barisa Badiribu,Big Five Security Limited,barisa.badiribu@big5security.co.ke,P4 Low relevance,,19.8
+964,C00821,A0642,Ryan Ntwaetsile,Inception Tech,rntwaetsile@inceptiontech.co.bw,P4 Low relevance,,19.8
+965,C01432,A0580,Jacek Struzik,Hybrid Systems (PTY) Ltd,jaceks@eafrica.bw,P4 Low relevance,,19.8
+966,C00804,A0721,Vamara Bakayoko,ZCA393E - IGT GROUP,gtgroup.ci@gmail.com,P4 Low relevance,,19.7
+967,C01085,A0268,Aubrey Hefele,PDIT,,P4 Low relevance,,19.7
+968,C00577,A0671,Albie Unknown,Integratek,albie@integratek.co.za,P4 Low relevance,,19.6
+969,C00699,A0707,Abraham Assegid,EXP574E-US - ASA Trading PLC,abraham.assegid@asatradingplc.com,P4 Low relevance,,19.6
+970,C00842,A0703,Tata Victor,EXP412E-US - G4S GABON,victor.tata@ga.g4s.com,P4 Low relevance,,19.6
+971,C00844,A0491,Herve Sala,SK Business,herves@gmail.com,P4 Low relevance,,19.6
+972,C01091,A0910,Ashley Schlosz,Johnson Controls International (Pty) Ltd,,P4 Low relevance,,19.6
+973,C01401,A0179,Pieter van der Merwe,AVT,Pieter.vandermerwe@avt.co.za,P4 Low relevance,,19.5
+974,C00925,A0690,Jayshree Kanniah,Fedile,jayshree@fedile.co.za,P4 Low relevance,,19.4
+975,C00969,A0570,Robby Roberts,Imat,robby@imat.co.za,P4 Low relevance,,19.4
+976,C00970,A0570,Karin Swanepoel,Imat,karin@imat.co.za,P4 Low relevance,,19.4
+977,C01088,A0566,Shaheem Martin,IDTek,,P4 Low relevance,,19.4
+978,C01266,A0570,Robby Roberts,Imat,Robby Roberts <robby@imat.co.za>,P4 Low relevance,,19.4
+979,C00249,A0097,Tumelo Tumelo,Security Systems,,P4 Low relevance,,19.3
+980,C00461,A0318,ANITA ISAACS,Q & R MINING SUPPLIES & PROJECTS,qrminingsupplies714@gmail.com,P4 Low relevance,,19.3
+981,C01086,A0809,Adriaan Berowski,National Observation Systems,,P4 Low relevance,,19.2
+982,C01373,A0534,Sean Nomdoe,Stone Three,sean.nomdoe@stonethree.com,P4 Low relevance,,19.1
+983,C01141,A0246,Francois De Kock,Protect Security Installations,francois@protectsi.co.za,P4 Low relevance,,19.0
+984,C01151,A0961,Pieter Walter,Lunarcom,admin@lunarcom.co.za,P4 Noise / generic,,19.0
+985,C01172,A0370,Kenneth Harris,Afritron Limited,kenneth@idtek.co.za,P4 Low relevance,,19.0
+986,C01292,A0660,Imtiaz Khan,Integrated Mobility Solutions,khan@imobility.co.za,P4 Low relevance,,19.0
+987,C01319,A0692,Martin Nel,Fibre Based Integration,martin@fbicc.co.za,P4 Low relevance,,19.0
+988,C01361,A0181,Rica Rossouw,Secutrade,admin@secutrade.co.za,P4 Noise / generic,,19.0
+989,C00191,A0045,Egon Laaser,Marine Solutions (Pty) Ltd,,P4 Low relevance,,18.9
+990,C00253,A0103,Chris Le Grange,Satis Technologies,chrissatistech44@gmail.com,P4 Low relevance,,18.9
+991,C00614,A0756,Given Chaipwa,G4S Malawi,,P4 Low relevance,,18.8
+992,C00791,A0693,Mark Van Louw,F S Systems,mark@fsi-systems.com,P4 Low relevance,,18.7
+993,C01093,A0629,Jason Kampel,Delve Systems,,P4 Low relevance,,18.7
+994,C00126,A0014,Wikus,Moot Security Shop,secshopmoot@gmail.com,P4 Low relevance,,18.6
+995,C00790,A0671,Sun-Mari Van den Berg,Integratek,tenders@integratek.co.za,P4 Noise / generic,,18.6
+996,C00589,A0317,Marius Unknown,QDE,marius@qde.co.za,P4 Low relevance,,18.5
+997,C00670,A0830,Natalie,Mikes Alarms,natalie@mikesalarms.co.zw,P4 Low relevance,,18.5
+998,C00819,A0469,Eytan Nevo,ATL-SA,eytan@atl-sa.com,P4 Low relevance,,18.5
+999,C00820,A0469,Yossi Tabul,ATL-SA,yossi@atl-sa.com,P4 Low relevance,,18.5
+1000,C00250,A0097,Titus J,Security Systems,titusj@btcmail.co.bw,P4 Low relevance,,18.3
+1001,C01183,A0585,Shannon Gough,GVSC Communications South Africa,shannon.g@gvsc.co.za,P4 Low relevance,,18.3
+1002,C00933,A0528,Xenobia Poole,Surion,xenobia@surion.io,P4 Low relevance,,18.2
+1003,C00934,A0528,Jaco Langer,Surion,jaco@surion.io,P4 Low relevance,,18.2
+1004,C00975,A0528,Contrad Baartman,Surion,conrad@surion.io,P4 Low relevance,,18.2
+1005,C01099,A0856,Gift Kilonzo Kilonzo,Cadeau Solutions Limited,,P4 Low relevance,,18.2
+1006,C00617,A0584,Abuba,GST Eng,,P4 Noise / generic,,18.1
+1007,C00953,A0488,Danny Ludlow,Smart Security,danny@smart-security.co,P4 Low relevance,,18.1
+1008,C00729,A0536,QUENTIN CLARK,STRUCTURE WORKS,quentin.clark@structureworksinc.com,P4 Low relevance,,18.0
+1009,C00734,A0739,Riaan,Energize Tech,riaan@energizetech.co.za,P4 Low relevance,,18.0
+1010,C00740,A0205,Michael Mc Kelvey,SBMS,michael@s-bms.co.za,P4 Low relevance,,18.0
+1011,C00741,A0205,Ethan Meyer,SBMS,ethan@s-bms.co.za,P4 Low relevance,,18.0
+1012,C00757,A0205,Claude Kee,SBMS,claude@s-bms.co.za,P4 Low relevance,,18.0
+1013,C00766,A0458,Augustus Katende,SPIDD Africa,augustusm@spiddafrica.com,P4 Low relevance,,18.0
+1014,C00767,A0574,Dr. Bernard Ndove,ICT Dynamix,bernard@ictdynamix.co.bw,P4 Low relevance,,18.0
+1015,C00773,A0457,John Maina,Aplite Consulting,maina@aplite.co.tz,P4 Low relevance,,18.0
+1016,C00808,A0442,Nomalisa Moyo,Applied Controls Technolgies (EXP592-E),nomalisa@appliedcontrols.co.zw,P4 Low relevance,,18.0
+1017,C00810,A0361,Renier Duvenhage,Timeware,reinier@timeware.com.na,P4 Low relevance,,18.0
+1018,C00852,A0451,Beatrece,SmartProtect,reception@smartprotect.co.za,P4 Noise / generic,,18.0
+1019,C00475,A0963,Sydney Motsamai,Comsoft (PTY) LTD,sydney@comsoft.co.bw,P4 Low relevance,,17.9
+1020,C01264,A0619,Dean Knoetze,Itec Integrate,Dean.Knoetze@itecgroup.co.za,P4 Low relevance,,17.7
+1021,C01431,A0935,Bradley Lodder,Colt Security,Brad@coltsecurity.co.za,P4 Low relevance,,17.7
+1022,C00252,A0103,Paul Williams,Satis Technologies,paul@satistech.co.za,P4 Low relevance,,17.5
+1023,C00785,A0454,Benson Unknown,Stallion,BensonN@stallion.co.za,P4 Low relevance,,17.5
+1024,C00872,A0454,Siphokazi Nodada,Stallion,siphokazin@stallion.co.za,P4 Low relevance,,17.5
+1025,C01001,A0454,Alex Primich,Stallion,AlexP@stallion.co.za,P4 Low relevance,,17.5
+1026,C01060,A0317,Cindy Celliers,QDE,,P4 Low relevance,,17.5
+1027,C01226,A0454,FLORIS DU PLESSIS,Stallion,Florisd@stallion.co.za,P4 Low relevance,,17.5
+1028,C00864,A0276,Lijane Badenhorst,Phendula Technologies,Lijane@phendulatech.co.za,P4 Low relevance,,17.4
+1029,C01400,A0287,Lionel Kanku Musungayi,Biptel,lkanku@biptel.net,P4 Low relevance,,17.4
+1030,C00419,A0631,Oliver Chimanyi,Integra Tec,oliver@integratec.co.bw,P4 Low relevance,,17.3
+1031,C00270,A0113,Jonathan Pillay,Shield Platinum Holdings,tech1@shieldph.co.za,P4 Low relevance,,17.2
+1032,C01446,A0263,Louis de Toit,Paradigm Dynamix,louis@paradyn.co.za,P4 Low relevance,,17.2
+1033,C00538,A0553,Minky Unknown,Dimension Data,minky@eyedsystems.co.bw,P4 Low relevance,,17.1
+1034,C00588,A0553,Gerhard Groenewald,Dimension Data,gerhard.groenewald@dimensiondata.com,P4 Low relevance,,17.1
+1035,C00826,A0569,Alfred Mwenda,IGS Security,projects@igs-security.org,P4 Noise / generic,,17.1
+1036,C00286,A0147,Morne Van Wyk,M5  Elements,morne@m5elements.co.za,P4 Low relevance,,17.0
+1037,C00439,A0946,Indira,Marschall Security/Optistar,Indira@marshallsecurity.co.za,P4 Low relevance,,17.0
+1038,C00454,A0177,Johan,Security superstore,salestoti3@securitysuperstore.co.za,P4 Low relevance,,17.0
+1039,C00464,A0260,Battalion Botsele,PC Net (Pty) Ltd,botsele@pcnet.co.bw,P4 Low relevance,,17.0
+1040,C00485,A0930,Thebeyame Obusitse,Cloud Point,thebeyame@cloudpoint.co.bw,P4 Low relevance,,17.0
+1041,C00636,A0472,Unknown Unknown,SISMOC,ecamacho@cinovate.co.mz,P4 Low relevance,,17.0
+1042,C00811,A0821,Taboka Molapis,Molvey (Pty) Ltd,molveyptyltd@gmail.com,P4 Low relevance,,17.0
+1043,C01081,A0185,Adam Gouws,Sentry Tec,,P4 Low relevance,,17.0
+1044,C01248,A0713,Ferraz,ElementC,zulmira@elementc.net,P4 Low relevance,,17.0
+1045,C01298,A0205,Clifford,SBMS,clifford@s-bms.co.za,P4 Low relevance,,17.0
+1046,C00280,A0139,George Brantzas,CMD Fire and Security,george@cmd-fs.co.za,P4 Low relevance,,16.9
+1047,C00928,A0615,Jacques Steyn,Ithemba IT Services,jacques@ithembait.co.za,P4 Low relevance,,16.9
+1048,C00929,A0615,Buds Vallabh,Ithemba IT Services,buds@ithembait.co.za,P4 Low relevance,,16.9
+1049,C01076,A0305,Gernot Bahr,Rolling Wheels Africa,,P4 Low relevance,,16.9
+1050,C00281,A0141,Renier Grobbelaar,Tailor Made Consulting,renier@tailor-madeconsulting.co.za,P4 Low relevance,,16.8
+1051,C00502,A0642,Tshepiso Mothupi,Inception Tech,tmothupi@inceptiontech.co.bw,P4 Low relevance,,16.8
+1052,C00895,A0155,Boun Klijnstra,SAin Touch,boun@saintouch.com,P4 Low relevance,,16.8
+1053,C00387,A0435,Pamela Quarm,Act ICT,bus.dev@act-ict.com,P4 Low relevance,,16.7
+1054,C00515,A0665,Jean Unknown,Intellisec,jean@intellisec.co.za,P4 Low relevance,,16.5
+1055,C00516,A0665,Tyron Unknown,Intellisec,tyronee@intellisec.co.za,P4 Low relevance,,16.5
+1056,C00556,A0665,Robin Unknown,Intellisec,robin@intellisec.co.za,P4 Low relevance,,16.5
+1057,C00568,A0665,Llewellyn Unknown,Intellisec,llewellyn@intellisec.co.za,P4 Low relevance,,16.5
+1058,C00569,A0665,Denzil Unknown,Intellisec,denzil@intellisec.co.za,P4 Low relevance,,16.5
+1059,C00712,A0879,Nadia Rouani Hellín,Cartronic Memory,nrouani@cartronic.es,P4 Low relevance,,16.5
+1060,C01080,A0810,Bongani Eswatini,Nation@Large,,P4 Low relevance,,16.5
+1061,C01092,A0577,Casper Engelbrecht,Icon Exec,,P4 Low relevance,,16.5
+1062,C00307,A0387,James Foxcroft,Wires and Wireless,james@wires.co.za,P4 Low relevance,,16.4
+1063,C00379,A0287,Paul Dongbaare,Biptel,pdongbaare@biptel.net,P4 Low relevance,,16.4
+1064,C00428,A0381,Wade Mosterd,WM Digital Solutions,wade@wmds.co.za,P4 Low relevance,,16.4
+1065,C00561,A0486,Belinda Eloff,Smart Protect (Pty) Ltd,belinda@smartprotect.co.za,P4 Low relevance,,16.4
+1066,C00896,A0298,Bishir Sickles,Royal Access Control,bishir@royalaccess.co.za,P4 Low relevance,,16.4
+1067,C01199,A0829,Matie Strydom,Micro Path Solutions,matie@mipsol.co.za,P4 Low relevance,,16.4
+1068,C01357,A0357,Gibril De Rosa,Tradecore International Ltd,gibril@tradecore-int.com,P4 Low relevance,,16.4
+1069,C01061,A0267,João Boarqueiro,Patrol Control - Angola,,P4 Low relevance,,16.1
+1070,C01073,A0487,Hendri Hendri,Smart Tech - Namibia,,P4 Low relevance,,16.1
+1071,C01074,A0823,John Long,MNK Security,,P4 Low relevance,,16.1
+1072,C01077,A0334,Washington Washington,Radio Solutions - Zimbabwe,,P4 Low relevance,,16.1
+1073,C01094,A0423,Nick Bayes,Vidac,,P4 Low relevance,,16.1
+1074,C00338,A0214,Craig Hanslo,Securitas,craig.hanslo@securitas-rsa.co.za,P3 Reference,,16.0
+1075,C00469,A0759,Marvin Gaye,G4S Sierra Leone,marvin.gaye@sl.g4s.com,P4 Low relevance,,16.0
+1076,C00704,A0345,Victor Mitchel,TSI Communications,victor@tsicom.co.za,P4 Low relevance,,16.0
+1077,C00855,A0839,Ian Keys,Omega Group,ian@omegagroup.co.za,P4 Low relevance,,16.0
+1078,C00866,A0369,ANGELIQUE STEYN,TRIPCON,angelique@tripcon.co.za,P4 Low relevance,,16.0
+1079,C00890,A0274,Petrus Geldenhuys,Buckler Technology Solutions,petrus@buckler.co.za,P4 Low relevance,,16.0
+1080,C00893,A0771,John Evans,Geutebrueck,john.evans@geutebrueck.com,P4 Low relevance,,16.0
+1081,C00894,A0771,Andre Van Rensburg,Geutebrueck,andre.vanrensburg@geutebrueck.com,P4 Low relevance,,16.0
+1082,C00907,A0723,Jeane vd Merwe,Zentech Integrated Security Solutions,jeane@zentechiss.co.za,P4 Low relevance,,16.0
+1083,C00908,A0723,Ernst Le Roux,Zentech Integrated Security Solutions,ernst@zentechiss.co.za,P4 Low relevance,,16.0
+1084,C00923,A0410,Daryl Epstein,Vikela,Daryl@vikelaelectronics.co.za,P4 Low relevance,,16.0
+1085,C00989,A0870,Martin Underhay,Ndende Technologies,martinu@ndende.co.za,P4 Low relevance,,16.0
+1086,C01013,A0355,Tyrone Kesten,TK Control Systems,tyrone@tkcontrolsystems.co.za,P4 Low relevance,,16.0
+1087,C01014,A0355,Marilize Munro,TK Control Systems,mmunro@tkcontrolsystems.co.za,P4 Low relevance,,16.0
+1088,C01017,A0455,Barend Van Huysen,StarComms,barend.vh@starcomms.co.za,P4 Low relevance,,16.0
+1089,C01018,A0490,Mark Tamine,SLI Group,mark@sligroup.co.za,P4 Low relevance,,16.0
+1090,C01033,A0865,Fred Dekker,CCTV SA,fred@cctvsa.co.za,P4 Low relevance,,16.0
+1091,C01034,A0193,Petro Steyn,B4Fire Technology,petro@b4fire.co.za,P4 Low relevance,,16.0
+1092,C01042,A0954,Elize Crawford,Contesto,Elize Crawford <helpdesk@contesto.co.za>,P4 Low relevance,,16.0
+1093,C01046,A0944,Sarah Clayton,Clayton Communications,sarah@clayton.africa,P4 Low relevance,,16.0
+1094,C01071,A0373,Benjamin Yeboah,TriQwest,,P4 Low relevance,,16.0
+1095,C01111,A0944,Alro Van der Berg,Clayton Communications,alro@clayton.africa,P4 Low relevance,,16.0
+1096,C01139,A0286,Reg Solomons,Remez Security S.A,reg@remezsecuritysa.co.za,P4 Low relevance,,16.0
+1097,C01157,A0944,Tobie Els,Clayton Communications,tobias@clayton.africa,P4 Low relevance,,16.0
+1098,C01158,A0944,Thembi Shibambu,Clayton Communications,thembi@clayton.africa,P4 Low relevance,,16.0
+1099,C01159,A0944,Stokkies Hanekom,Clayton Communications,stokkies@clayton.africa,P4 Low relevance,,16.0
+1100,C01202,A0907,Marcelle Henning,Landis & Staefa Fire & Security,marcelleh@staefa.co.za,P4 Low relevance,,16.0
+1101,C01211,A0723,Norman Pretorius,Zentech Integrated Security Solutions,norman@zentechiss.co.za,P4 Low relevance,,16.0
+1102,C01212,A0390,Sarel Burger,Ya Fanang,Sarel@yafanang.co.za,P4 Low relevance,,16.0
+1103,C01229,A0462,Coert Smit,Spanning Tree,coert@spanningtree.co.za,P4 Low relevance,,16.0
+1104,C01251,A0913,Brian Schutte,JDR IT SOLUTIONS,brian@jdrsolutions.co.za,P4 Low relevance,,16.0
+1105,C01265,A0618,JUAN HAYWOOD,ISST,juan@isst.co.za,P4 Low relevance,,16.0
+1106,C01281,A0870,Dewald Nel,Ndende Technologies,dewaldn@ndende.co.za,P4 Low relevance,,16.0
+1107,C01282,A0832,Rikus Terblance,Milestone Systems,rter@milestonesys.com,P4 Low relevance,,16.0
+1108,C01307,A0197,Annene Steenkamp,Sedna,annene.steenkamp@sedna.net,P4 Low relevance,,16.0
+1109,C01314,A0764,Gilroy Cloete,Gillies Technical Services,gilroy@gillies.co.za,P4 Low relevance,,16.0
+1110,C01334,A0657,Stefan Bekker,Iritron,stefan.bekker@iritron.co.za,P4 Low relevance,,16.0
+1111,C01335,A0657,Andre Barnard,Iritron,andre.barnard@iritron.co.za,P4 Low relevance,,16.0
+1112,C01347,A0783,Shane Serrao,Fibre Fever,shane@fibrefever.co.za,P4 Low relevance,,16.0
+1113,C01441,A0720,Niel Scholtz,ZA Projects,niel.scholtz@zaprojects.co.za,P4 Low relevance,,16.0
+1114,C01442,A0720,Michael Meyer,ZA Projects,michael.meyer@zaprojects.co.za,P4 Low relevance,,16.0
+1115,C01444,A0255,Aadil Dien,Point to Point Secrity,aadil@p2ptechnologies.co.za,P4 Low relevance,,16.0
+1116,C01447,A0875,Emil Rose,No Fear Systems,emil@nofearsystems.co.za,P4 Low relevance,,16.0
+1117,C01451,A0867,Markus Botha,NEC Xon,markus@nec.xon.co.za,P4 Low relevance,,16.0
+1118,C01454,A0621,Simon Russel,Intesec Security,simon@intesec.co.za,P4 Low relevance,,16.0
+1119,C01455,A0211,Ishmaeel Davids,Secure Electronics,ishmaeel@secureelectronics.co.za,P4 Low relevance,,16.0
+1120,C01459,A0787,Michael Beardwood,FirePro,michael@firepro.co.za,P4 Low relevance,,16.0
+1121,C01463,A0287,Nkululeko Shoba,Biptel,nshoba@biptel.net,P4 Low relevance,,16.0
+1122,C01472,A0350,Shaun Duncan,Unique Group,shaun.duncan@uniquegroup.com,P4 Low relevance,,16.0
+1123,C01478,A0439,Aston Arndt,SOMO Technical Solution,aston@somots.com,P4 Low relevance,,16.0
+1124,C01481,A0216,Jacques Securite,Securite,jacques@securite.co.za,P4 Low relevance,,16.0
+1125,C01482,A0394,Leon van Niekerk,West Coast Communication,wcr@telkomsa.net,P4 Low relevance,,16.0
+1126,C01486,A0409,Eduardo Takacs,Activ-Eye,eduardo@activ-eye.co.za,P4 Low relevance,,16.0
+1127,C01509,A0903,Stephen Etherington,Crest,stephen@crestpac.co.za,P4 Low relevance,,16.0
+1128,C01510,A0964,George Padley,ConnectedSA,george@connectedsa.co.za,P4 Low relevance,,16.0
+1129,C01515,A0400,Pierre Prinsloo,4D Security,pierre@4dsecurity.co.za,P4 Low relevance,,16.0
+1130,C00585,A0454,Freddy Niehaus,Stallion,niehausf@stallion.co.za,P4 Low relevance,,15.5
+1131,C01101,A0675,Steve Amsdorf,EV Track,,P4 Low relevance,,15.5
+1132,C01082,A0273,Jon Green,Pos-Secure,,P4 Low relevance,,15.3
+1133,C01083,A0711,William William,Zebo Asia - China; Hong Kong,,P4 Low relevance,,15.3
+1134,C01084,A0399,Jesse Govender,ABCDE,,P4 Low relevance,,15.3
+1135,C00223,A0076,Brandon Davids,Keep Electronics,admin@keep.co.za,P4 Noise / generic,,15.2
+1136,C00283,A0144,Graham de Klerk,CRESTONE TECHNICAL SOLUTIONS,graham@crestone.co.za,P4 Low relevance,,15.2
+1137,C00448,A0819,Sunnyboy Ngwepe,Mobeni Integrated Systems,Sunnyboy.n@mobeniis.co.za,P4 Low relevance,,15.2
+1138,C01167,A0914,Andre Cornelius,JCV Trading,melancor63@gmail.com,P4 Low relevance,,15.1
+1139,C01288,A0914,Johan Volsteedt,JCV Trading,johanv@jcvt.co.za,P4 Low relevance,,15.1
+1140,C00271,A0118,Samkelisiwe Magasela,Prime African Security,samkelisiwem@primeafrican.co.za,P4 Low relevance,,15.0
+1141,C00534,A0574,Thato Unknown,ICT Dynamix,thato@securitysystems.co.bw,P4 Low relevance,,15.0
+1142,C01163,A0190,Gareth Hughes,Security Observation Services,garethhughes@soserve.co.za,P4 Low relevance,,15.0
+1143,C01089,A0687,Henry Eagle,Eagle CCTV,,P4 Low relevance,,14.8
+1144,C00478,A0844,Berni Lamberti,Captiv Networks,berni@captiv.co.za,P4 Low relevance,,14.7
+1145,C00770,A0932,Musa Kuwali,CLS Systems,clsbotswana@gmail.com,P4 Low relevance,,14.7
+1146,C00800,A0208,Tami Maware,Saritatech,saritachtech@outlook.com,P4 Low relevance,,14.7
+1147,C00523,A0830,Unknown,Mikes Alarms,accounts@mikesalarms.co.zw,P4 Noise / generic,,14.5
+1148,C00796,A0749,Philip Philip Yogo (GardaWorld - Kenya),GardaWorld - Kenya,philip.yogo@garda.com,P4 Low relevance,,14.5
+1149,C00797,A0749,Robert (GardaWorld - Kenya) Mwangi,GardaWorld - Kenya,robert.mwangi@garda.com,P4 Low relevance,,14.5
+1150,C00798,A0836,Dennis Wambugu (NTT DATA - Kenya),NTT DATA,dennis.wambugu@global.ntt,P4 Low relevance,,14.5
+1151,C00294,A0503,Willem De Wet,TCL Construction,wdwconsult@gmail.com,P4 Low relevance,,14.4
+1152,C00297,A0723,Niekie Barnard,Zentech Integrated Security Solutions,niekie@zentechiss.co.za,P4 Low relevance,,14.4
+1153,C00299,A0519,Philip Smerkovitz,Teleye,phil@TeleEye.co.za,P4 Low relevance,,14.4
+1154,C00303,A0510,Bafana Mbokane,Things Access Control,bafana837@yahoo.com,P4 Low relevance,,14.4
+1155,C00310,A0710,Darryl Zackey,Zak Communications,darryl@zakteam.co.za,P4 Low relevance,,14.4
+1156,C00381,A0900,Thandaza B Sidaza,Craig International South Africa (Pty) Ltd,Thandaza.Sidaza@craig-group.com,P4 Low relevance,,14.4
+1157,C00432,A0797,Johan Smith,Multinet Systems (Pty) Ltd,johans@multinetsystems.co.za,P4 Low relevance,,14.4
+1158,C00433,A0797,Benard Nortje,Multinet Systems (Pty) Ltd,Benard@multinetsystems.co.za,P4 Low relevance,,14.4
+1159,C00442,A0902,Angelo Visser,Kyotech,angelo@kyotech.co.za,P4 Low relevance,,14.4
+1160,C00445,A0919,Jordan Munisamy,Kapsch TrafficCom South Africa,Jordan.Munisamy@kapsch.net,P4 Low relevance,,14.4
+1161,C00446,A0922,Jean Claude Burkie,Kamili and Imanie Traduing (Pty) Ltd,jeanclaude.burkie@gmail.com,P4 Low relevance,,14.4
+1162,C00447,A0658,Richard Fox,IPP-Projects,richard.fox@ipp-projects.co.za,P4 Low relevance,,14.4
+1163,C00468,A0737,Peter Bekker,Edge To Edge Surveillance,peter@etoe.co.za,P4 Low relevance,,14.4
+1164,C00487,A0659,Hadley Stevens,Integrated Resources & Technologies,hadley.stevens@irtgroup.co.za,P4 Low relevance,,14.4
+1165,C00490,A0668,Corne Jansen,Integrated Home and Office,corne@integratedhomes.co.za,P4 Low relevance,,14.4
+1166,C00924,A0763,Vaneshree Pillay,G4S,vaneshree.pillay@za.g4s.com,P4 Low relevance,,14.4
+1167,C01191,A0284,Duane Kreyfelt,Revolution,duane@revsa.co.za,P4 Low relevance,,14.4
+1168,C01236,A0772,Jacus de Villiers,DVM Group,jacus@dvmgroup.co.za,P4 Low relevance,,14.4
+1169,C01239,A0960,Anthea Thebenare,Community Investment Technology,anthea.thebenare@cit-tech.co.za,P4 Low relevance,,14.4
+1170,C01240,A0682,Gibert Smith,Eskom Rotek Industries,gilbert.smith@eskom.co.za,P4 Low relevance,,14.4
+1171,C01242,A0736,Jade Pizani,Envirolec,jade@envirolec.co.za,P4 Low relevance,,14.4
+1172,C01268,A0555,Abram Tlometsane,Honeywell Building Automation,abram.tlometsane@honeywell.com,P4 Low relevance,,14.4
+1173,C01374,A0448,Phil Chalmers,Sourcing-IT Limited,phil@sourcing-it.co.uk,P4 Low relevance,,14.4
+1174,C00335,A0523,Nicolene Fick,Surveillance Concept,nicolene@surv-con.co.za,P4 Low relevance,,14.2
+1175,C00678,A0433,Ariztha Luck,Vuzela,service@vuzela.com,P4 Low relevance,,14.0
+1176,C00725,A0243,Tyron Matthee,Pulse Tech engineering,tyron@pulse-tech.co.za,P4 Low relevance,,14.0
+1177,C00727,A0264,Kathy Naylor,Paradigm Dymanics,kathy@pdynx.co.za,P4 Low relevance,,14.0
+1178,C00733,A0766,Barry Butterworth,GIS,barryb@guardian-is.org,P4 Low relevance,,14.0
+1179,C00739,A0884,Wouter De Kock,Newco Technologies,wouter@newcotech.co.za,P4 Low relevance,,14.0
+1180,C00761,A0769,Willem Kleynhans,GEW Technologies,willem.kleynhans@hensoldt.net,P4 Low relevance,,14.0
+1181,C00763,A0938,Ursula Swanepoel,Master Alarms,uswanepoel@masteralarms.com.na,P4 Low relevance,,14.0
+1182,C00769,A0378,Ken Ukeje,Tronica,sales@tronica.com,P4 Noise / generic,,14.0
+1183,C00781,A0346,Albie Van TOnder,Van TOnder Inc,wwwt@gmail.com,P4 Low relevance,,14.0
+1184,C00794,A0380,Lilian TBC,Top Choice Surveillance Limited,liliank@topchoice.co.ke,P4 Low relevance,,14.0
+1185,C01090,A0348,Moses E,Unique Extractor Experts,,P4 Low relevance,,14.0
+1186,C00284,A0145,Dudley Kuit,Falcon Security Technologies,dudley@falconst.co.za,P4 Low relevance,,13.6
+1187,C00552,A0393,Jackson Mbuthia,Wells Fargo,accountssnr@fargo.co.ke,P4 Low relevance,,13.5
+1188,C01402,A0393,Jackson Mbuthia,Wells Fargo,jackson.mbuthia@fargo.co.ke,P4 Low relevance,,13.5
+1189,C01412,A0470,Asad Mohamed,AUA Industria,mohamed.asad@aua.co.ke,P4 Low relevance,,13.5
+1190,C01413,A0470,Ameet Taylor,AUA Industria,ameet@aua.co.ke,P4 Low relevance,,13.5
+1191,C01414,A0470,Amar Taylor,AUA Industria,amar@aua.co.ke,P4 Low relevance,,13.5
+1192,C01415,A0470,Adhil Abdul Karim,AUA Industria,adhil@aua.co.ke,P4 Low relevance,,13.5
+1193,C00273,A0124,Nadine Unknown,Globescope,nadine@globescope.co.za,P4 Low relevance,,13.4
+1194,C00275,A0124,Glynn Unknown,Globescope,glynn@globescope.co.za,P4 Low relevance,,13.4
+1195,C01350,A0434,Muneeb Isaacs,Acquired Business Solutions,muneebi@acquired.co.za,P4 Low relevance,,13.4
+1196,C00367,A0521,Robbie Truter,Texoft,robbie@texoft.co.za,P4 Low relevance,,13.2
+1197,C00910,A0851,Adrian Hofmeyr,OPTINET SYSTEMS,adrianh@optinetsystems.co.za,P4 Low relevance,,13.2
+1198,C00295,A0542,Tarek Beshir,Swoop Alarms,swoop@swoopalarms.org,P4 Low relevance,,13.0
+1199,C00302,A0520,Rashid Gembe,TeraTech,rashid.gembe@teratech.co.tz,P4 Low relevance,,13.0
+1200,C00360,A0213,Maurizio C Borsato,Secu Logix,seculogixea@gmail.com,P4 Low relevance,,13.0
+1201,C00361,A0169,Samson Asgedom,Samek Engineering,samson@samekengineering.com,P4 Low relevance,,13.0
+1202,C00362,A0203,Jackson Mburu,Safenet Technologies LTD,j.mburu@safenet.co.ke,P4 Low relevance,,13.0
+1203,C00363,A0936,Sandile Hadebe,Mak-Sand Investments,maksand07@gmail.com,P4 Low relevance,,13.0
+1204,C00365,A0908,Ahmed Ibrahim,Kymeera Investment Ltd,aibrahim@kymeera.com,P4 Low relevance,,13.0
+1205,C00369,A0557,Sinead Claasen,Hudaco Namibia,sineadc@hudaco.africa,P4 Low relevance,,13.0
+1206,C00370,A0752,Dominic Ekesiobi,G4S Nigeria,dominic.ekesiobi@ng.g4s.com,P4 Low relevance,,13.0
+1207,C00371,A0762,Michael Perry,G4S Africa (Pty) Ltd,michael.perry@africa.g4s.com,P4 Low relevance,,13.0
+1208,C00374,A0760,Jeremiah Musabayana,Fuzzy Electronics,jmusabayana@fuzzy.co.zw,P4 Low relevance,,13.0
+1209,C00376,A0697,Naila Anifo,Extin,electronica.maputo@extin.co.mz,P4 Low relevance,,13.0
+1210,C00380,A0326,Nqabeni Velaphi,Binary Automation,binaryautomation@outlook.com,P4 Low relevance,,13.0
+1211,C00385,A0507,Gary Kemp,Alltech Empower,gary@alltechempower.co.za,P4 Low relevance,,13.0
+1212,C00386,A0447,Mansur Adamu,Soltz Metroline Nigeria,mansur.adamu@gmail.com,P4 Low relevance,,13.0
+1213,C00392,A0403,Richard Nkume,XC7 Systems LTD,richardnkume@gmail.com,P4 Low relevance,,13.0
+1214,C00393,A0388,"Sesan ""Chess"" Omojola",Wright Technologies Limited,sesan.omojola@wrightechltd.com,P4 Low relevance,,13.0
+1215,C00395,A0371,Ignatius Mbobela,AIM,icmbobela@aim.com,P4 Low relevance,,13.0
+1216,C00397,A0351,Pierre Coetzee,UViRCO Technologies,pierre@uvirco.com,P4 Low relevance,,13.0
+1217,C00398,A0368,Tebogo Mahlangu,Treatstad Business Enterprise (PTY)Ltd,phetotebogo@gmail.com,P4 Low relevance,,13.0
+1218,C00399,A0376,Cheryl Chetty,Transaf Imports and Exports,cheryl@transaf.co.za,P4 Low relevance,,13.0
+1219,C00400,A0539,Marcel Sargeant,Tally Solutions,marcel@tallysolutions.co.za,P4 Low relevance,,13.0
+1220,C00407,A0419,Wynand Van Rensburg,Vengatel,wynand@vengatel.co.za,P4 Low relevance,,13.0
+1221,C00410,A0484,Ash Kandhai,Siyashova Security and Projects,ash@siyashovaprojects.co.za,P4 Low relevance,,13.0
+1222,C00411,A0485,Morner Mellet,Six Core Systems,morne@sixcore.co.za,P4 Low relevance,,13.0
+1223,C00414,A0697,Igor Fonseca,Extin,dep.electronica@extin.co.mz,P4 Low relevance,,13.0
+1224,C00415,A0740,Sandeep Rittishettar,Endeavour Africa Ltd,sandeep.cr@endeavourafrica.com,P4 Low relevance,,13.0
+1225,C00416,A0779,Max De Sousa,Duxbury Networking,mdesousa@duxnet.co.za,P4 Low relevance,,13.0
+1226,C00418,A0616,Kfir Shabi,Deca Logic LTD,kfir@deca-logic.com,P4 Low relevance,,13.0
+1227,C00420,A0278,Struan McLagan,Beyond Security,struan@beyond-security.net,P4 Low relevance,,13.0
+1228,C00421,A0278,Glen McLagan,Beyond Security,glen@beyond-security.net,P4 Low relevance,,13.0
+1229,C00423,A0481,Fred Odekhian,ASK Electrical Limited,fredodekh@me.com,P4 Low relevance,,13.0
+1230,C00424,A0495,Ovudiche Iroanwusi,Annai Limited Nigeria,diche@annai-ng.com,P4 Low relevance,,13.0
+1231,C00425,A0495,Inyeaka Iroanwusi,Annai Limited Nigeria,inyeakai@annai-ng.com,P4 Low relevance,,13.0
+1232,C00427,A0778,Sailesh Naran,Focus Around Limited,sailesh@focusaroundtz.com,P4 Low relevance,,13.0
+1233,C00429,A0431,Jan Labuschagne,West Rand Controls,janl@wrcontrol.co.za,P4 Low relevance,,13.0
+1234,C00431,A0195,Ornella Lascar,Avacor,alarm@avacor.mu,P4 Low relevance,,13.0
+1235,C00443,A0893,Disang Frank,KingJeff Technologies,disang@kingjeff.co.bw,P4 Low relevance,,13.0
+1236,C00451,A0475,Alex Ronald,Shelomithtechnologies,director@shelomithtechnologies.com,P4 Low relevance,,13.0
+1237,C00457,A0292,Ntsane Pitso,Runway Boutique,graceunique6ls@gmail.com,P4 Low relevance,,13.0
+1238,C00458,A0885,Ace Rams,Ngami Radio Communications,acerams@ngamiradios.co.bw,P4 Low relevance,,13.0
+1239,C00459,A0517,Omphile Malete,TechnoZilla,omphile@technozilla.co.bw,P4 Low relevance,,13.0
+1240,C00460,A0329,Rabia Ramadhani,Rana,rabia@rana.co.tz,P4 Low relevance,,13.0
+1241,C00465,A0480,Modi Magwaza,Sesigo Advisory,modi@sesigoadvisory.africa,P4 Low relevance,,13.0
+1242,C00470,A0610,Meghji Ithsham,Divine Technology,marketing@divinetechnologies.co.tz,P4 Low relevance,,13.0
+1243,C00473,A0645,Lee Bester,Digicell,lee@digicell.co.za,P4 Low relevance,,13.0
+1244,C00481,A0822,Hilda Enaboifo,Chrema Technologies Limited,hilda.enaboifo@chrematech.com,P4 Low relevance,,13.0
+1245,C00491,A0635,Dewald Van Jaarsveld,InfoTech,infotech@iway.na,P4 Low relevance,,13.0
+1246,C00492,A0886,Boago Sigwele,Khoisan Technologies,b.sigwele@khoisantech.co.bw,P4 Low relevance,,13.0
+1247,C00497,A0672,Mustafa Abdullah,GlobalTech Computers,mustafa@globaltech-computers.com,P4 Low relevance,,13.0
+1248,C00498,A0758,Stephen Shibandiko,G4S Tanzania,stephen.shibandiko@tz.g4s.com,P4 Low relevance,,13.0
+1249,C00547,A0735,Andre De Almeida,Elvey,andreda@elveygroup.com,P4 Low relevance,,13.0
+1250,C00548,A0735,Justin Ludick,Elvey,justin@elveygroup.com,P4 Low relevance,,13.0
+1251,C00549,A0735,Gareth Williams,Elvey,gareth@elveygroup.com,P4 Low relevance,,13.0
+1252,C00550,A0763,Mj Oosthuizen,G4S,mj.oosthuizen@za.g4s.com,P4 Low relevance,,13.0
+1253,C00553,A0889,Alfred Tanui,Kenya Kazi Services Ltd,alfredtanui@kksecurity.com,P4 Low relevance,,13.0
+1254,C00554,A0325,Mercy Wangechi,Biometrics Technology LTD,wangechi@biometricsint.com,P4 Low relevance,,13.0
+1255,C00555,A0735,Vicki Smith,Elvey,vicki@elveygroup.com,P4 Low relevance,,13.0
+1256,C00558,A0424,Tiaan Van Der Vyver,Advanced Infrastructure,tiaan.vandervyver@abecai.co.za,P4 Low relevance,,13.0
+1257,C00560,A0424,Nicole Hattingh,Advanced Infrastructure,nicole.hattingh@global.ntt,P4 Low relevance,,13.0
+1258,C00562,A0424,Ayanda Mbalati,Advanced Infrastructure,ayanda.mbalati@abecai.co.za,P4 Low relevance,,13.0
+1259,C00563,A0735,Isabel Chauke,Elvey,isabel@elveygroup.com,P4 Low relevance,,13.0
+1260,C00564,A0424,Branden Haywood,Advanced Infrastructure,Branden.Haywood@abecai.co.za,P4 Low relevance,,13.0
+1261,C00565,A0197,Karien Thomas,Sedna,kthomas@sedna.africa,P4 Low relevance,,13.0
+1262,C00566,A0949,Johan Venter,Coresol,Johan@coresol.co.za,P4 Low relevance,,13.0
+1263,C00567,A0424,Magriet Denby,Advanced Infrastructure,Magriet.Denby@abecai.co.za,P4 Low relevance,,13.0
+1264,C00578,A0735,Lebo Theoha,Elvey,lebo@elveygroup.com,P4 Low relevance,,13.0
+1265,C00630,A0765,Wayne Fourie,Global Comms,wfourie@globalcomms.co.za,P4 Low relevance,,13.0
+1266,C00631,A0935,Cobus Posthumus,Colt Security,cobus@coltsecurity.co.za,P4 Low relevance,,13.0
+1267,C00783,A0424,Steven van den Bergh,Advanced Infrastructure,steven.vandenbergh@abecai.co.za,P4 Low relevance,,13.0
+1268,C00784,A0949,Camron Abraham,Coresol,Camron@coresol.co.za,P4 Low relevance,,13.0
+1269,C00787,A0424,Lameck Nyoni,Advanced Infrastructure,lameck.nyoni@abecai.co.za,P4 Low relevance,,13.0
+1270,C00853,A0160,Zane Serrao,Rutherford,serraoZa@rutherford.co.za,P4 Low relevance,,13.0
+1271,C00854,A0307,Kam Govender,Rosond,kam.govender@rosond.com,P4 Low relevance,,13.0
+1272,C00862,A0331,Ryan Lipschitz,RAC Systems,ryan@racsystems.co.za,P4 Low relevance,,13.0
+1273,C00865,A0860,Ingrid Martch,Orisec South Africa,ingrid.m@orisec.co.za,P4 Low relevance,,13.0
+1274,C00867,A0362,Erwin Brown,TimeTronics,ebrown@timetronics.co.za,P4 Low relevance,,13.0
+1275,C00878,A0559,Raeesa Desai,Digital Shift,raeesad@digitalshift.co.za,P4 Low relevance,,13.0
+1276,C00897,A0281,Brigitte Pfafferott,RJ CONNECT,brigitte@rjconnect.co.za,P4 Low relevance,,13.0
+1277,C00898,A0308,Vincent Botha,Ringmaster (Pty) Ltd,vincent@ringmastersecurity.com,P4 Low relevance,,13.0
+1278,C00901,A0835,Deon Celliers,NuGen,deonc@nugen.co.za,P4 Low relevance,,13.0
+1279,C00902,A0874,Adrian Hofmeyr,National Security & Fire,adrianh@national.co.za,P4 Low relevance,,13.0
+1280,C00903,A0168,Rhoo Mufhadi,BCX,rhoo.mufhadi@bcx.co.za,P4 Low relevance,,13.0
+1281,C00904,A0168,Lynette Wolhuter,BCX,lynette.wolhuter@bcx.co.za,P4 Low relevance,,13.0
+1282,C00905,A0168,Ledson Khumalo,BCX,ledson.khumalo@bcx.co.za,P4 Low relevance,,13.0
+1283,C00911,A0544,Ryan Kleber,T and J Security,ryan@tandjsecurity.co.za,P4 Low relevance,,13.0
+1284,C00912,A0168,Estelle Rossouw,BCX,Estelle.rossouw@bcx.co.za,P4 Low relevance,,13.0
+1285,C00915,A0436,Sean King,ACS,sking@acontrols.co.za,P4 Low relevance,,13.0
+1286,C00920,A0663,Ralph Mberi,Integritron,ralp.mberi@integritron.co.za,P4 Low relevance,,13.0
+1287,C00921,A0405,Trevor Fouche,Xone Integrated Security,trevor.fouche@xone.co.za,P4 Low relevance,,13.0
+1288,C00922,A0382,Lebeko Mphelo,Woosh,lebeko@letswhoosh.com,P4 Low relevance,,13.0
+1289,C00926,A0727,Kirby Rae Russell,Enkulu Technologies,kirby@enkulutech.co.za,P4 Low relevance,,13.0
+1290,C00927,A0744,Anita Sithole,EMS SA,annitas@emsmail.co.za,P4 Low relevance,,13.0
+1291,C00930,A0666,Bronwyn Rouan,inteliPOS,bronwyn.rouan@intelipos.com,P4 Low relevance,,13.0
+1292,C00931,A0723,Duaine vd Merwe,Zentech Integrated Security Solutions,whadmin@zentechiss.co.za,P4 Low relevance,,13.0
+1293,C00935,A0697,Mamoudou Berete,Extin,it@extin.co.mz,P4 Low relevance,,13.0
+1294,C00936,A0653,Abdallah Namwitika,Derm Electrics (T) Limited,namwitika@dermtz.com,P4 Low relevance,,13.0
+1295,C00937,A0605,Romi Narraidoo,Harel Mallac Technologies Ltd,Romi.Narraidoo@hmtechnologies.mu,P4 Low relevance,,13.0
+1296,C00938,A0605,Michael Ah Ting,Harel Mallac Technologies Ltd,michael.ahting@hmtechnologies.mu,P4 Low relevance,,13.0
+1297,C00939,A0605,Claude Figon,Harel Mallac Technologies Ltd,claude.figon@hmtechnologies.mu,P4 Low relevance,,13.0
+1298,C00940,A0605,Ashveen Kumar Dreepaul,Harel Mallac Technologies Ltd,ashveen.dreepaul@hmtechnologies.mu,P4 Low relevance,,13.0
+1299,C00942,A0604,Deon Swanepoel,Halo Technology,deon@halotechnology.co.za,P4 Low relevance,,13.0
+1300,C00944,A0195,Daniel De St Pern,Avacor,dgdestpern@avacor.mu,P4 Low relevance,,13.0
+1301,C00945,A0694,Jimi Benedict,Eyewitness Integrated Security Systems Ltd.,eyewitness_system@yahoo.com,P4 Low relevance,,13.0
+1302,C00946,A0698,Tumisang Galeage,Eye-D Systems,tumisang@eyedsystems.co.bw,P4 Low relevance,,13.0
+1303,C00947,A0698,Caesar Chitungulu,Eye-D Systems,caesar@eyedsystems.co.bw,P4 Low relevance,,13.0
+1304,C00948,A0698,Aupa Seduke,Eye-D Systems,aupa@eyedsystems.co.bw,P4 Low relevance,,13.0
+1305,C00949,A0697,Michael Fritz,Extin,fire@extin.co.mz,P4 Low relevance,,13.0
+1306,C00950,A0547,Moses Mkungo,Amiran Communications,moses.mkungo@amirankenya.com,P4 Low relevance,,13.0
+1307,C00951,A0547,Amir Grinberg,Amiran Communications,Amir@amirankenya.com,P4 Low relevance,,13.0
+1308,C00952,A0606,Roger Ghostine,Harco Group,roger.ghostine@harcogroup.be,P4 Low relevance,,13.0
+1309,C00954,A0184,Modisa Manyake,Serviceline Engineering,mmanyake@servicelinebw.com,P4 Low relevance,,13.0
+1310,C00955,A0175,José Fonseca,Security Technology Group Mozambique,jfonseca@stgmoz.com,P4 Low relevance,,13.0
+1311,C00957,A0174,Vitalis Ongunya,Security Group Africa HQ,VOngunya@securitygroupke.com,P4 Low relevance,,13.0
+1312,C00958,A0319,Fatunbi Sekoni Olanrewaju,Quadrev LLC,lanrefatunbi@quadrev.com,P4 Low relevance,,13.0
+1313,C00959,A0576,Kayode Sodimu,ICST Solutions Limited,ksodimu@icstsolutions.com,P4 Low relevance,,13.0
+1314,C00960,A0251,Navin Kumar Bhantoa,ProGuard Ltd,navin@proguardltd.com,P4 Low relevance,,13.0
+1315,C00962,A0757,Elie Ramilihasimbola,G4S Madagascar Solutions de Sécurité Sarl,tech.randd@mg.g4s.com,P4 Low relevance,,13.0
+1316,C00963,A0863,Mike Oyenuga,Outbox Technologies Limited,mikeoyenuga@outboxltd.com,P4 Low relevance,,13.0
+1317,C00964,A0562,Luis Pereira,Hitron Mocambique,lpereira1961@gmail.com,P4 Low relevance,,13.0
+1318,C00966,A0893,Geoffrey Moduka,KingJeff Technologies,innovation@kingjeff.co.bw,P4 Low relevance,,13.0
+1319,C00967,A0636,Jackson Mkwama,InFoSys ICT & Security System Solutions,jackson@infosyssec.co.tz,P4 Low relevance,,13.0
+1320,C00968,A0636,Frank Cirara,InFoSys ICT & Security System Solutions,frank@infosyssec.co.tz,P4 Low relevance,,13.0
+1321,C00971,A0572,Walter Monyake,Ideal Choice (PTY) Ltd,walter@idealchoice.co.bw,P4 Low relevance,,13.0
+1322,C00972,A0745,Nikola Millovanovic,Gaborone Electronics,nikola@gaboroneelectronics.co.bw,P4 Low relevance,,13.0
+1323,C00973,A0852,Faustin Tshilumba,Panorama Sprl,faustin.t@panoramasprl.com,P4 Low relevance,,13.0
+1324,C00980,A0377,Tanya Studdard,Triple SL Tech,tanya@tsltech.co.a,P4 Low relevance,,13.0
+1325,C00981,A0377,Sharon Nkhata,Triple SL Tech,sharon@tsltech.co.za,P4 Low relevance,,13.0
+1326,C00982,A0356,Richard Brits,Tradeport,richard@tradeport.co.za,P4 Low relevance,,13.0
+1327,C00983,A0955,Ashley Ittoo,Contractplus,ashley@contractplus.mu,P4 Low relevance,,13.0
+1328,C00985,A0939,Ian Erasmus,Mastech,ian@mastech.co.za,P4 Low relevance,,13.0
+1329,C00990,A0796,Claude Fivaz,MTS Group,claude@mtsgroup.co.za,P4 Low relevance,,13.0
+1330,C00996,A0872,Vilas Soopramanien,Caudan Security Services,vsoopramanien@caudansecurity.com,P4 Low relevance,,13.0
+1331,C00997,A0325,Kellen Wanjira,Biometrics Technology LTD,kwanjira@biometricsint.com,P4 Low relevance,,13.0
+1332,C01007,A0505,Martin Shone,Amatec Zimbabwe,martin@amateczim.co.zw,P4 Low relevance,,13.0
+1333,C01008,A0358,Asim Osman,Alfa Trading,asim.alfa@gmail.com,P4 Low relevance,,13.0
+1334,C01009,A0370,Nancy Schroeder,Afritron Limited,nancy@idtek.co.za,P4 Low relevance,,13.0
+1335,C01011,A0344,Edward Van Trotsenburg,Afrisec Distribution & Consulting LTD,edward@afrisec.com,P4 Low relevance,,13.0
+1336,C01039,A0813,Suniel Deokali,Cirtech Communications,sunil@cirtech.co.za,P4 Low relevance,,13.0
+1337,C01040,A0813,Sarvesh Deokali,Cirtech Communications,sarvesh@cirtech.co.za,P4 Low relevance,,13.0
+1338,C01043,A0857,John Human,Camsecure,john.human@camsecure.co.za,P4 Low relevance,,13.0
+1339,C01044,A0239,Mbali Xulu,Bnc Technology,design2@bnctechnology.co.za,P4 Low relevance,,13.0
+1340,C01048,A0944,Peter Clark,Clayton Communications,peterc@clayton.africa,P4 Low relevance,,13.0
+1341,C01102,A0478,Daniel Steyn,SFP Fire & Security Sysytem Integrators,daniel@sfp.co.za,P4 Low relevance,,13.0
+1342,C01103,A0180,Bill H Shaik,Secutec,bill@secutec.africa,P4 Low relevance,,13.0
+1343,C01107,A0690,Akash Sewpersadh,Fedile,akash@fedile.co.za,P4 Low relevance,,13.0
+1344,C01109,A0815,Hennie Van Rooyen,MC Fire,hennie@mcfire.co.za,P4 Low relevance,,13.0
+1345,C01113,A0686,Johan Badenhorst,Eagle Eye Security Specialists,johan.badenhorst@eagle-ess.co.za,P4 Low relevance,,13.0
+1346,C01114,A0612,Kenneth Dipale,DitemoTec,ken@ditemo-tec.co.za,P4 Low relevance,,13.0
+1347,C01117,A0623,Vairaag Panchoo,ISF SFP Fire & Security Integrators,vairaag@sfp.co.za,P4 Low relevance,,13.0
+1348,C01123,A0603,Prashant Maharaj,Gyro Group,prashant.maharaj@gyrogroup.co.za,P4 Low relevance,,13.0
+1349,C01128,A0483,Brian Gerber,Siyenza Holdings,bgerber@siyenzaholdings.co.za,P4 Low relevance,,13.0
+1350,C01137,A0463,Marius Venter,Stefmet Technologies,marius@stefmet.co.za,P4 Low relevance,,13.0
+1351,C01140,A0288,Jabulani Ndlovu,Reliable Technology Solutions,jabu@rtg-za.com,P4 Low relevance,,13.0
+1352,C01144,A0673,Kevin Coode,EDSE PROJECTS,kevin@esde.co.za,P4 Low relevance,,13.0
+1353,C01145,A0685,Nathan Bearman,Eagle Group of Companies,nathan@eagle.co.za,P4 Low relevance,,13.0
+1354,C01156,A0929,Quentin Clark,Complete Security,quentin@completesecurity.co.za,P4 Low relevance,,13.0
+1355,C01168,A0625,Margaret Matayi,Jasco Security & Fire Solutions,margaret.matayi@jasco.co.za,P4 Low relevance,,13.0
+1356,C01169,A0625,Jaco Van Niekerk,Jasco Security & Fire Solutions,jaco.vniekerk@jasco.co.za,P4 Low relevance,,13.0
+1357,C01171,A0496,Jason Kozinsky,Alpine Communications,jason@alpinecommunications.co.za,P4 Low relevance,,13.0
+1358,C01173,A0349,Kevin Govender,African Business Development Consulting Enterprises,kevin@abdce.co.za,P4 Low relevance,,13.0
+1359,C01177,A0857,Nikolai Friend,Camsecure,nikolai.friend@camsecure.co.za,P4 Low relevance,,13.0
+1360,C01184,A0765,Dumisani Nkosi,Global Comms,dnkosi@globalcomms.co.za,P4 Low relevance,,13.0
+1361,C01186,A0864,Carlo Peneda,CCTV SECURITY SURVEILLANCE,carlo@cctvsa.co.za,P4 Low relevance,,13.0
+1362,C01188,A0414,Divan Bester,Vikela Electronics,divan@vikelaelectronics.co.za,P4 Low relevance,,13.0
+1363,C01189,A0425,JACQUES SMITH,VERIPIX,js@verpix.co.za,P4 Low relevance,,13.0
+1364,C01192,A0286,Michele Tavares,Remez Security S.A,michele@remezsecuritysa.co.za,P4 Low relevance,,13.0
+1365,C01195,A0271,Francios Bezuidehout,Plug and Play Security,francios@plugandplay.co.za,P4 Low relevance,,13.0
+1366,C01197,A0548,Chriselle Landsberg,Sypher,chriselle@sypher.co.za,P4 Low relevance,,13.0
+1367,C01200,A0953,Andre Cloete,LMS Software,safe.secure.mp@gmail.com,P4 Low relevance,,13.0
+1368,C01207,A0546,Andries Wilson,Tahuti Trading 121 CC t/a MBA Security,willy@lantic.net,P4 Low relevance,,13.0
+1369,C01210,A0277,Carl Bezuidenhout,BezyIT,cabezuid@hotmail.com,P4 Low relevance,,13.0
+1370,C01213,A0389,Riëtte Smeda,Xone,riette.smeda@xone.co.za,P4 Low relevance,,13.0
+1371,C01214,A0396,Robert Morton,WIREWIZARDS,robert@wirewizards.co.za,P4 Low relevance,,13.0
+1372,C01215,A0418,Jacque Visser,VLN  Group,jacque@vnlgroup.org,P4 Low relevance,,13.0
+1373,C01217,A0206,Gerhard Goosen,SATIS Technnologies,gg@satistech.co.za,P4 Low relevance,,13.0
+1374,C01220,A0514,Tim Coetzee,The Lab SA,tim@thelabsa.com,P4 Low relevance,,13.0
+1375,C01221,A0514,Rudi Feiertag,The Lab SA,rudi@thelabsa.com,P4 Low relevance,,13.0
+1376,C01222,A0498,Johan Badenhorst,TECHSYCO,badenhorstj500@gmail.com,P4 Low relevance,,13.0
+1377,C01224,A0792,Antonie Roetz,FSI SYSTEMS INTERNATIONAL,antonie@fsi-systems.com,P4 Low relevance,,13.0
+1378,C01241,A0680,Kevin Turner,Equites Protection Services,kevin@equitesprotection.co.za,P4 Low relevance,,13.0
+1379,C01244,A0266,Salmon Swart,C5S,md@c5s.co.za,P4 Low relevance,,13.0
+1380,C01250,A0916,Lionel Liebenberg,Jireh Control Access and Beyond,lionel@jirehcon.co.za,P4 Low relevance,,13.0
+1381,C01252,A0613,Melvin Moodley,Ithuba Protection,melvin@ithubaprotection.co.za,P4 Low relevance,,13.0
+1382,C01258,A0663,Ralph Mberi,Integritron,ralph.mberi@integritron.co.za,P4 Low relevance,,13.0
+1383,C01262,A0770,Christiaan Porter,GEW,Christiaan.Porter@hensoldt.net,P4 Low relevance,,13.0
+1384,C01272,A0170,Ricky Holmes,SAMS Connecting the Dots,ricky@samsconnectingdots.com,P4 Low relevance,,13.0
+1385,C01279,A0230,Lizelle Pretorius,Brits Fire Protection Services,Britsfireprotec@lantic.net,P4 Low relevance,,13.0
+1386,C01283,A0931,Wesley Wagner,MAP,wesley@maptm.co.za,P4 Low relevance,,13.0
+1387,C01289,A0624,William Jones,Jascom,wj@jascom.co.za,P4 Low relevance,,13.0
+1388,C01290,A0624,Schalk Steenekamp,Jascom,ss@jascom.co.za,P4 Low relevance,,13.0
+1389,C01299,A0204,Mpho Moraba,Savvy Integrity Solutions,savvyintegrity@gmail.com,P4 Low relevance,,13.0
+1390,C01302,A0302,Sean McCarthy,RT Systems,sean@rtsystems.co.za,P4 Low relevance,,13.0
+1391,C01303,A0294,Sikhululwe Sikwele,Rock Engineering Africa,sikhululwe@rockengineeringafrica.co.za,P4 Low relevance,,13.0
+1392,C01304,A0328,Lee-Roy O'Neill,Redbox Fire and Security,lee-roy@redboxfiresecurity.co.za,P4 Low relevance,,13.0
+1393,C01306,A0242,Willem Marais,Qlimax Infrastructure,qlimaxinfrastructure@gamil.com,P4 Low relevance,,13.0
+1394,C01309,A0272,Dewald Van Der Sandt,Polycomp Technologies,dewald@polycomp.co.za,P4 Low relevance,,13.0
+1395,C01311,A0261,Anton Conradie,Paladin Dynamics,anton@paladindynamics.co.za,P4 Low relevance,,13.0
+1396,C01312,A0160,Jeanie Mason,Rutherford,mansonje@rutherford.co.za,P4 Low relevance,,13.0
+1397,C01315,A0928,Satyapal Singh,Coega Steels Pty Ltd,storemanager@coegasteels.com,P4 Low relevance,,13.0
+1398,C01316,A0858,Bill Sandham,Cam Era Surveillance,bill.s@cam-era.co.za,P4 Low relevance,,13.0
+1399,C01317,A0854,Omendran Naicker,C Kit Projects,omendran@ckitprojects.co.za,P4 Low relevance,,13.0
+1400,C01320,A0677,Anesh Ramjiwan,EVS Systems,anesh@evsolutions.biz,P4 Low relevance,,13.0
+1401,C01321,A0650,Gordon Bosch,Denax (Pty) Ltd,gordonb@denax.co.za,P4 Low relevance,,13.0
+1402,C01322,A0630,Corne Momberg,JacMaCor Security Specialist,cornem@jacmacorss.co.za,P4 Low relevance,,13.0
+1403,C01323,A0843,Francois Stoop,NovaSec,francois@novasec.co.za,P4 Low relevance,,13.0
+1404,C01324,A0797,Monique Ludik,Multinet Systems (Pty) Ltd,Monique@multinetsystems.co.za,P4 Low relevance,,13.0
+1405,C01326,A0279,George Mlambo,Beyond Boarders Engineering,beyondboarderseng@gmail.com,P4 Low relevance,,13.0
+1406,C01329,A0347,Riaan Van Greuning,AE Solutions,rvg@aesolutions.za.com,P4 Low relevance,,13.0
+1407,C01333,A0901,Wayne Patience,Creative Electronics,service@creativeelectronics.co.za,P4 Low relevance,,13.0
+1408,C01340,A0567,Marius Coetzee,Ideco,marius@ideco.co.za,P4 Low relevance,,13.0
+1409,C01341,A0561,Chad Tulsi,Honeywell,Chad.Tulsi@Honeywell.com,P4 Low relevance,,13.0
+1410,C01342,A0595,Francois Duvenhage,HFR,francoisd@hfr.co.za,P4 Low relevance,,13.0
+1411,C01343,A0587,Anthony Gough,GVSC,anthonyg@gvsc.co.za,P4 Low relevance,,13.0
+1412,C01345,A0750,Clint Morrison,Gemalto,clinton.morrison@gemalto.com,P4 Low relevance,,13.0
+1413,C01352,A0714,Stephan Wessels,Element C,stephan@elementc.net,P4 Low relevance,,13.0
+1414,C01353,A0560,Allen Coetzee,Digital ID Technologies,allen@digitalidinc.com,P4 Low relevance,,13.0
+1415,C01355,A0950,Francois Lezar,Lezar Innovative Trading (Pty) Ltd,francois.lezar@gmail.com,P4 Low relevance,,13.0
+1416,C01363,A0518,Mike Delport,Technosential Group,mike@accelerate-it.co.bw,P4 Low relevance,,13.0
+1417,C01364,A0492,Philippe Colin,Technical Dynamics Ltd,techdy@intnet.mu,P4 Low relevance,,13.0
+1418,C01366,A0459,Abuu Maige,SSTL Group,abuu.maige@sstl.co.tz,P4 Low relevance,,13.0
+1419,C01367,A0450,Mansur Lawal,Southgate Technologies Limited,mansur.lawal@southgtech.com,P4 Low relevance,,13.0
+1420,C01368,A0450,Dafe Oroghi,Southgate Technologies Limited,dafe.oroghi@southgtech.com,P4 Low relevance,,13.0
+1421,C01376,A0535,Tim Timmins,Stobech Facilities Management,tim@stobech.co.bw,P4 Low relevance,,13.0
+1422,C01383,A0746,Evans Kachusha,GardaWorld,Evans.Kachusha@garda.com,P4 Low relevance,,13.0
+1423,C01403,A0450,Chukwuemeka Egu,Southgate Technologies Limited,emeka.egu@southgtech.com,P4 Low relevance,,13.0
+1424,C01404,A0449,Steve Makori,Soulco Kenya Ltd.,steve.makori@soulco.net,P4 Low relevance,,13.0
+1425,C01406,A0343,Joseph Ndome,Two Way Communications Ltd.,joseph@twowaycomm.co.ke,P4 Low relevance,,13.0
+1426,C01408,A0509,Janko Barkhuizen,Teltech cc,janko@teltech.com.na,P4 Low relevance,,13.0
+1427,C01409,A0316,Dillon Wood,Pylot,dillonw@pylot.co.za,P4 Low relevance,,13.0
+1428,C01410,A0252,Freddie Saayman,Protego Worldwide Ltd.,freddie@protegosa.com,P4 Low relevance,,13.0
+1429,C01416,A0547,Simon Njuguna,Amiran Communications,Simon.Njuguna@amirankenya.com,P4 Low relevance,,13.0
+1430,C01417,A0848,Ovie Abugo,O'Mecil Limited,oabugo@yahoo.com,P4 Low relevance,,13.0
+1431,C01418,A0379,Tolu Orija,Trivest Technologies Limited,toluo@trivest-group.com,P4 Low relevance,,13.0
+1432,C01420,A0324,Robben Sutherland,RDS Fire & Security (Pty) Ltd,robben@rdsfiresec.co.za,P4 Low relevance,,13.0
+1433,C01421,A0313,Jacus de Villiers,Quantum Fire Consulting,jacus@qfcgroup.co.za,P4 Low relevance,,13.0
+1434,C01424,A0763,Craig Hanslo,G4S,craig.hanslo@za.g4s.com,P3 Reference,,13.0
+1435,C01425,A0880,Bernard O. Thebe,Ninamo Technologies (Pty) Ltd,ninamotech@mail.com,P4 Low relevance,,13.0
+1436,C01429,A0499,Shariq Isak,Teknik Engineering,technical.support@teknik.co.ke,P4 Low relevance,,13.0
+1437,C01430,A0620,Erica Holtzkamp,ITADNS Pty Ltd,ericah@itadns.com,P4 Low relevance,,13.0
+1438,C01433,A0557,Nico Venter,Hudaco Namibia,security@hudaco.africa,P4 Low relevance,,13.0
+1439,C01434,A0557,Tarryn Izaaks,Hudaco Namibia,namibia4@hudaco.africa,P4 Low relevance,,13.0
+1440,C01435,A0557,Leandra Ludwig,Hudaco Namibia,Leandral@hudaco.africa,P4 Low relevance,,13.0
+1441,C01437,A0421,Jack Okuku,Veritech,jacko@veritechltd.com,P4 Low relevance,,13.0
+1442,C01439,A0509,Craig Anderson,Teltech cc,craiga@teltech.com.na,P4 Low relevance,,13.0
+1443,C01452,A0811,Aubrey,My Eye Cu,aubrey@myeyecu.co.za,P4 Low relevance,,13.0
+1444,C01464,A0199,Robert Mogakwe,Barsoom enterprise and sourcing,robert@barsoom.co.za,P4 Low relevance,,13.0
+1445,C01465,A0201,Adele Steenkamp,Barrier Fire and Access Control,adel@barrierfire.co.za,P4 Low relevance,,13.0
+1446,C01467,A0504,Terry Bush,Amatola Electronic Security,terry@amatolasecurity.co.za,P4 Low relevance,,13.0
+1447,C01469,A0814,Tiyani Chauke,CIYTECH SYSTEMS,tiyani@ciytech.co.za,P4 Low relevance,,13.0
+1448,C01477,A0315,Roland Francis,Blu-Vine Technologies,roland@blu-vine.com,P4 Low relevance,,13.0
+1449,C01484,A0159,Salbie,BCP Projects,bcp9237@gmail.com,P4 Low relevance,,13.0
+1450,C01487,A0722,Justin,A.I.R Consulting,justin@airconsulting.co.za,P4 Low relevance,,13.0
+1451,C01500,A0568,Ian Downard,Hudaco Three-D,ian@Three-d.co.za,P4 Low relevance,,13.0
+1452,C01517,A0407,Ruaan Fourie,Zero NE,ruaan@zero-ne.co.za,P4 Low relevance,,13.0
+1453,C00524,A0963,M Leshomo,Comsoft (PTY) LTD,mleshomo@comsoft.co.bw,P4 Low relevance,,12.9
+1454,C00536,A0963,M Pollock,Comsoft (PTY) LTD,mpollock@telemech.co.bw,P4 Low relevance,,12.9
+1455,C00435,A0806,Kuhlesibonge Ngema,Mosen Technologies (Pty) Ltd,admin@mosentechnologies.co.za,P4 Low relevance,,12.4
+1456,C00752,A0847,Jason,Capital Guarding,jason@capitalguarding.co.za,P4 Low relevance,,12.0
+1457,C00793,A0426,Karl Birkenstock,Vector Digital Energy,admin@vde.biz,P4 Noise / generic,,12.0
+1458,C00943,A0178,Sameer Mohamed,Barmedas.Com Ltd,sales@barmedas.com,P4 Noise / generic,,12.0
+1459,C01142,A0269,Sharon Kennedy,Phoenix Fire,sales@phoenixfire.co.za,P4 Noise / generic,,12.0
+1460,C01301,A0840,Edson Nhangumbe,One Treat Solutions,info@onetreatsolutions.co.za,P4 Noise / generic,,12.0
+1461,C01466,A0212,ANTHONY JULIUS,BAD GROUP,info@badgroup.co.za,P4 Noise / generic,,12.0
+1462,C00504,A0195,Yparsad Unknown,Avacor,yparsad@avacor.mu,P4 Low relevance,,11.0
+1463,C00505,A0735,Lisa Chetty,Elvey,lisa@elveygroup.com,P4 Low relevance,,11.0
+1464,C00507,A0459,Joseph Longino,SSTL Group,joseph.longino@clalontechs.co.tz,P4 Low relevance,,11.0
+1465,C00509,A0763,Richabess Essel,G4S,richabess.essel@gh.g4s.com,P4 Low relevance,,11.0
+1466,C00510,A0763,Unknown Unknown,G4S,hi.com.lda@gmail.com,P4 Low relevance,,11.0
+1467,C00511,A0576,Humphrey Okorie,ICST Solutions Limited,humphrey.okorie@averthalogen.com,P4 Low relevance,,11.0
+1468,C00512,A0697,Unknown Unknown,Extin,maltrademozambique@outlook.com,P4 Low relevance,,11.0
+1469,C00518,A0663,DK Unknown,Integritron,dk@integritron.co.za,P4 Low relevance,,11.0
+1470,C00519,A0763,Shaun Gates,G4S,shaun.gates@za.g4s.com,P4 Low relevance,,11.0
+1471,C00520,A0949,Guy Unknown,Coresol,guy@coresol.co.za,P4 Low relevance,,11.0
+1472,C00521,A0763,Koketso Kebinatshipi,G4S,Koketso.kebinatshipi@bw.g4s.com,P4 Low relevance,,11.0
+1473,C00525,A0735,Francois Smuts,Elvey,francois@elveygroup.com,P4 Low relevance,,11.0
+1474,C00526,A0698,Unknown Unknown,Eye-D Systems,komtronix@gmail.com,P4 Low relevance,,11.0
+1475,C00527,A0697,J Droba,Extin,jdroba2004@hotmail.com,P4 Low relevance,,11.0
+1476,C00528,A0735,Gerhard Moolman,Elvey,gerhard@elveygroup.com,P4 Low relevance,,11.0
+1477,C00529,A0735,Jacquie Psiroukis,Elvey,jacquie@elveygroup.com,P4 Low relevance,,11.0
+1478,C00530,A0735,Donette Nowers,Elvey,donette@elveygroup.com,P4 Low relevance,,11.0
+1479,C00531,A0735,Lelethu Kube,Elvey,adminjhb@elveygroup.com,P4 Low relevance,,11.0
+1480,C00535,A0459,Keithb Unknown,SSTL Group,Keithb@ultimate-tz.com,P4 Low relevance,,11.0
+1481,C00537,A0735,Eugene de Klerk,Elvey,eugene@elveygroup.com,P4 Low relevance,,11.0
+1482,C00540,A0735,Mikara Francis,Elvey,mikara@elveygroup.com,P4 Low relevance,,11.0
+1483,C00541,A0735,Josslyn Abdull,Elvey,josslyn@elveygroup.com,P4 Low relevance,,11.0
+1484,C00542,A0697,M Rodrigues,Extin,mrodrigues@tecnocontrol.co.mz,P4 Low relevance,,11.0
+1485,C00543,A0735,Marie Deysel,Elvey,marie@elveygroup.com,P4 Low relevance,,11.0
+1486,C00544,A0329,Moiz Salemwalla,Rana,moiz.salemwalla@secure7.co.tz,P4 Low relevance,,11.0
+1487,C00546,A0735,Ntombifikile Diniso,Elvey,ntombi@elveygroup.com,P4 Low relevance,,11.0
+1488,C00571,A0626,S Rosenmayer,Datacentrix,srosenmayer@datacentrix.co.za,P4 Low relevance,,11.0
+1489,C00572,A0782,John Unknown,Fang,john@fang.co.za,P4 Low relevance,,11.0
+1490,C00573,A0782,Fredo Unknown,Fang,fredo@fang.co.za,P4 Low relevance,,11.0
+1491,C00574,A0782,Johan Unknown,Fang,johan@fang.co.za,P4 Low relevance,,11.0
+1492,C00575,A0513,J Grobbelaar,Thorburn,jgrobbelaar@thorburn.co.za,P4 Low relevance,,11.0
+1493,C00576,A0782,Xander Unknown,Fang,xander@fang.co.za,P4 Low relevance,,11.0
+1494,C00579,A0818,Peter Hill,MCM,peter@mcool.co.za,P4 Low relevance,,11.0
+1495,C00580,A0883,Johannes Engelbrecht,Nextec,johannes.engelbrecht@eoh.com,P4 Low relevance,,11.0
+1496,C00581,A0561,Deepak Sudhakaran,Honeywell,Deepak.Sudhakaran@Honeywell.com,P4 Low relevance,,11.0
+1497,C00582,A0870,Ernest Shongw,Ndende Technologies,ernests@ndende.co.za,P4 Low relevance,,11.0
+1498,C00584,A0944,Brad Lodder,Clayton Communications,bradl@clayton.africa,P4 Low relevance,,11.0
+1499,C00586,A0843,Marco Unknown,NovaSec,marco@novasec.co.za,P4 Low relevance,,11.0
+1500,C00587,A0944,Anthony van Wijk,Clayton Communications,anthonyvw@clayton.africa,P4 Low relevance,,11.0
+1501,C00599,A0735,Mercia van Niekerk,Elvey,mercia@elveygroup.com,P4 Low relevance,,11.0
+1502,C00613,A0735,Thembisa Mjuluki,Elvey,thembisa@elveygroup.com,P4 Low relevance,,11.0
+1503,C00633,A0735,Albert Mosia,Elvey,albert@elveygroup.com,P4 Low relevance,,11.0
+1504,C00634,A0735,Celeste Jacobs,Elvey,celeste@elveygroup.com,P4 Low relevance,,11.0
+1505,C00635,A0735,Hasmita Rama,Elvey,hasmita@elveygroup.com,P4 Low relevance,,11.0
+1506,C00637,A0735,Rooi Mazibuko,Elvey,rooi@elveygroup.com,P4 Low relevance,,11.0
+1507,C00638,A0735,Jacques Vrey,Elvey,jacques.vrey@elveygroup.com,P4 Low relevance,,11.0
+1508,C00639,A0735,Margaret Joubert,Elvey,margaret@elveygroup.com,P4 Low relevance,,11.0
+1509,C00641,A0735,Riaan Louw,Elvey,riaan@elveygroup.com,P4 Low relevance,,11.0
+1510,C00643,A0572,Iqbal Unknown,Ideal Choice (PTY) Ltd,iqbal@powergate.co.bw,P4 Low relevance,,11.0
+1511,C00645,A0735,Nathan Pillay,Elvey,nathan@elveygroup.com,P4 Low relevance,,11.0
+1512,C00646,A0735,Rebecca Naidoo,Elvey,rebecca@elveygroup.com,P4 Low relevance,,11.0
+1513,C00647,A0542,Unknown Unknown,Swoop Alarms,md@swoopalarms.org,P4 Low relevance,,11.0
+1514,C00648,A0735,Leslie Oglethorpe,Elvey,leslie@elveygroup.com,P4 Low relevance,,11.0
+1515,C00649,A0967,Rmtungi Unknown,Comsec,rmtungi@kashaisecurity.co.tz,P4 Low relevance,,11.0
+1516,C00650,A0735,Mariska van der Merwe,Elvey,mariska.vandermerwe@elvey.co.za,P4 Low relevance,,11.0
+1517,C00651,A0421,Eliud Unknown,Veritech,eliud@vanguardengineering.co.ke,P4 Low relevance,,11.0
+1518,C00652,A0697,Miguel Tavaresgtr,Extin,migueltavaresgtr@gmail.com,P4 Low relevance,,11.0
+1519,C00664,A0735,Anita Hermaans,Elvey,anita@elveygroup.com,P4 Low relevance,,11.0
+1520,C00671,A0735,Lucy de Freitas,Elvey,lucy@elveygroup.com,P4 Low relevance,,11.0
+1521,C00672,A0763,Navneet Unknown,G4S,navneet@comsec.co.tz,P4 Low relevance,,11.0
+1522,C00674,A0245,D Gichimu,BM Security,dgichimu@bmsecurity.com,P4 Low relevance,,11.0
+1523,C00682,A0437,Catherine Malletzie,WayGard Security,catherine.m@waygard.co.bw,P4 Low relevance,,11.0
+1524,C00686,A0763,Kaone Setabo,G4S,kaone.setabo@bw.g4s.com,P4 Low relevance,,11.0
+1525,C00687,A0648,Dennis Oppong,Dennis Communication,oppongdennis66@yahoo.com,P4 Low relevance,,11.0
+1526,C00689,A0166,Leruo Sebusang,BeAlarmed,leruo@decoon.co.bw,P4 Low relevance,,11.0
+1527,C00691,A0908,Osita Okoye,Kymeera Investment Ltd,osita@kymeera.com,P4 Low relevance,,11.0
+1528,C00693,A0395,Vivienne Marais,Wisid Sourcing (Pty) Ltd,vivienne@wisidsourcing.com,P4 Low relevance,,11.0
+1529,C00694,A0497,Dani Taback,Techwise,dani@techwise.net.za,P4 Low relevance,,11.0
+1530,C00695,A0548,Christelle Landsberg,Sypher,christelle@sypher.co.za,P4 Low relevance,,11.0
+1531,C00696,A0283,Barry De Jager,Robar,barry.dejager@prtmw.com,P4 Low relevance,,11.0
+1532,C00719,A0927,David van Vuuren,Colgate,bp_david_vanvuuren@colpal.com,P4 Low relevance,,11.0
+1533,C00732,A0634,Hermanus,Infradata,juhaid@indata.co.za,P4 Low relevance,,11.0
+1534,C00742,A0655,Cecilia Keast,Ip Dimension,cecilia@ipdimension.net,P4 Low relevance,,11.0
+1535,C00744,A0321,Justin Li,Qomolangma Peak Technology,justinpak@qq.com,P4 Low relevance,,11.0
+1536,C00745,A0807,Tinashe Sithole,Nashcom,tsithole@nashcomwireless.co.za,P4 Low relevance,,11.0
+1537,C00748,A0567,Reinier Duvenhage,Ideco,reinier@ideco.co.za,P4 Low relevance,,11.0
+1538,C00750,A0770,Werner Muller,GEW,Werner.Muller@hensoldt.net,P4 Low relevance,,11.0
+1539,C00751,A0866,Mmamosetlha Seganoe,Ceger Enterpise,cegerenterprise@gmail.com,P4 Low relevance,,11.0
+1540,C00756,A0514,Trewinnard Van Kerkhof,The Lab SA,trewinnard@thelabsa.com,P4 Low relevance,,11.0
+1541,C00758,A0581,Darren Stroberg,IBR FIRE SYSTEMS,darren@ibrfire.co.za,P4 Low relevance,,11.0
+1542,C00759,A0597,Vijay Agrawal,HBS,Vijay.Agrawal@Honeywell.com,P4 Low relevance,,11.0
+1543,C00760,A0597,Niekie Kruger,HBS,niekie.kruger@honeywell.com,P4 Low relevance,,11.0
+1544,C01096,A0393,Andrew Andrew (Wells Fargo - Kenya),Wells Fargo,,P4 Low relevance,,10.5
+1545,C00404,A0697,Mohamed,Extin,dg@extin.co.mz,P4 Low relevance,,10.0
+1546,C00430,A0408,Brendan,Volthan,brendan@volthan.co.za,P4 Low relevance,,10.0
+1547,C00436,A0689,Julian,Easybuild,ceo@easybuild.co.bw,P4 Low relevance,,10.0
+1548,C00444,A0833,Nesta,Ophix,ophixtech@gmail.com,P4 Low relevance,,10.0
+1549,C00474,A0971,Mandhla,Connect Systems,connectsysintergration@gmail.com,P4 Low relevance,,10.0
+1550,C00477,A0825,John,Chrystal Sales,chrystalsales@gmail.com,P4 Low relevance,,10.0
+1551,C00611,A0741,Andries Andries (Electro Maintenance - Namibia),Electro Maintenance,,P4 Low relevance,,10.0
+1552,C00762,A0887,General Admin Staff,KGT Kenya,info@kgt-solutions.com,P4 Noise / generic,,10.0
+1553,C01064,A0200,Mohit Mohit (Securex - Kenya),Securex Agencies,,P4 Low relevance,,10.0
+1554,C01098,A0200,Nitin Securex - Kenya,Securex Agencies,,P4 Low relevance,,10.0
+1555,C01194,A0244,Brendon,PTY Group,brendon@ptygroup.co.za,P4 Low relevance,,10.0
+1556,C01203,A0299,Sophia,RSA AUTOMATION & SECURITY SYSTEMS,aneldo@telkomsa.net,P4 Low relevance,,10.0
+1557,C01337,A0638,Anna,Inhlanhla GA Tshwarelo Trading and Project,inhlanhlagatshwarelo@gmail.com,P4 Low relevance,,10.0
+1558,C01339,A0640,Sithembiso,Inam Technologies,stanase@inam-t.co.za,P4 Low relevance,,10.0
+1559,C01235,A0679,Julie Khan,ECCO ACCESS SYSTEMS,accounts@ecco-as.com,P4 Noise / generic,,9.6
+1560,C00684,A0446,Nhlanhla,Smilez N and S Solutions,smileznands@yahoo.com,P4 Low relevance,,9.4
+1561,C00375,A0489,Lucky Dlamini,Slomoes Corporation PTY Ltd,info@slomoescorp.co.sz,P4 Noise / generic,,9.0
+1562,C00612,A0865,Brett Smada,CCTV SA,brettcctvsa.co.za,P4 Low relevance,,9.0
+1563,C01015,A0338,Precious Booi,Ulwazi Systems,info@ulwazisystems.co.za,P4 Noise / generic,,9.0
+1564,C01116,A0667,Geno Swart,Designer Air,reception@designerair.co.za,P4 Noise / generic,,9.0
+1565,C01305,A0320,Lute Kibombwe,QPS Industrial Services (Pty) Ltd,sales@qpsindustrial.co.za,P4 Noise / generic,,9.0
+1566,C01325,A0826,Ntebogang Molongnwane,Milton Veezy,info@miltonveezy.com,P4 Noise / generic,,9.0
+1567,C01379,A0662,Anita Janse Van Vuuren,Intelligent Devices,reception@idevices.co.za,P4 Noise / generic,,9.0
+1568,C01456,A0162,Almare,Safe Spaces,admin@safespaces.co.za,P4 Noise / generic,,9.0
+1569,C00514,A0735,Loth,Elvey,lothm@elveygroup.com,P4 Low relevance,,8.0
+1570,C00532,A0735,Carlos,Elvey,carlos@elveygroup.com,P4 Low relevance,,8.0
+1571,C00644,A0735,Shivani,Elvey,Shivani@elveygroup.com,P4 Low relevance,,8.0
+1572,C00653,A0735,Valerie,Elvey,valerie@elveygroup.com,P4 Low relevance,,8.0
+1573,C00688,A0627,Wendy,Debill,wenbkin@gmail.com,P4 Low relevance,,8.0
+1574,C00743,A0300,Sophia,RSA Automation,soploff@gmail.com,P4 Low relevance,,8.0
+1575,C00753,A0855,Andre,Business IT Solutions,andre@bitz.co.za,P4 Low relevance,,8.0
+1576,C00823,A0384,Vania,WR Control,vaniap@wrcontrol.co.za,P4 Low relevance,,8.0
+1577,C01198,A0532,Jenna,Steven Denning Security Systems (PTY) Ltd,accounts@sdssolutions.co.za,P4 Low relevance,,7.4
+1578,C00506,A0763,Unknown Unknown,G4S,sales@zm.g4s.com,P4 Noise / generic,,7.0
+1579,C00522,A0380,Benson Gakere,Top Choice Surveillance Limited,Info@topchoice.co.ke,P4 Noise / generic,,7.0
+1580,C01097,A0718,Ashitha,Zoho,,P4 Noise / generic,,7.0
+1581,C00513,A0479,Lloyd,Setup Technologies,support@setuptechnologies.co.za,P4 Noise / generic,,6.0
+1582,C00857,A0688,Robert,Facetec,robert0763845201,P4 Noise / generic,,6.0
+1583,C01308,A0236,Drahti,Pramukh Export (Pty) Ltd,admin@pramukh.co.za,P4 Noise / generic,,6.0

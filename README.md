@@ -11,6 +11,92 @@ A local, resumable KYC tool for Elvey Group's Projects/Pentagon division. It:
 
 Everything lives in one SQLite file (`elvey_kyc.db`). Every command can be re-run safely.
 
+### v5.2 (2026-10-10): Key tiers first, skip complete contacts, no more 2-hourly task, token-free updates
+
+- **Order:** Key: Internal → Key: Supplier → Key: BD → Key: Competitor → Y-pinned → P1 → P2 → P3.
+  - The Key tiers come from the updated `seed_data/kyc_priority.csv` (1,583 rows).
+  - Rows for people not in the database yet are **created** on import:
+    - `INT-###`: 13 Elvey staff from the org chart, created with segment `internal`;
+    - `SUP-*`: the Milestone SA team, created with segment `supplier` under a supplier account.
+  - `--tier key|p1|p2|p3`; `run_kyc.ps1` now runs `key, p1, p2, p3`.
+- **Skip complete:** a contact is skipped when it has a role, a profile URL, a photo and work history,
+  and was harvested less than 90 days ago (`harvest.refresh_days`).
+  - Incomplete contacts are revisited only for what's missing. For example, the photo is fetched
+    only when there isn't one.
+  - A revisit never wipes work history it already had.
+- **Scheduling:** the every-2-hours "Elvey LinkedIn harvest" task is retired. Remove it with
+  `scripts\unschedule_kyc.ps1`. `scripts\schedule_kyc.ps1` is an opt-in single daily run (see
+  [Scheduling](#scheduling-opt-in-once-a-day--and-removing-the-old-2-hourly-task)).
+- **Token-free updates:**
+  - an "↻ Update from LinkedIn" button on every person card;
+  - the **Send to KYC** bookmarklet (`/bookmarklet`) for the profile you're looking at.
+- **Snapshot:** `people_snapshot.json`/`.csv` goes to the Drive KYC folder at the end of every run.
+  The claude.ai people view is refreshed from it.
+- **Progress:** the KYC panel shows done / pending / failed per tier, the last run, and the next
+  scheduled run ("manual only" if none).
+
+### v5.1 (2026-10-10): harvest in the MD's KYC priority order, skip the noise
+
+`seed_data/kyc_priority.csv` (1,565 contacts scored on account value, quotes addressed to them,
+cadence, role and data quality) sets the harvest order. `python -m src.priority import` loads it, then
+the reviewed workbook in `config.yaml` `inputs.kyc_priority` if that file exists. In the
+**P1 Key — confirm** / **P2 Active** sheets:
+- **Y** pins the contact to the top.
+- **N** demotes it to P3.
+- **Not relevant** sets the tier to `Excluded`.
+- The **Correction** text is stored in `contacts.kyc_correction` and shown on the contact card as
+  "Review note". Nothing in it is acted on automatically.
+
+Contacts are matched by email, then contact_id, then name + company. Where duplicates merged into
+one contact, the best row wins. The harvester's order is:
+1. the Key tiers (v5.2);
+2. curated Elvey/competitor contacts not yet harvested;
+3. pinned contacts;
+4. P1, then P2, then P3.
+
+P4 and Excluded are never harvested unless you pass `--include-low`. Use `--tier p1|p2|p3` to stop
+after a given tier. Without a priority file, the top-50/top-500/category-A order still applies.
+`run_kyc.ps1` runs the import automatically. The KYC progress panel shows harvested/total per tier,
+and the People Tree sorts each company's people by score.
+
+### v5 (2026-10-09): Spider first, real data in the graph, one command that actually harvests
+
+**Why the People Tree stayed empty:** the LinkedIn harvester drives *your own logged-in browser on
+your PC*. Code changes made from a cloud session never ran it, so 1,488 of 1,565 contacts still say
+`lookup pending (KYC app)` and none has a real LinkedIn URL (only the `in ›` placeholder). The fix is
+operational as much as code: **one command on your PC** that does everything, in priority order.
+
+- **`scripts\run_kyc.ps1`** (double-click → *Run with PowerShell*): creates `.venv` + installs
+  requirements (and Playwright Chromium) if missing → ingests both workbooks from `config.yaml` →
+  matches faces → harvests LinkedIn in batches **top-50 accounts → top-500 contacts → category A**
+  (daily cap, pacing and checkpoint stops unchanged) → exports
+  `data\exports\Elvey KYC enriched contacts <date>.xlsx` + `data\exports\faces\` → starts the
+  dashboard and opens `/graph/`. First run: log into LinkedIn in the browser window that opens, then
+  press Enter in the PowerShell window. Log: `data\run_kyc.log`. Switches: `-SkipHarvest`,
+  `-NoDashboard`, `-BatchLimit N`, `-Tiers top50,top500`.
+- **Relational workbook ingest** (`inputs.relational_workbook`): `python -m src.ingest` now loads it
+  first, then the CLEANED flat sheet on top. New: `fact_sellout` → `sellout` (per account × brand),
+  `fact_quotes` → `quotes`, open `fact_deals` (stage blank / not Closed/Paid/Lost) → `opportunities`
+  (closed ones are removed on the next ingest), `view_top500_contacts` rank → `contacts.top500_rank`,
+  `dim_reps` → AM-code → name. Contacts inherit the account's resolved owner + call category. Re-runs
+  update in place. A dated filename that no longer exists falls back to the newest matching export.
+  Two fixes found on the real data: the flat sheet no longer wipes the top-50 account rank or
+  re-labels Elvey as a customer; negative (credit-note) sellout no longer breaks the graph.
+- **Graph = live DB only.** Accounts, contacts (works_at), Elvey → customer `does_business_with`
+  carrying the owner rep + quote count/last quote, brands from sellout as product nodes, open Zoho
+  deals as opportunities. The demo seed loads **only** with the env flag `ELVEY_GRAPH_SOURCE=seed`.
+- **Spider is the default view**, centred on Elvey (or the top account by sellout). Each
+  relationship ring keeps its most important spokes (sellout, quotes, open deals) and says "16 of
+  1060"; *Show more* widens it. Labels run along the spoke on busy rings; click to re-centre,
+  breadcrumbs / ⌂ to go back. 1 hop by default, 2 hops one click away. 3D is still there, listed last.
+- **Harvest priority + search fallback:** `python -m src.harvest --tier top50|top500|cat-a|all`.
+  A stored value is only used as a LinkedIn URL when it's a real `/in/` profile; blanks, `in ›` and
+  company/search links fall through to the existing *name + company* search. A browser that can't
+  start now stops the run cleanly instead of crashing.
+- **KYC progress** panel (People Tree header and the /graph rail; `GET /api/kyc/progress`;
+  `python -m src.dashboard --progress`): contacts, role known, LinkedIn URL, photo, per-tier
+  enrichment, last harvest run and today's cap use — so you can see at a glance whether it ran.
+
 ### v3 (2026-09-30): the cleaned Consolidated Sales Contacts sheet
 
 The authoritative source is now the **cleaned, hand-synced Consolidated Sales Contacts sheet**
@@ -199,6 +285,9 @@ You can also override paths through env vars: `KYC_FOLDER`, `KYC_WORKBOOK`, `KYC
 
 ## Run order
 
+The short version: `powershell -ExecutionPolicy Bypass -File scripts\run_kyc.ps1` does all of the
+below in order. The individual steps:
+
 ```powershell
 python -m src.ingest                 # load accounts + contacts, print counts / coverage
 python -m src.images                 # match faces, write data/to_enrich.csv
@@ -287,51 +376,94 @@ python -m src.zoho log
 
 > **LinkedIn ToS:** LinkedIn's User Agreement restricts automated access. Keep this modest, interactive and owner-run: your own account, small daily volumes, for Elvey's own KYC. Stop if LinkedIn warns you.
 
-### Scheduling the harvester (so you don't have to run it by hand)
+### Scheduling (opt-in, once a day) — and removing the old 2-hourly task
 
-`python -m src.harvest` already paces itself (`harvest.delay_min_s`/`delay_max_s` between contacts)
-and stops the moment it hits the daily cap or a LinkedIn checkpoint/authwall — the pieces needed to
-run it unattended are already there. `scripts/run_harvest.ps1` wraps one call and appends its
-output to `data\harvest_schedule.log`; schedule *that* to fire every couple of hours during the day
-instead of running the whole day's cap in one sitting, which both looks more human to LinkedIn and
-means a checkpoint only costs you that one batch, not the rest of the day.
+The old recipe here registered a Windows task, **"Elvey LinkedIn harvest"**, that ran
+`scripts\run_harvest.ps1 -Limit 8` every 2 hours from whichever folder it was created in. On an old
+checkout that harvests in the old order and ignores the KYC priority list, so it's retired:
 
-One-time setup, in PowerShell from the repo folder — replace the path after `-File` with your own
-repo location (run `(Get-Location).Path` to check it; this only works unquoted if that path has no
-spaces in it, which `C:\Users\<you>\Documents\elvey-kyc` doesn't):
+- `scripts\run_harvest.ps1` now does nothing (it only logs that it's retired), so a task still pointing
+  at an updated copy can't harvest.
+- **Remove the task:** `powershell -ExecutionPolicy Bypass -File scripts\unschedule_kyc.ps1`. If the task
+  isn't there, it says so. `scripts\run_kyc.ps1` also warns at the start of every run while the old task
+  still exists, and prints the same one-line command.
+
+Manual is the default: run `scripts\run_kyc.ps1` when you want a pass. If you want an unattended
+pass, register **one** daily, off-peak run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\schedule_kyc.ps1                    # 06:40 daily, batch of 10
+powershell -ExecutionPolicy Bypass -File scripts\schedule_kyc.ps1 -Time 19:10 -BatchLimit 8
+powershell -ExecutionPolicy Bypass -File scripts\unschedule_kyc.ps1 -All            # remove it again
 ```
-schtasks /Create /SC MINUTE /MO 120 /TN "Elvey LinkedIn harvest" /TR "powershell -ExecutionPolicy Bypass -File C:\Users\HaikoWostmann\Documents\elvey-kyc\scripts\run_harvest.ps1 -Limit 8" /RL LIMITED
-```
-(Nesting quotes around the path here — e.g. `-File \"...\"` — trips up how PowerShell hands the
-string to `schtasks`, which then mistakes `-Limit` for a stray top-level option. Keeping the whole
-`/TR` value as one quoted string with no quotes inside it avoids that; if your path ever does have
-spaces, drop `-Limit 8` from the end instead — the script already defaults to 8 — rather than trying
-to quote the path.)
 
-This runs a batch of up to 8 contacts every 2 hours, around the clock (five such batches a day
-roughly matches the default `harvest.daily_cap` of 40 — raise `-Limit`/the cap, or add more, to
-taste). It needs nothing from you after that, but it does need:
-- **You logged in once already** (`python -m src.harvest --test` once, interactively, to get past
-  LinkedIn's login/security check in the visible browser window) — the persistent profile in
-  `data/chrome-profile` remembers that session.
-- **A visible desktop session** for the scheduled runs to open their browser window in, same as a
-  manual run (headless is not recommended — see above). In Task Scheduler's properties for the task,
-  under *General*, tick "Run only when user is logged on"; the window will briefly pop up each run.
-  If the task instead needs to run while you're logged out, this harvester isn't set up for that —
-  say so and we can look at headless as a fallback, accepting the higher block risk that implies.
+This creates the task **"Elvey KYC daily"**. It runs
+`run_kyc.ps1 -Scheduled -BatchLimit N` from the repo's own folder, whatever path you cloned to, so
+nothing is hardcoded. A scheduled run:
+- has no dashboard window and never waits for a keypress;
+- harvests one small batch in strict priority order (Key tiers first);
+- never waits for a LinkedIn log-in. If the session has expired it stops and says so; run
+  `python -m src.harvest --test` once by hand to log in again;
+- ends with the people snapshot.
 
-Check on it any time with `Get-Content data\harvest_schedule.log -Tail 40` or
-`python -m src.harvest --report 10`. If a batch stops early with "not logged in" or a checkpoint
-message in the log, LinkedIn needs you to re-verify by hand — run `python -m src.harvest --test`
-once, interactively, then the scheduled runs pick back up on their own.
+It also removes the old 2-hourly task. It runs only while you're logged on, because the LinkedIn
+window needs your desktop. The daily cap, pacing and checkpoint stops in `config.yaml` apply
+unchanged; nothing raises them.
 
-To pause it: `schtasks /Change /TN "Elvey LinkedIn harvest" /DISABLE` (`/ENABLE` to resume). To
-remove it entirely: `schtasks /Delete /TN "Elvey LinkedIn harvest" /F`.
+The dashboard's KYC panel shows the next scheduled run, or "manual only" if there isn't one. It also
+flags the old task if it is still registered.
 
-Running this unattended is a step beyond "interactive, owner-run" — you're still the only account
-being used, and the existing cap/pacing/stop-on-checkpoint behavior all still apply, but nobody is
-watching each run happen. Keep an eye on the log for the first few days and back off the schedule if
-LinkedIn ever pushes back.
+> **LinkedIn ToS:** keep it modest. Use your own account and small daily volumes, for Elvey's own KYC.
+> Stop if LinkedIn warns you.
+
+## Update one person now, without Claude (no tokens)
+
+There are two ways to refresh someone while you browse. Neither involves Claude.
+
+1. **"↻ Update from LinkedIn"** is on every person card in the People Tree, the contact card, the
+   `/graph` **People** view and the `/graph` dossier. It calls
+   `POST /api/contacts/{id}/harvest`, which runs the same harvester code:
+   - the same logged-in `data/chrome-profile`, with the window opening briefly;
+   - the same parsing and the same writer;
+   - one of today's daily-cap slots. When the cap is used up it says so (HTTP 429).
+
+   It returns the updated record, and the card refreshes. Only one runs at a time. If a scheduled or
+   manual harvest has the browser profile open, it tells you to try again shortly.
+2. **"Send to KYC" bookmarklet**, for when you're already on someone's profile in your normal Chrome.
+   Install it once from **http://127.0.0.1:8765/bookmarklet**: drag the button to the bookmarks bar.
+   On a profile (scroll once so Experience loads), click it. It reads only the visible page:
+   - name, headline, location, current company, experience and photo URL;
+   - using the harvester's own `JS_PROFILE` reader.
+
+   It POSTs that to `http://127.0.0.1:<port>/api/capture`. CORS is allowed for linkedin.com origins on
+   that one endpoint only. If LinkedIn's page security blocks the direct call, it hands the data to a
+   local `/capture` window instead. The app matches the profile to a contact, by profile URL first,
+   then by name + current company. It stores the profile with `role_source = linkedin`; a manual edit
+   still wins. If it can't tell who the person is, `/capture` shows a **match or create** picker, and
+   the People Tree's KYC panel links to any captures still waiting. Captures **don't** count against
+   the daily cap, because nothing was automated.
+
+## Getting the data into the people view (the snapshot)
+
+`python -m src.export snapshot` writes `people_snapshot.json` and `people_snapshot.csv`. The snapshot
+holds:
+- **people:** tier, score, role, company, profile URL, a ~72 px base64 photo thumbnail, last
+  harvested, complete flag and correction notes;
+- **accounts;**
+- **links:** works_at, reports_to and graph links.
+
+The files go to `config.yaml` `exports.snapshot_dir`. Left blank, that means the Google Drive KYC
+folder (`paths.kyc_folder`, through Drive for desktop) when it's mounted, and `data/exports/`
+otherwise. The snapshot is rewritten:
+- at the end of every `run_kyc.ps1` pass;
+- after every "Update from LinkedIn";
+- after every matched bookmarklet capture.
+
+**Which view to use:**
+- The local **`/graph`** (and the People Tree) is the live view. It is always current.
+- The claude.ai artifact **"Elvey Deal & People Intelligence"** is a published copy. It is refreshed
+  from `people_snapshot.json` in the Drive KYC folder by the daily pass, so it only moves when a
+  snapshot has been written and that pass has run.
 
 ## Correcting a specific person (the Corrections chat)
 

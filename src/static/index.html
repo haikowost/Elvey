@@ -26,6 +26,9 @@ nav button.on, .chip.on { background: var(--accent); color: var(--accent-ink); b
 main { padding: 16px 20px 60px; max-width: 1400px; margin: 0 auto; }
 .bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
 select { padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--ink); font: inherit; }
+.kycbox { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: baseline; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; margin: 0 0 12px; font-size: 13px; }
+.kycbox b { font-size: 15px; font-variant-numeric: tabular-nums; } .kycbox .muted { color: var(--muted); }
+.kycbox.stale { border-color: var(--warn-line); background: var(--warn-bg); }
 .warnbox { background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 8px; padding: 8px 10px; margin: 8px 0; font-size: 13px; }
 #chatlog { display: flex; flex-direction: column; gap: 10px; max-width: 760px; margin: 14px 0; }
 .bubble { padding: 10px 14px; border-radius: 12px; max-width: 88%; font-size: 14px; line-height: 1.4; }
@@ -96,6 +99,10 @@ dialog { border: 1px solid var(--line); border-radius: 12px; background: var(--p
 dialog pre { white-space: pre-wrap; font-size: 12px; max-height: 55vh; overflow: auto; background: var(--bg); padding: 10px; border-radius: 8px; }
 .hidden { display: none !important; }
 .card { cursor: pointer; } .card:hover { border-color: var(--accent); }
+.li-upd { border: 1px solid var(--line); background: transparent; color: var(--accent); border-radius: 999px; padding: 2px 8px; font: inherit; font-size: 11px; cursor: pointer; margin-top: 6px; }
+.li-upd:disabled { opacity: .6; cursor: progress; }
+.kycbox .tiers { display: flex; flex-wrap: wrap; gap: 4px 14px; width: 100%; font-size: 12px; }
+.kycbox .tiers span b { font-size: 12px; } .kycbox .fail { color: var(--comp); }
 .cc-head { display: flex; gap: 16px; align-items: center; margin-bottom: 12px; }
 .cc-head .face { width: 96px; height: 96px; font-size: 30px; }
 .cc-head h3 { margin: 0 0 2px; font-size: 18px; }
@@ -116,12 +123,15 @@ dialog pre { white-space: pre-wrap; font-size: 12px; max-height: 55vh; overflow:
     <button data-view="analyze">Analyze</button>
     <button data-view="chat">Corrections<span id="chatbadge" class="tag hidden" style="margin-left:5px"></span></button>
     <button data-view="zoho">Zoho sync</button>
+    <a href="/graph/" style="margin-left:6px;color:var(--accent)">Deal graph ↗</a>
+    <a href="/bookmarklet" style="margin-left:6px;color:var(--accent)" title="Install the Send to KYC bookmark for LinkedIn">Send to KYC bookmark</a>
   </nav>
   <div class="stats" id="stats"></div>
 </header>
 
 <main>
   <section id="view-tree">
+    <div id="kycbox" class="kycbox" aria-live="polite" title="LinkedIn enrichment progress (scripts\run_kyc.ps1 runs the harvest)"></div>
     <div id="dqbox" class="warnbox hidden"></div>
     <div class="bar">
       <span id="branches"></span>
@@ -254,6 +264,30 @@ async function loadStats() {
   $('#fcat').innerHTML = '<option value="">All categories</option>' +
     (s.categories || []).map(c => `<option>${esc(c)}</option>`).join('');
 }
+async function loadProgress() {
+  const box = $('#kycbox');
+  try {
+    const k = await api('/api/kyc/progress');
+    const pct = n => k.contacts ? ` <span class="muted">(${Math.round(100 * n / k.contacts)}%)</span>` : '';
+    const run = k.last_harvest_run;
+    const when = run ? new Date(run.at).toLocaleString('en-ZA') : 'never';
+    const days = run ? (Date.now() - new Date(run.at)) / 864e5 : Infinity;
+    box.classList.toggle('stale', days > 2);
+    const sch = k.schedule || {};
+    const next = sch.mode === 'scheduled' ? `next scheduled run: ${esc(sch.next_run || '?')}` : 'manual only (no scheduled run)';
+    box.innerHTML = `<strong>KYC progress</strong>
+      <span><b>${k.contacts}</b> contacts</span>
+      <span><b>${k.role_known}</b> role known${pct(k.role_known)}</span>
+      <span><b>${k.linkedin_url}</b> LinkedIn URL${pct(k.linkedin_url)}</span>
+      <span><b>${k.photo}</b> photo${pct(k.photo)}</span>
+      <div class="tiers" title="done / pending / failed (no profile found or gave up) per priority tier">
+        ${k.tiers.filter(t => t.total).map(t => `<span>${esc(t.label)}: <b>${t.enriched}</b> done · ${t.pending} pending${t.failed ? ` · <span class="fail">${t.failed} failed</span>` : ''}</span>`).join('')}</div>
+      <span class="muted">Last harvest: ${esc(when)}${run && run.stopped ? ' — stopped: ' + esc(run.stopped) : ''}
+        · today ${k.used_today}/${k.daily_cap} · ${k.queued} queued · ${next}</span>
+      ${sch.old_task_present ? `<span class="fail">The old every-2-hours "Elvey LinkedIn harvest" task is still scheduled — run scripts\\unschedule_kyc.ps1</span>` : ''}
+      ${k.captures_pending ? `<a href="/capture">${k.captures_pending} LinkedIn capture(s) waiting for you to say who they are</a>` : ''}`;
+  } catch (e) { box.textContent = 'KYC progress unavailable: ' + e.message; }
+}
 function statusOk(p, f) {
   if (f === 'all') return true;
   if (f === 'review') return p.contact_status === 'active' && p.employment_status === 'moved';
@@ -281,6 +315,8 @@ const ALL_COLUMNS = [
   { key: 'in_zoho', label: 'In Zoho', get: p => p.in_zoho || '' },
   { key: 'in_makdb', label: 'In MakDB', get: p => p.in_makdb || '' },
   { key: 'priority', label: 'Priority', get: p => p.priority ?? '' },
+  { key: 'kyc_tier', label: 'KYC tier', get: p => p.kyc_tier || '' },
+  { key: 'kyc_score', label: 'KYC score', get: p => p.kyc_score ?? '' },
   { key: 'reports_to', label: 'Reports to', get: p => (p.reports_to && p.reports_to.name) || '' },
 ];
 const DEFAULT_COLS = ['name', 'role', 'company', 'department', 'allocated_rep', 'category', 'contact_class', 'email', 'cell'];
@@ -479,6 +515,7 @@ function card(p) {
     ${exp ? `<div class="x">${exp}</div>` : ''}
     <div class="x">${[p.email, p.cell].filter(Boolean).map(esc).join(' · ')}</div>
     ${flags.length ? `<div class="x">⚑ ${flags.map(esc).join(' · ')}</div>` : ''}
+    <button class="li-upd" data-stop data-harvest="${p.id}" title="Look this person up on LinkedIn now (uses 1 of today's harvest cap; no Claude tokens)">↻ Update from LinkedIn</button>
   </div></div>`;
 }
 function findPerson(id) {
@@ -530,6 +567,8 @@ function contactCard(id) {
       ${g && g.brand_focus ? row('Brand focus', esc(g.brand_focus)) : ''}
       ${g && g.allocation ? row('Allocation', esc(g.allocation)) : ''}
       ${row('Priority', p.priority ? '#' + p.priority : '')}
+      ${row('KYC priority', p.kyc_tier ? esc(`${p.kyc_tier}${p.kyc_score != null ? ' · score ' + p.kyc_score : ''}${p.kyc_order ? ' · #' + p.kyc_order : ''}${p.kyc_pinned ? ' · confirmed' : ''}`) : '')}
+      ${row('Review note', esc(p.kyc_correction || ''))}
       ${row('KYC', esc([p.face ? 'photo ✓' : (p.image_status === 'no_photo' ? 'no LinkedIn photo' : 'no photo yet'), status,
                         p.match_confidence === 'name-only' ? 'matched by name only – please verify' : ''].filter(Boolean).join(' · ')))}
       ${row('In Zoho', p.zoho ? 'yes' : 'not yet')}
@@ -573,6 +612,10 @@ function contactCard(id) {
     <div class="cc-actions">
       <input type="search" id="cclinkedin" placeholder="Correct LinkedIn profile URL…" value="${esc(p.linkedin && p.linkedin.includes('/in/') ? p.linkedin : '')}" style="min-width:320px">
       <button class="btn ghost" data-act="seturl">Set as their exact profile &amp; re-queue</button>
+    </div>
+    <div class="cc-actions">
+      <button class="btn" data-harvest="${p.id}" title="Opens the harvester's LinkedIn window for this one person now (uses 1 of today's cap; no Claude tokens)">↻ Update from LinkedIn now</button>
+      <span class="muted">Or open their profile in Chrome and click your <a href="/bookmarklet" target="_blank">Send to KYC</a> bookmark (free).</span>
     </div>
     <p class="muted" id="ccmsg"></p>
     ${p.enriched_at ? `<p class="muted">Last LinkedIn look-up: ${esc(p.enriched_at)}</p>` : ''}`;
@@ -625,6 +668,27 @@ async function loadAccounts() {
   if (!T.accounts) T.accounts = await api('/api/accounts');
   return T.accounts;
 }
+// "Update from LinkedIn": one contact, right now, through the local harvester (no Claude involved)
+async function updateFromLinkedIn(btn) {
+  const id = +btn.dataset.harvest;
+  const label = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '↻ Updating… (LinkedIn window opens)';
+  const msg = $('#ccmsg');
+  try {
+    const j = await api(`/api/contacts/${id}/harvest`, { method: 'POST' });
+    btn.textContent = `✓ ${j.result || 'updated'}`;
+    await loadTree(); loadProgress();
+    if ($('#contact').open) { contactCard(id); $('#ccmsg').textContent = `Updated from LinkedIn (${j.result}). Today ${j.used_today} used.`; }
+  } catch (e) {
+    btn.textContent = label; btn.disabled = false;
+    if (msg && $('#contact').open) msg.textContent = 'LinkedIn update: ' + e.message; else alert('LinkedIn update: ' + e.message);
+  }
+}
+document.addEventListener('click', ev => {
+  const b = ev.target.closest('[data-harvest]');
+  if (b) { ev.preventDefault(); ev.stopPropagation(); updateFromLinkedIn(b); }
+}, true);
 $('#tree').addEventListener('click', ev => {
   if (ev.target.closest('[data-stop]')) return;
   const c = ev.target.closest('.card, .orgrow, tr[data-pid]');
@@ -884,7 +948,7 @@ $('#chatsend').onclick = () => chatSend($('#chatbox').value);
 $('#chatbox').addEventListener('keydown', e => { if (e.key === 'Enter') chatSend($('#chatbox').value); });
 $('#chatskip').onclick = () => chatSend('skip');
 
-loadStats(); loadTree(); loadVerify();
+loadStats(); loadProgress(); loadTree(); loadVerify();
 </script>
 </body>
 </html>

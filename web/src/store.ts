@@ -16,6 +16,7 @@ export interface Hover { id: string; x: number; y: number }
 
 interface State {
   source: 'seed' | 'live' | null;
+  root: string | null;   // the default centre: Elvey, else the top account by sellout
   nodes: GNode[];
   links: GLink[];
   byId: Map<string, GNode>;
@@ -43,13 +44,15 @@ interface State {
 
 export const useStore = create<State>((set, get) => ({
   source: null,
+  root: null,
   nodes: [],
   links: [],
   byId: new Map(),
   employerOf: new Map(),
   loadError: null,
 
-  view: 'graph',
+  // Spider (flat 2D radial) is the default: the 3D graph is kept, but it's hard to navigate at this size
+  view: 'spider',
   selectedId: null,
   trail: [],
   dossierOpen: false,
@@ -62,10 +65,13 @@ export const useStore = create<State>((set, get) => ({
     const employerOf = new Map<string, string>();
     for (const l of g.links) if (l.rel === 'works_at' && !employerOf.has(l.source)) employerOf.set(l.source, l.target);
     const sel = get().selectedId;
+    const root = g.root && byId.has(g.root) ? g.root : defaultRoot(g.nodes);
+    // nothing selected (or a deep link to an id this dataset doesn't have): centre on the root,
+    // so the Spider opens on Elvey's network instead of an empty "pick something" screen
+    const keep = sel && byId.has(sel);
     set({
-      source: g.source, nodes: g.nodes, links: g.links, byId, employerOf,
-      // a deep link to an id this dataset doesn't have falls back to no selection, not a broken view
-      ...(sel && !byId.has(sel) ? { selectedId: null, trail: [] } : {}),
+      source: g.source, root, nodes: g.nodes, links: g.links, byId, employerOf,
+      ...(keep ? {} : { selectedId: root, trail: root ? [root] : [] }),
     });
   },
   setLoadError: (e) => set({ loadError: e }),
@@ -98,6 +104,14 @@ export const useStore = create<State>((set, get) => ({
   setHover: (hover) => set({ hover }),
   setPalette: (paletteOpen) => set({ paletteOpen }),
 }));
+
+/** Fallback centre when the API names none: an Elvey company, else the biggest company. */
+export function defaultRoot(nodes: GNode[]): string | null {
+  const companies = nodes.filter((n) => n.type === 'company');
+  const pick = companies.filter((n) => n.group === 'elvey').sort((a, b) => b.size - a.size)[0]
+    ?? companies.sort((a, b) => b.size - a.size)[0];
+  return pick?.id ?? null;
+}
 
 export const lensKey = (n: GNode) => (n.type === 'person' ? 'person' : n.group);
 

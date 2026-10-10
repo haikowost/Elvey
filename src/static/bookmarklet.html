@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Send to KYC</title>
+<link rel="icon" href="data:,">
+<style>
+:root { --bg: #f5f6f8; --panel: #fff; --ink: #1c2330; --muted: #667085; --line: #e3e6eb; --accent: #1f5fbf; --accent-ink: #fff; }
+@media (prefers-color-scheme: dark) { :root { --bg: #12151b; --panel: #1b2029; --ink: #e6e9ef; --muted: #98a2b3; --line: #2c3340; --accent: #5b9bff; --accent-ink: #0b1220; } }
+body { margin: 0; font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--ink); }
+main { max-width: 640px; margin: 48px auto; padding: 0 16px; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 24px; }
+h1 { font-size: 20px; margin: 0 0 6px; }
+.bm { display: inline-block; margin: 18px 0; padding: 10px 18px; border-radius: 999px; background: var(--accent); color: var(--accent-ink);
+      font-weight: 650; text-decoration: none; cursor: grab; }
+ol { padding-left: 20px; } li { margin: 6px 0; }
+.muted { color: var(--muted); font-size: 13px; }
+a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <div class="panel">
+    <h1>Send to KYC</h1>
+    <p class="muted">Store the LinkedIn profile you're already looking at in the Elvey KYC app. It only reads that page — no automation, no Claude, no tokens, and it doesn't count against the harvest's daily cap.</p>
+    <a class="bm" href="__HREF__" title="Drag me to your bookmarks bar">⇪ Send to KYC</a>
+    <ol>
+      <li>Drag the blue <b>Send to KYC</b> button onto Chrome's bookmarks bar (Ctrl+Shift+B shows the bar).</li>
+      <li>Open anyone's LinkedIn profile in your normal Chrome, scroll once so Experience loads, then click the bookmark.</li>
+      <li>It saves straight to the matching contact; if it can't tell who it is, a small window asks you to pick or create the contact.</li>
+    </ol>
+    <p class="muted">The KYC dashboard must be running (scripts\run_kyc.ps1 or <code>python -m src.dashboard</code>). If you change the dashboard port, re-install the bookmark from this page.
+      Waiting captures: <a href="/capture">/capture</a> · <a href="/">People Tree</a></p>
+  </div>
+</main>
+</body>
+</html>

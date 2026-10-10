@@ -4,7 +4,7 @@ Two sources, one shape (`{nodes, links}`, see GRAPH-BRIEF in README):
   * seed  — seed_data/graph_seed.json, clearly-marked demo data;
   * live  — derived from the KYC database (accounts, contacts, account_roles, reporting lines)
             plus the optional projects / products / opportunities / graph_links tables.
-Pick with `graph.source` in config.yaml or the ELVEY_GRAPH_SOURCE env var.
+Live is the default; the demo seed only loads with the env flag ELVEY_GRAPH_SOURCE=seed.
 
     python -m src.graph import deals.json   # load projects/products/opportunities/links (live mode)
     python -m src.graph stats               # what the live graph currently contains
@@ -47,6 +47,7 @@ class Graph:
         self.nodes = nodes
         self.links = [l for l in links if l["source"] in self.by_id and l["target"] in self.by_id]
         self.details = details or {}
+        self.root: str | None = None   # the default centre for the Spider view (Elvey, else top account)
         self.adj: dict[str, list[tuple[dict, str, str]]] = {n["id"]: [] for n in nodes}
         for l in self.links:
             self.adj[l["source"]].append((l, l["target"], "out"))
@@ -58,7 +59,7 @@ class Graph:
         return [x for x in self.adj.get(nid, []) if rel is None or x[0]["rel"] == rel]
 
     def payload(self) -> dict:
-        return {"source": self.source, "nodes": self.nodes, "links": self.links}
+        return {"source": self.source, "root": self.root, "nodes": self.nodes, "links": self.links}
 
 
 def _node(**kw) -> dict:
@@ -67,6 +68,8 @@ def _node(**kw) -> dict:
          "facts": [f for f in (kw.get("facts") or []) if f], "opps": kw.get("opps") or [],
          "region": kw.get("region"), "brands": kw.get("brands") or [],
          "zoho": kw.get("zoho"), "kyc": kw.get("kyc")}
+    if kw.get("kyc_tier") or kw.get("kyc_score") is not None:
+        n["kycTier"], n["kycScore"] = kw.get("kyc_tier"), kw.get("kyc_score")
     return n
 
 
@@ -87,7 +90,10 @@ def load_seed(path: Path = SEED_FILE) -> Graph:
         for r in raw["nodes"]:
             details[r["id"]] = {"summary": r.get("summary"), "experience": r.get("experience") or []}
             nodes.append(_node(**r))
-        _seed_cache[key] = Graph(nodes, [dict(l) for l in raw["links"]], "seed", details)
+        g = Graph(nodes, [dict(l) for l in raw["links"]], "seed", details)
+        g.root = next((n["id"] for n in sorted(nodes, key=lambda n: -n["size"])
+                       if n["type"] == "company" and n["group"] == "elvey"), None)
+        _seed_cache[key] = g
     return _seed_cache[key]
 
 
@@ -107,11 +113,27 @@ def _split_brands(text: str | None) -> list[str]:
 
 
 def _sellout_size(v: float | None) -> float:
-    return round(1.5 + min(2.0, math.log10(1 + (v or 0) / 100_000)), 2) if v else 1.5
+    # net sellout can be negative (credit notes outweighing invoices): size those like zero
+    return round(1.5 + min(2.0, math.log10(1 + v / 100_000)), 2) if v and v > 0 else 1.5
+
+
+def _slug(text: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-") or "x"
+
+
+def _rand(v: float | None) -> str:
+    return f"R {v:,.0f}" if v else "R 0"
 
 
 def load_live(conn, cfg=None) -> Graph:
     accounts = db.rows(conn, "SELECT * FROM accounts")
+    rep_names = db.jload((db.one(conn, "SELECT value FROM meta WHERE key = 'rep_names'") or {}).get("value"), {})
+    owner_name = lambda code: rep_names.get(code, code) if code else None  # noqa: E731
+    # quotes are interaction weight: how often Elvey actually quoted this account (fact_quotes)
+    quotes = {r["account_id"]: r for r in db.rows(
+        conn, "SELECT account_id, count(*) AS n, max(quote_date) AS last, sum(coalesce(value, 0)) AS total "
+              "FROM quotes WHERE account_id IS NOT NULL GROUP BY account_id")}
+    sellout_rows = db.rows(conn, "SELECT * FROM sellout ORDER BY account_id, coalesce(fy26, 0) DESC")
     roles: dict[int, list[str]] = {}
     for r in db.rows(conn, "SELECT account_id, role FROM account_roles"):
         roles.setdefault(r["account_id"], []).append(r["role"])
@@ -123,9 +145,15 @@ def load_live(conn, cfg=None) -> Graph:
                       key=lambda a: (not a["name_norm"].startswith("elvey"), a["rank"] is None, a["rank"] or 0, a["id"]))
     root = f"a{internal[0]['id']}" if internal else None
 
+    if not root and accounts:  # no Elvey account loaded: centre on the biggest account by sellout
+        top = max(accounts, key=lambda a: (a["latest_sellout"] or 0, -(a["rank"] or 10**6)))
+        fallback_root = f"a{top['id']}"
+    else:
+        fallback_root = root
+
     acct_opps: dict[int, list] = {}
     proj_opps: dict[int, list] = {}
-    for o in db.rows(conn, "SELECT * FROM opportunities ORDER BY id"):
+    for o in db.rows(conn, "SELECT * FROM opportunities ORDER BY coalesce(amount, 0) DESC, id"):
         opp = {k: v for k, v in (("t", o["title"]), ("p", o["stage"]), ("val", o["value"])) if v}
         if o["project_id"]:
             proj_opps.setdefault(o["project_id"], []).append(opp)
@@ -136,14 +164,17 @@ def load_live(conn, cfg=None) -> Graph:
         nid, group = f"a{a['id']}", groups[a["id"]]
         sellout = a["latest_sellout"]
         extra = db.jload(a["extra"], {})
+        q = quotes.get(a["id"])
+        owner = owner_name(a["rep"])
         facts = [f"Sellout: R {sellout:,.0f}" if sellout else None,
                  f"Rank #{a['rank']}" if a["rank"] else None,
                  f"Brand focus: {a['brand_focus']}" if a["brand_focus"] else None,
-                 f"Elvey rep: {a['rep']}" if a["rep"] else None,
+                 f"Elvey rep: {owner}" if owner else None,
+                 f"Quotes: {q['n']} (last {q['last'] or '?'})" if q else None,
                  f"Category {extra['category']}" if extra.get("category") else None,
                  f"KYC {a['kyc_status']}" if a["kyc_status"] else None]
         nodes.append(_node(id=nid, label=a["name"], type="company", group=group,
-                           size=4 if nid == root else _sellout_size(sellout),
+                           size=4 if nid == root else round(_sellout_size(sellout) + (min(1.0, math.log10(1 + q["n"]) / 2) if q else 0), 2),
                            sub=" · ".join(x for x in (a["division"], a["branch"]) if x) or group.capitalize(),
                            facts=facts, opps=acct_opps.get(a["id"]), region=a["cluster"],
                            brands=_split_brands(a["brand_focus"]), zoho=bool(a["zoho_account_id"])))
@@ -151,8 +182,9 @@ def load_live(conn, cfg=None) -> Graph:
             if group == "elvey":
                 links.append({"source": nid, "target": root, "rel": "part_of"})
             elif group == "customer":
-                links.append({"source": root, "target": nid, "rel": "does_business_with",
-                              **({"ex": {"owner": a["rep"]}} if a["rep"] else {})})
+                ex = {k: v for k, v in (("owner", owner), ("quotes", q["n"] if q else None),
+                                        ("last_quote", q["last"] if q else None)) if v}
+                links.append({"source": root, "target": nid, "rel": "does_business_with", **({"ex": ex} if ex else {})})
             elif group == "competitor":
                 links.append({"source": nid, "target": root, "rel": "competes"})
             elif group == "supplier":
@@ -175,12 +207,16 @@ def load_live(conn, cfg=None) -> Graph:
             size=round(1.4 + (0.4 if c["contact_class"] == "engaged" else 0) + (0.3 if _SENIOR.search(role or "") else 0), 2),
             sub=", ".join(x for x in (role, company) if x) or None,
             photoUrl=f"/api/photo/{nid}" if has_photo else None,
-            facts=[c["department"], f"Class: {c['contact_class']}" if c["contact_class"] else None,
+            facts=[c["department"],
+                   f"KYC {c['kyc_tier']} · score {c['kyc_score']:g}" if c["kyc_tier"] and c["kyc_score"] is not None
+                   else (f"KYC {c['kyc_tier']}" if c["kyc_tier"] else None),
+                   f"Class: {c['contact_class']}" if c["contact_class"] else None,
                    f"Call cadence {c['category']}" if c["category"] else None, place or None,
                    f"Allocated to {c['allocated_rep']}" if c["allocated_rep"] and c["allocated"] else None],
             region=clusters.get(acct),
             zoho=bool(c["zoho_contact_id"]) or (c["in_zoho"] or "").upper() == "Y",
-            kyc="done" if c["enrich_status"] == "done" else "pending"))
+            kyc="done" if c["enrich_status"] == "done" else "pending",
+            kyc_tier=c["kyc_tier"], kyc_score=c["kyc_score"]))
         details[nid] = {"summary": c["linkedin_summary"], "experience": db.jload(c["linkedin_experience"], []),
                         "linkedin": c["linkedin_profile_url"] or c["linkedin_contact_url"],
                         "email": c["email"], "phone": c["cell"] or c["tel"], "enrich_status": c["enrich_status"],
@@ -192,6 +228,26 @@ def load_live(conn, cfg=None) -> Graph:
         if c["reports_to_id"]:
             links.append({"source": nid, "target": f"c{c['reports_to_id']}", "rel": "knows", "ex": {"reports_to": True}})
 
+    # brands (fact_sellout) as product nodes: account -> brand weighted by sellout; brand -> Elvey portfolio
+    brand_total: dict[str, dict] = {}
+    for srow in sellout_rows:
+        b = brand_total.setdefault(srow["brand"], {"fy26": 0.0, "fy25": 0.0, "n": 0, "portfolio": 0})
+        b["fy26"] += srow["fy26"] or 0
+        b["fy25"] += srow["fy25"] or 0
+        b["n"] += 1
+        b["portfolio"] = max(b["portfolio"], srow["portfolio"] or 0)
+    for brand, t in brand_total.items():
+        bid = f"brand:{_slug(brand)}"
+        nodes.append(_node(id=bid, label=brand, type="product", group="product", size=_sellout_size(t["fy26"] or t["fy25"]),
+                           sub="Portfolio brand" if t["portfolio"] else "Distributed brand", brands=[brand],
+                           facts=[f"FY26 sellout: {_rand(t['fy26'])}", f"FY25 sellout: {_rand(t['fy25'])}",
+                                  f"{t['n']} buying account(s)"]))
+        if root:
+            links.append({"source": bid, "target": root, "rel": "part_of", "ex": {"portfolio": bool(t["portfolio"])}})
+    for srow in sellout_rows:
+        links.append({"source": f"a{srow['account_id']}", "target": f"brand:{_slug(srow['brand'])}", "rel": "does_business_with",
+                      "ex": {k: v for k, v in (("fy26", srow["fy26"]), ("fy25", srow["fy25"])) if v}})
+
     for p in db.rows(conn, "SELECT * FROM projects"):
         nodes.append(_node(id=f"p{p['id']}", label=p["name"], type="project", group="project", size=2,
                            sub=p["sub"], region=p["region"], brands=_split_brands(p["brands"]),
@@ -202,21 +258,29 @@ def load_live(conn, cfg=None) -> Graph:
     for l in db.rows(conn, "SELECT * FROM graph_links"):
         links.append({"source": l["source"], "target": l["target"], "rel": l["rel"],
                       **({"ex": db.jload(l["ex"], {})} if l["ex"] else {})})
-    return Graph(nodes, links, "live", details)
+    g = Graph(nodes, links, "live", details)
+    g.root = fallback_root
+    return g
 
 
 LIVE_CACHE_S = 10
 
 
 def source_name(cfg) -> str:
-    return os.environ.get("ELVEY_GRAPH_SOURCE") or (cfg.get("graph") or {}).get("source") or "live"
+    """'live' (the KYC database) unless the ELVEY_GRAPH_SOURCE=seed env flag asks for the demo data.
+    The demo set is env-only on purpose: a config file left on 'seed' must never pass fake deals
+    off as real ones."""
+    return "seed" if (os.environ.get("ELVEY_GRAPH_SOURCE") or "").strip().lower() == "seed" else "live"
 
 
 
 # --------------------------------------------------------------------------- derivations
 
 def _brief(n: dict) -> dict:
-    return {k: n.get(k) for k in ("id", "label", "type", "group", "sub", "photoUrl", "zoho", "kyc", "oppCount", "region")}
+    b = {k: n.get(k) for k in ("id", "label", "type", "group", "sub", "photoUrl", "zoho", "kyc", "oppCount", "region")}
+    if "kycTier" in n:
+        b["kycTier"], b["kycScore"] = n["kycTier"], n.get("kycScore")
+    return b
 
 
 def all_opps(g: Graph, nid: str) -> list[dict]:
@@ -258,6 +322,7 @@ def investigate(g: Graph, aid: str) -> dict:
     n = g.by_id[aid]
     reps = [{**_brief(g.by_id[o]), "kyc": g.by_id[o].get("kyc")}
             for l, o, d in g.neighbors(aid, "works_at") if d == "in"]
+    reps.sort(key=lambda r: (r.get("kycScore") is None, -(r.get("kycScore") or 0), r["label"]))
     projects = linked_projects(g, aid)
     consultants = _via_projects(g, aid, projects, ("specifies",), ("consultant",))
     endusers = _via_projects(g, aid, projects, ("involved_in",), ("enduser",))
@@ -301,12 +366,35 @@ def suggested_plays(g, n, reps, consultants, endusers, competitors, owner) -> li
     return plays[:6]
 
 
-def ego(g: Graph, cid: str, depth: int = 1) -> dict:
-    """The centre + its neighbours, grouped by relationship; depth=2 adds a faint outer ring."""
+EGO_PER_GROUP = 24     # spokes per relationship ring segment before "+N more" (legibility on big hubs)
+EGO_RING2_PER_PARENT = 6
+EGO_RING2_MAX = 80
+
+
+def _weight(l: dict) -> float:
+    ex = l.get("ex") or {}
+    return float(ex.get("quotes") or 0) + float(ex.get("fy26") or ex.get("fy25") or 0) / 1_000_000
+
+
+def _importance(g: Graph, nid: str, w: float = 0.0) -> tuple:
+    """Sort key, most important first: size (sellout / seniority) + interaction weight (quotes,
+    brand sellout) + a bump for open opportunities."""
+    n = g.by_id[nid]
+    score = n["size"] + 0.5 * math.log1p(max(w, 0)) + (n.get("kycScore") or 0) / 25 + (0.6 + 0.05 * min(n["oppCount"], 10) if n["oppCount"] else 0)
+    return (-score, n["label"].lower())
+
+
+def ego(g: Graph, cid: str, depth: int = 1, limit: int = EGO_PER_GROUP) -> dict:
+    """The centre + its neighbours, grouped by relationship; depth=2 adds a faint outer ring.
+
+    A hub like Elvey has hundreds of customers: each relationship group keeps its `limit` most
+    important spokes (open opportunities first, then quote/sellout weight and size) and reports
+    the rest as `total`, so the spider stays readable. `limit=0` keeps everything."""
     ring1: dict[str, dict] = {}
     for l, o, d in g.neighbors(cid):
-        e = ring1.setdefault(o, {**_brief(g.by_id[o]), "rels": [], "ring": 1})
+        e = ring1.setdefault(o, {**_brief(g.by_id[o]), "rels": [], "ring": 1, "w": 0.0})
         e["rels"].append(l["rel"])
+        e["w"] = max(e["w"], _weight(l))
         if l["rel"] == "opportunity":
             e["opp"] = (l.get("ex") or {}).get("t")
     for e in ring1.values():
@@ -316,17 +404,28 @@ def ego(g: Graph, cid: str, depth: int = 1) -> dict:
     groups: dict[str, list[str]] = {}
     for oid, e in ring1.items():
         groups.setdefault(e["rel"], []).append(oid)
+    totals = {r: len(ids) for r, ids in groups.items()}
+    for r, ids in groups.items():
+        ids.sort(key=lambda o: _importance(g, o, ring1[o]["w"]))
+        if limit:
+            del ids[limit:]
+    kept = {o for ids in groups.values() for o in ids}
+    ring1 = {o: e for o, e in ring1.items() if o in kept}
     ring2: dict[str, dict] = {}
     if depth >= 2:
-        for parent in ring1:
-            for l, o, _ in g.neighbors(parent):
+        for parent in sorted(ring1, key=lambda o: _importance(g, o, ring1[o]["w"])):
+            added = 0
+            for l, o, _ in sorted(g.neighbors(parent), key=lambda x: _importance(g, x[1], _weight(x[0]))):
+                if len(ring2) >= EGO_RING2_MAX or added >= EGO_RING2_PER_PARENT:
+                    break
                 if o != cid and o not in ring1 and o not in ring2:
                     ring2[o] = {**_brief(g.by_id[o]), "ring": 2, "rel": l["rel"], "parent": parent}
+                    added += 1
     keep = {cid, *ring1, *ring2}
     links = [l for l in g.links if l["source"] in keep and l["target"] in keep
              and (cid in (l["source"], l["target"]) or (depth >= 2 and (l["source"] in ring2 or l["target"] in ring2)))]
     return {"center": {**_brief(g.by_id[cid]), "facts": g.by_id[cid]["facts"]},
-            "groups": [{"rel": r, "ids": groups[r]} for r in REL_PRIORITY if r in groups],
+            "groups": [{"rel": r, "ids": groups[r], "total": totals[r]} for r in REL_PRIORITY if r in groups],
             "nodes": list(ring1.values()) + list(ring2.values()), "links": links}
 
 
@@ -383,7 +482,7 @@ def filter_graph(g: Graph, types=None, rels=None, regions=None, brands=None, opp
         return ((not types or lens_key(n) in types) and (not regions or n.get("region") in regions)
                 and (not brands or brands & set(n.get("brands") or [])) and (not opps_only or n["oppCount"]))
     keep = {n["id"] for n in g.nodes if ok(n)}
-    return {"source": g.source, "nodes": [n for n in g.nodes if n["id"] in keep],
+    return {"source": g.source, "root": g.root, "nodes": [n for n in g.nodes if n["id"] in keep],
             "links": [l for l in g.links if l["source"] in keep and l["target"] in keep and (not rels or l["rel"] in rels)]}
 
 

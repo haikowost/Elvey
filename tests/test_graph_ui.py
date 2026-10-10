@@ -73,8 +73,23 @@ def _view(page, name):
     page.get_by_role("radio", name=name).click()
 
 
-def test_1_investigate_veracitech(page, base_url):
+def test_0_default_is_spider_centred_on_elvey(page, base_url):
+    """Spider (flat 2D) is the landing view, centred on Elvey, with the KYC progress panel in the rail."""
     page.goto(base_url)
+    spider = page.get_by_test_id("spider")
+    expect(spider.get_by_role("button", name="Elvey details")).to_be_visible()
+    page.wait_for_function("location.hash === '#spider:elvey'")
+    expect(page.get_by_role("radio", name="Spider")).to_have_attribute("aria-checked", "true")
+    expect(page.get_by_test_id("kyc-progress")).to_be_visible()
+    # picking an account in Spider re-centres the spider there; the breadcrumb leads back to Elvey
+    page.get_by_label("Account picker").select_option(label="Veracitech")
+    expect(spider.get_by_role("button", name="Veracitech details")).to_be_visible()
+    page.get_by_role("navigation", name="Breadcrumbs").get_by_role("button", name="Elvey").click()
+    page.wait_for_function("location.hash === '#spider:elvey'")
+
+
+def test_1_investigate_veracitech(page, base_url):
+    page.goto(base_url + "#investigate")
     page.get_by_label("Account picker").select_option(label="Veracitech")
     inv = page.get_by_test_id("investigate")
     inv.wait_for()
@@ -146,7 +161,7 @@ def test_6_unenriched_contact_shows_kyc_pending(page, base_url):
 
 
 def test_graph_view_renders_and_lens_toggles(page, base_url):
-    page.goto(base_url)
+    page.goto(base_url + "#graph")  # 3D is still there, just no longer the landing view
     page.get_by_test_id("graph3d").locator("canvas").wait_for()
     page.get_by_label("Lenses").get_by_role("button", name="Projects").click()
     expect(page.get_by_label("Lenses").get_by_role("button", name="reset")).to_be_visible()

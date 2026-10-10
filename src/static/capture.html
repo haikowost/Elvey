@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KYC captures</title>
+<link rel="icon" href="data:,">
+<style>
+:root { --bg: #f5f6f8; --panel: #fff; --ink: #1c2330; --muted: #667085; --line: #e3e6eb; --accent: #1f5fbf; --accent-ink: #fff;
+        --ok: #1f7a4d; --bad: #b4413a; }
+@media (prefers-color-scheme: dark) { :root { --bg: #12151b; --panel: #1b2029; --ink: #e6e9ef; --muted: #98a2b3; --line: #2c3340;
+        --accent: #5b9bff; --accent-ink: #0b1220; --ok: #4fbf86; --bad: #e0716a; } }
+* { box-sizing: border-box; }
+body { margin: 0; font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--ink); }
+main { max-width: 760px; margin: 0 auto; padding: 20px 16px 60px; }
+h1 { font-size: 18px; margin: 0 0 4px; }
+.muted { color: var(--muted); font-size: 13px; }
+.cap { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; margin: 14px 0; }
+.cap h2 { font-size: 16px; margin: 0; }
+.cand { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); }
+.cand img, .cand .face { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; flex: none; background: var(--line); }
+.cand div { flex: 1; min-width: 0; }
+.btn { border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink); border-radius: 999px; padding: 6px 12px; font: inherit; cursor: pointer; }
+.btn.ghost { background: transparent; color: var(--accent); }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
+input { padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--ink); font: inherit; min-width: 220px; }
+.ok { color: var(--ok); } .bad { color: var(--bad); }
+a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <h1>LinkedIn captures</h1>
+  <div class="muted">Profiles sent with the <a href="/bookmarklet">Send to KYC</a> bookmarklet that need you to say who they are. <a href="/">People Tree</a></div>
+  <div id="msg" aria-live="polite"></div>
+  <div id="list"></div>
+</main>
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const api = async (url, opt) => { const r = await fetch(url, opt); const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.detail || r.statusText); return j; };
+const post = (url, body) => api(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+
+function saved(j) {
+  const c = j.contact || {};
+  return `<p class="ok">Saved to <b>${esc(c.name)}</b>${c.company ? ' · ' + esc(c.company) : ''}${c.role ? ' — ' + esc(c.role) : ''}.</p>`;
+}
+function render(items, only) {
+  if (only && !items.length) { $('#list').innerHTML = ''; return; }
+  $('#list').innerHTML = items.length ? items.map(x => {
+    const c = x.capture || {};
+    return `<section class="cap" data-id="${x.capture_id}">
+      <h2>${esc(c.name)}</h2>
+      <div>${esc(c.headline || '')}</div>
+      <div class="muted">${[c.company, c.location].filter(Boolean).map(esc).join(' · ')}
+        ${c.url ? ` · <a href="${esc(c.url)}" target="_blank" rel="noopener">profile</a>` : ''} · ${esc(x.reason || '')}</div>
+      ${(x.candidates || []).map(k => `<div class="cand">
+          ${k.face ? `<img src="${esc(k.face)}" alt="">` : '<span class="face"></span>'}
+          <div><b>${esc(k.name)}</b> <span class="muted">${esc(k.company || '')}${k.role ? ' · ' + esc(k.role) : ''}${k.tier ? ' · ' + esc(k.tier) : ''}</span></div>
+          <button class="btn" data-pick="${k.id}">This is them</button></div>`).join('') || '<p class="muted">No contact with a similar name.</p>'}
+      <div class="row">
+        <input data-company value="${esc(c.company || '')}" placeholder="Company for the new contact">
+        <button class="btn ghost" data-create>Create new contact</button>
+        <button class="btn ghost" data-dismiss>Dismiss</button>
+      </div>
+      <div class="res"></div>
+    </section>`;
+  }).join('') : '<p class="muted">Nothing waiting — every capture matched a contact.</p>';
+  document.querySelectorAll('.cap').forEach(sec => {
+    const id = sec.dataset.id, res = sec.querySelector('.res');
+    const go = async body => {
+      res.innerHTML = '<p class="muted">Saving…</p>';
+      try {
+        const j = await post(`/api/captures/${id}/apply`, body);
+        res.innerHTML = j.status === 'dismissed' ? '<p class="muted">Dismissed.</p>' : saved(j);
+        sec.querySelectorAll('button').forEach(b => b.disabled = true);
+      } catch (e) { res.innerHTML = `<p class="bad">${esc(e.message)}</p>`; }
+    };
+    sec.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => go({ contact_id: +b.dataset.pick }));
+    sec.querySelector('[data-create]').onclick = () => go({ create: true, company: sec.querySelector('[data-company]').value });
+    sec.querySelector('[data-dismiss]').onclick = () => go({ dismiss: true });
+  });
+}
+async function start() {
+  const id = new URLSearchParams(location.search).get('id');
+  try {
+    if (location.hash.length > 1) {   // the bookmarklet couldn't call us directly: it handed the page over here
+      const payload = JSON.parse(decodeURIComponent(location.hash.slice(1)));
+      history.replaceState(null, '', location.pathname);
+      const j = await post('/api/capture', payload);
+      if (j.status === 'saved') { $('#msg').innerHTML = saved(j); return render([], true); }
+      if (j.status === 'needs_match') return render([j]);
+      $('#msg').innerHTML = `<p class="bad">${esc(j.error || 'Nothing usable on that page.')}</p>`;
+      return;
+    }
+    if (id) {
+      const j = await api('/api/captures/' + id);
+      if (j.status && j.status !== 'pending') { $('#msg').innerHTML = `<p class="muted">That capture is already ${esc(j.status)}.</p>`; }
+      else return render([j]);
+    }
+    render(await api('/api/captures'));
+  } catch (e) { $('#msg').innerHTML = `<p class="bad">${esc(e.message)}</p>`; }
+}
+start();
+</script>
+</body>
+</html>

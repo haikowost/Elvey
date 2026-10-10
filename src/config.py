@@ -17,6 +17,7 @@ except ImportError:  # pragma: no cover
     pass
 
 _ENV_PATHS = {"KYC_FOLDER": ("paths", "kyc_folder"), "KYC_WORKBOOK": ("inputs", "workbook"),
+              "KYC_RELATIONAL": ("inputs", "relational_workbook"), "KYC_PRIORITY": ("inputs", "kyc_priority"),
               "KYC_DB": ("paths", "db")}
 
 

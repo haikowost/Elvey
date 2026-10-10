@@ -50,6 +50,14 @@ CREATE TABLE IF NOT EXISTS contacts (
     zoho_last_activity   TEXT,               -- 'Last Activity Time' from a Zoho Contacts export (v4 §2)
     qreg_last_quote      TEXT,               -- latest Quote Date from a rep's QReg sheet (v4 §2)
     reports_to_id        INTEGER REFERENCES contacts(id),  -- contact-level org chart, any account (v4 §3)
+    top500_rank          INTEGER,            -- view_top500_contacts rank (relational workbook), drives harvest order
+    kyc_priority_order   INTEGER,            -- MD's KYC order (src/priority.py); harvest order when present
+    kyc_tier             TEXT,               -- effective tier: P1 Key|P2 Active|P3 Reference|P4 ...|Internal/Competitor (curated)|Excluded
+    kyc_score            REAL,               -- 0-100 priority score
+    kyc_tier_base        TEXT,               -- tier as scored, before Haiko's review
+    kyc_review           TEXT,               -- Y|N|Not relevant from the review workbook
+    kyc_pinned           INTEGER,            -- 1 = reviewed Y: harvest ahead of the rest of its tier
+    kyc_correction       TEXT,               -- free-text correction from the review, for a human to action
     email                TEXT,
     tel                  TEXT,
     cell                 TEXT,
@@ -173,4 +181,41 @@ CREATE TABLE IF NOT EXISTS graph_links (
     rel     TEXT NOT NULL,                  -- works_at|part_of|does_business_with|involved_in|specifies|serves|competes|opportunity|knows
     ex      TEXT,                           -- JSON extras, e.g. {"owner": "Quin"}
     UNIQUE (source, target, rel)
+);
+
+-- Relational-workbook facts (Elvey Consolidated Relational Database: fact_sellout / fact_quotes).
+-- Loaded by src/ingest.py on every run, keyed so re-ingest updates in place (idempotent).
+CREATE TABLE IF NOT EXISTS sellout (
+    account_id INTEGER NOT NULL REFERENCES accounts(id),
+    brand      TEXT NOT NULL,               -- dim_brands.brand, e.g. 'IQSIGHT / Bosch'
+    portfolio  INTEGER NOT NULL DEFAULT 0,  -- 1 = one of Haiko's portfolio brands (dim_brands.portfolio_flag)
+    fy25       REAL,
+    fy26       REAL,
+    PRIMARY KEY (account_id, brand)
+);
+
+CREATE TABLE IF NOT EXISTS quotes (
+    id          INTEGER PRIMARY KEY,
+    source_key  TEXT UNIQUE,                -- 'Q:<quote_id>' from fact_quotes
+    q_no        TEXT,
+    rep         TEXT,
+    quote_date  TEXT,                       -- YYYY-MM-DD
+    for_contact TEXT,
+    ref         TEXT,
+    account_id  INTEGER REFERENCES accounts(id),
+    value       REAL,
+    gp          REAL
+);
+CREATE INDEX IF NOT EXISTS ix_quotes_account ON quotes(account_id);
+
+-- LinkedIn profiles Haiko sent with the "Send to KYC" bookmarklet (src/capture.py). Applied straight
+-- away when they match one contact; otherwise 'pending' until the /capture picker matches or creates.
+CREATE TABLE IF NOT EXISTS captures (
+    id          INTEGER PRIMARY KEY,
+    url         TEXT,
+    payload     TEXT NOT NULL,              -- sanitized page read (JSON)
+    status      TEXT NOT NULL DEFAULT 'pending',   -- pending|applied|dismissed|failed
+    contact_id  INTEGER REFERENCES contacts(id),
+    match_how   TEXT,                       -- profile url|name+company|picked|created
+    received_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
