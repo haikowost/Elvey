@@ -10,20 +10,24 @@
 #      contacts, top-50/top-500 ranks, sellout, quotes, open Zoho deals), then inputs.workbook (the
 #      CLEANED contacts sheet). A dated name that no longer exists falls back to the newest export.
 #   3. Matches the KYC face library to contacts.
-#   4. Runs the LinkedIn harvester in priority batches: contacts at the top-50 accounts, then the
-#      top-500 contacts, then category A. The daily cap / pacing / checkpoint stops in config.yaml
+#   4. Imports the KYC contact priority (seed_data\kyc_priority.csv + the reviewed workbook in
+#      config.yaml inputs.kyc_priority), then runs the LinkedIn harvester in priority batches:
+#      curated Elvey/competitor contacts not yet harvested, confirmed (Y) contacts, P1, P2, P3.
+#      P4 / Excluded are skipped (-IncludeLow to include them). Without a priority file it falls
+#      back to top-50 accounts, top-500 contacts, category A. The daily cap / pacing / checkpoint stops in config.yaml
 #      apply unchanged. FIRST RUN: a browser window opens - log into LinkedIn there, complete any
 #      security check, then press Enter in THIS window. That login is remembered afterwards.
 #   5. Exports data\exports\Elvey KYC enriched contacts <date>.xlsx + data\exports\faces\.
 #   6. Starts the dashboard (its own window) and opens http://127.0.0.1:<port>/graph/.
 #
 # Switches: -SkipHarvest (just refresh data + open the dashboard), -NoDashboard, -BatchLimit N
-# (max contacts per tier per run; the daily cap still wins), -Tiers top50,top500 (subset).
+# (max contacts per tier per run; the daily cap still wins), -Tiers p1,p2 (subset), -IncludeLow.
 param(
     [switch]$SkipHarvest,
     [switch]$NoDashboard,
     [int]$BatchLimit = 0,
-    [string[]]$Tiers = @('top50', 'top500', 'cat-a')
+    [string[]]$Tiers = @('p1', 'p2', 'p3'),
+    [switch]$IncludeLow
 )
 
 $ErrorActionPreference = 'Continue'
@@ -79,6 +83,11 @@ Step "Ingesting the workbooks from config.yaml"
 & $py -m src.ingest
 if ($LASTEXITCODE -ne 0) { Fail "Ingest failed - check inputs.relational_workbook / inputs.workbook in config.yaml (Google Drive for desktop must be running so G:\ is there)." }
 
+Step "KYC contact priority (harvest order)"
+# seed_data\kyc_priority.csv, then the reviewed workbook from config.yaml inputs.kyc_priority if present
+& $py -m src.priority import
+if ($LASTEXITCODE -ne 0) { Write-Host "(priority import reported a problem - harvest falls back to the account-rank order)" -ForegroundColor Yellow }
+
 Step "Matching the KYC face library"
 & $py -m src.images
 if ($LASTEXITCODE -ne 0) { Write-Host "(face matching reported a problem - continuing)" -ForegroundColor Yellow }
@@ -89,6 +98,7 @@ if (-not $SkipHarvest) {
         Step "LinkedIn harvest: $tier"
         $hargs = @('-m', 'src.harvest', '--tier', $tier, '--exit-code')
         if ($BatchLimit -gt 0) { $hargs += @('--limit', "$BatchLimit") }
+        if ($IncludeLow) { $hargs += '--include-low' }
         & $py @hargs
         $code = $LASTEXITCODE
         if ($code -eq 3) { Write-Host "Daily cap reached - the rest continues on the next run (tomorrow)." -ForegroundColor Yellow; break }

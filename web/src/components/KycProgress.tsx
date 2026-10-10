@@ -7,7 +7,7 @@ const pct = (n: number, d: number) => (d ? Math.round((100 * n) / d) : 0);
 function Bar({ label, n, of }: { label: string; n: number; of: number }) {
   return (
     <div className="kyc-row" title={`${n} of ${of}`}>
-      <span>{label}</span><b>{n}</b>
+      <span>{label}</span><b>{n}<span className="kyc-of"> / {of}</span></b>
       <div className="kyc-bar" role="meter" aria-label={label} aria-valuemin={0} aria-valuemax={of} aria-valuenow={n}>
         <i style={{ width: `${pct(n, of)}%` }} />
       </div>
@@ -36,7 +36,8 @@ export default function KycProgress() {
       <Bar label="Role known" n={p.role_known} of={p.contacts} />
       <Bar label="LinkedIn URL" n={p.linkedin_url} of={p.contacts} />
       <Bar label="Photo" n={p.photo} of={p.contacts} />
-      {p.tiers.map((t) => <Bar key={t.tier} label={t.label} n={t.enriched} of={t.total} />)}
+      {p.priority_mode ? <div className="kyc-sub">Harvested by priority tier (done / total)</div> : null}
+      {p.tiers.map((t) => <Bar key={t.tier} label={`${t.label}${t.pending ? ` · ${t.pending} pending` : ''}`} n={t.enriched} of={t.total} />)}
       <div className={`kyc-run${ageDays > 2 ? ' stale' : ''}`}>
         {run ? <>Last harvest {new Date(run.at).toLocaleString('en-ZA')}{run.stopped ? ` — stopped: ${run.stopped}` : ''}</> : 'Harvest has never run'}
         <br />{p.contacts} contacts · today {p.used_today}/{p.daily_cap} · {p.queued} queued

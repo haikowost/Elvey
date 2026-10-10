@@ -68,6 +68,8 @@ def _node(**kw) -> dict:
          "facts": [f for f in (kw.get("facts") or []) if f], "opps": kw.get("opps") or [],
          "region": kw.get("region"), "brands": kw.get("brands") or [],
          "zoho": kw.get("zoho"), "kyc": kw.get("kyc")}
+    if kw.get("kyc_tier") or kw.get("kyc_score") is not None:
+        n["kycTier"], n["kycScore"] = kw.get("kyc_tier"), kw.get("kyc_score")
     return n
 
 
@@ -205,12 +207,16 @@ def load_live(conn, cfg=None) -> Graph:
             size=round(1.4 + (0.4 if c["contact_class"] == "engaged" else 0) + (0.3 if _SENIOR.search(role or "") else 0), 2),
             sub=", ".join(x for x in (role, company) if x) or None,
             photoUrl=f"/api/photo/{nid}" if has_photo else None,
-            facts=[c["department"], f"Class: {c['contact_class']}" if c["contact_class"] else None,
+            facts=[c["department"],
+                   f"KYC {c['kyc_tier']} · score {c['kyc_score']:g}" if c["kyc_tier"] and c["kyc_score"] is not None
+                   else (f"KYC {c['kyc_tier']}" if c["kyc_tier"] else None),
+                   f"Class: {c['contact_class']}" if c["contact_class"] else None,
                    f"Call cadence {c['category']}" if c["category"] else None, place or None,
                    f"Allocated to {c['allocated_rep']}" if c["allocated_rep"] and c["allocated"] else None],
             region=clusters.get(acct),
             zoho=bool(c["zoho_contact_id"]) or (c["in_zoho"] or "").upper() == "Y",
-            kyc="done" if c["enrich_status"] == "done" else "pending"))
+            kyc="done" if c["enrich_status"] == "done" else "pending",
+            kyc_tier=c["kyc_tier"], kyc_score=c["kyc_score"]))
         details[nid] = {"summary": c["linkedin_summary"], "experience": db.jload(c["linkedin_experience"], []),
                         "linkedin": c["linkedin_profile_url"] or c["linkedin_contact_url"],
                         "email": c["email"], "phone": c["cell"] or c["tel"], "enrich_status": c["enrich_status"],
@@ -271,7 +277,10 @@ def source_name(cfg) -> str:
 # --------------------------------------------------------------------------- derivations
 
 def _brief(n: dict) -> dict:
-    return {k: n.get(k) for k in ("id", "label", "type", "group", "sub", "photoUrl", "zoho", "kyc", "oppCount", "region")}
+    b = {k: n.get(k) for k in ("id", "label", "type", "group", "sub", "photoUrl", "zoho", "kyc", "oppCount", "region")}
+    if "kycTier" in n:
+        b["kycTier"], b["kycScore"] = n["kycTier"], n.get("kycScore")
+    return b
 
 
 def all_opps(g: Graph, nid: str) -> list[dict]:
@@ -313,6 +322,7 @@ def investigate(g: Graph, aid: str) -> dict:
     n = g.by_id[aid]
     reps = [{**_brief(g.by_id[o]), "kyc": g.by_id[o].get("kyc")}
             for l, o, d in g.neighbors(aid, "works_at") if d == "in"]
+    reps.sort(key=lambda r: (r.get("kycScore") is None, -(r.get("kycScore") or 0), r["label"]))
     projects = linked_projects(g, aid)
     consultants = _via_projects(g, aid, projects, ("specifies",), ("consultant",))
     endusers = _via_projects(g, aid, projects, ("involved_in",), ("enduser",))
@@ -370,7 +380,7 @@ def _importance(g: Graph, nid: str, w: float = 0.0) -> tuple:
     """Sort key, most important first: size (sellout / seniority) + interaction weight (quotes,
     brand sellout) + a bump for open opportunities."""
     n = g.by_id[nid]
-    score = n["size"] + 0.5 * math.log1p(max(w, 0)) + (0.6 + 0.05 * min(n["oppCount"], 10) if n["oppCount"] else 0)
+    score = n["size"] + 0.5 * math.log1p(max(w, 0)) + (n.get("kycScore") or 0) / 25 + (0.6 + 0.05 * min(n["oppCount"], 10) if n["oppCount"] else 0)
     return (-score, n["label"].lower())
 
 

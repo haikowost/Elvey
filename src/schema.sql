@@ -51,6 +51,13 @@ CREATE TABLE IF NOT EXISTS contacts (
     qreg_last_quote      TEXT,               -- latest Quote Date from a rep's QReg sheet (v4 §2)
     reports_to_id        INTEGER REFERENCES contacts(id),  -- contact-level org chart, any account (v4 §3)
     top500_rank          INTEGER,            -- view_top500_contacts rank (relational workbook), drives harvest order
+    kyc_priority_order   INTEGER,            -- MD's KYC order (src/priority.py); harvest order when present
+    kyc_tier             TEXT,               -- effective tier: P1 Key|P2 Active|P3 Reference|P4 ...|Internal/Competitor (curated)|Excluded
+    kyc_score            REAL,               -- 0-100 priority score
+    kyc_tier_base        TEXT,               -- tier as scored, before Haiko's review
+    kyc_review           TEXT,               -- Y|N|Not relevant from the review workbook
+    kyc_pinned           INTEGER,            -- 1 = reviewed Y: harvest ahead of the rest of its tier
+    kyc_correction       TEXT,               -- free-text correction from the review, for a human to action
     email                TEXT,
     tel                  TEXT,
     cell                 TEXT,

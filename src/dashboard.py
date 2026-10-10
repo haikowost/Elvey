@@ -14,7 +14,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Redirect
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import analyze, chat, db, export, graph, harvest, orgchart, zoho
+from . import analyze, chat, db, export, graph, harvest, orgchart, priority, zoho
 from .config import load_config
 from .images import coverage, update_account_kyc_status
 from .util import ACCOUNT_ROLES, CONTACT_CLASSES, DEPARTMENTS, norm_company
@@ -106,6 +106,8 @@ def people_tree(conn, cfg) -> dict:
             "reports_to": ({"id": c["reports_to_id"], "name": names_by_id.get(c["reports_to_id"])}
                             if c["reports_to_id"] else None),
             "zoho": bool(c["zoho_contact_id"]),
+            "kyc_tier": c["kyc_tier"], "kyc_score": c["kyc_score"], "kyc_order": c["kyc_priority_order"],
+            "kyc_pinned": bool(c["kyc_pinned"]), "kyc_correction": c["kyc_correction"],
         }
         for role in _effective_roles(c, account_roles):
             if role not in BRANCH_ORDER:
@@ -139,7 +141,9 @@ def people_tree(conn, cfg) -> dict:
     out = {seg: [] for seg in BRANCH_ORDER}
     for g in groups.values():
         # the Customers branch surfaces the "actually being worked" contacts first (v4 §2)
-        g["people"].sort(key=lambda p: (p["contact_class"] != "engaged", not p["allocated"],
+        # ... and within a company by the KYC priority score (pinned first), when it's been imported
+        g["people"].sort(key=lambda p: (not p["kyc_pinned"], p["kyc_score"] is None, -(p["kyc_score"] or 0),
+                                         p["contact_class"] != "engaged", not p["allocated"],
                                          p["priority"] is None, p["priority"] or 0, p["name"]))
         out[g["segment"]].append(g)
     for seg in out:
@@ -220,13 +224,17 @@ def kyc_progress(conn, cfg) -> dict:
     active = "contact_status = 'active'"
     url = "(coalesce(linkedin_profile_url, '') LIKE '%linkedin.com/in/%' OR coalesce(linkedin_contact_url, '') LIKE '%linkedin.com/in/%')"
     tiers = []
-    for key, label in (("top50", "Top-50 accounts"), ("top500", "Top-500 contacts"), ("cat-a", "Category A")):
+    if priority.has_priority(conn):  # the MD's tiers: P1 coverage is what matters
+        tiers = [{"tier": t["tier"], "label": t["tier"], "total": t["total"], "enriched": t["done"],
+                  "pending": t["pending"], "photo": t["photo"], "pinned": t["pinned"]} for t in priority.tier_counts(conn)]
+    for key, label in (() if tiers else (("top50", "Top-50 accounts"), ("top500", "Top-500 contacts"), ("cat-a", "Category A"))):
         n = harvest.TIERS[key]
         row = conn.execute(
             f"SELECT count(*), sum(c.enrich_status = 'done'), sum(c.image_status IN ('downloaded','manual')) "
             f"FROM contacts c LEFT JOIN accounts a ON a.id = c.account_id WHERE c.{active} AND ({harvest.TIER_SQL}) = ?",
             [n]).fetchone()
-        tiers.append({"tier": key, "label": label, "total": row[0], "enriched": row[1] or 0, "photo": row[2] or 0})
+        tiers.append({"tier": key, "label": label, "total": row[0], "enriched": row[1] or 0,
+                      "pending": row[0] - (row[1] or 0), "photo": row[2] or 0})
     last_run = db.jload((db.one(conn, "SELECT value FROM meta WHERE key = 'last_harvest_run'") or {}).get("value"))
     last_visit = q("SELECT max(ts) FROM harvest_log")
     return {
@@ -237,7 +245,7 @@ def kyc_progress(conn, cfg) -> dict:
         "enriched": q(f"SELECT count(*) FROM contacts WHERE {active} AND enrich_status = 'done'"),
         "no_profile": q(f"SELECT count(*) FROM contacts WHERE {active} AND enrich_status = 'no_profile'"),
         "queued": len(harvest.queue(conn, cfg)),
-        "tiers": tiers,
+        "tiers": tiers, "priority_mode": priority.has_priority(conn),
         "used_today": harvest.used_today(conn),
         "daily_cap": int((cfg.get("harvest") or {}).get("daily_cap", 40)),
         "last_harvest_run": last_run,

@@ -691,10 +691,12 @@ def set_manual_url(conn, contact_id: int, url: str) -> dict:
 
 # --------------------------------------------------------------------------- run loop (driver-agnostic)
 
-# Harvest order: the accounts and people that matter most commercially first, so each day's
-# capped batch is spent where it counts. Tier 0 = contacts at the top-50 accounts (by account
-# rank), 1 = the top-500 contacts, 2 = call-cadence 'A' contacts, 3 = Elvey staff + competitors,
-# 4 = everyone else.
+# Harvest order. With the MD's priority list imported (src/priority.py, contacts.kyc_tier) it is:
+# curated Elvey staff + competitors never harvested yet, Haiko-confirmed (Y) pins, P1 Key, P2
+# Active, P3 Reference (each by kyc_priority_order), then curated re-runs / unscored contacts.
+# P4 and Excluded are never harvested unless include_low. Without priority data it falls back to
+# the commercial order: 0 = contacts at the top-50 accounts (by account rank), 1 = the top-500
+# contacts, 2 = call-cadence 'A' contacts, 3 = Elvey staff + competitors, 4 = everyone else.
 TIERS = {"top50": 0, "top500": 1, "cat-a": 2, "all": 4}
 TIER_SQL = """CASE
     WHEN c.segment = 'customer' AND a.rank IS NOT NULL AND a.rank <= 50 THEN 0
@@ -702,12 +704,22 @@ TIER_SQL = """CASE
     WHEN upper(substr(coalesce(c.category, ''), 1, 1)) = 'A' THEN 2
     WHEN c.segment IN ('internal', 'competitor') THEN 3
     ELSE 4 END"""
+# --tier names in priority mode (the legacy names map onto the same three batches, so
+# scripts/run_kyc.ps1 works either way)
+PRIORITY_TIERS = {"p1": 2, "p2": 3, "p3": 5, "all": 5, "top50": 2, "top500": 3, "cat-a": 5}
+LEGACY_ALIASES = {"p1": "top50", "p2": "top500", "p3": "cat-a"}
+TIER_CHOICES = ("p1", "p2", "p3", "top50", "top500", "cat-a", "all")
 
 
 def queue(conn, cfg, limit: int | None = None, ids: list[int] | None = None, segment: str | None = None,
-          tier: str | None = None) -> list[dict]:
-    """Who to enrich next. `tier` ('top50' | 'top500' | 'cat-a' | 'all') limits the queue to that
-    priority band and everything above it, which is how scripts/run_kyc.ps1 batches a day's cap."""
+          tier: str | None = None, include_low: bool = False) -> list[dict]:
+    """Who to enrich next, best first. `tier` ('p1' | 'p2' | 'p3' | 'all', or the legacy
+    'top50' | 'top500' | 'cat-a') limits the queue to that band and everything above it, which is
+    how scripts/run_kyc.ps1 batches a day's cap. Explicit `ids` are always honoured."""
+    from .priority import LOW_RANK, RANK_SQL, has_priority
+
+    if tier and tier not in TIER_CHOICES:
+        raise ValueError(f"unknown tier {tier!r} (use one of {', '.join(TIER_CHOICES)})")
     max_attempts = (cfg.get("harvest") or {}).get("max_attempts", 2)
     where = ["(c.image_status = 'none' OR c.enrich_status = 'pending' OR (c.enrich_status = 'failed' AND c.enrich_attempts < ?))",
              "c.enrich_status != 'no_profile'", "c.contact_status = 'active'"]
@@ -718,15 +730,25 @@ def queue(conn, cfg, limit: int | None = None, ids: list[int] | None = None, seg
     if segment:
         where.append("c.segment = ?")
         params.append(segment)
-    if tier and tier != "all":
-        if tier not in TIERS:
-            raise ValueError(f"unknown tier {tier!r} (use one of {', '.join(TIERS)})")
-        where.append(f"({TIER_SQL}) <= ?")
-        params.append(TIERS[tier])
-    sql = (f"SELECT c.*, a.name AS company, ({TIER_SQL}) AS tier FROM contacts c LEFT JOIN accounts a ON a.id = c.account_id "
-           f"WHERE {' AND '.join(where)} "
-           f"ORDER BY tier, CASE WHEN tier = 0 THEN a.rank END, c.top500_rank IS NULL, c.top500_rank, "
-           f"c.priority IS NULL, c.priority, c.id")
+    if has_priority(conn):
+        rank_sql = RANK_SQL
+        if not include_low and not ids:
+            where.append(f"({rank_sql}) < ?")
+            params.append(LOW_RANK)
+        if tier and tier != "all":
+            where.append(f"({rank_sql}) <= ?")
+            params.append(PRIORITY_TIERS[tier])
+        order = "tier, c.kyc_priority_order IS NULL, c.kyc_priority_order, c.priority IS NULL, c.priority, c.id"
+    else:
+        rank_sql = TIER_SQL
+        tier = LEGACY_ALIASES.get(tier, tier)
+        if tier and tier != "all":
+            where.append(f"({rank_sql}) <= ?")
+            params.append(TIERS[tier])
+        order = ("tier, CASE WHEN tier = 0 THEN a.rank END, c.top500_rank IS NULL, c.top500_rank, "
+                 "c.priority IS NULL, c.priority, c.id")
+    sql = (f"SELECT c.*, a.name AS company, ({rank_sql}) AS tier FROM contacts c LEFT JOIN accounts a ON a.id = c.account_id "
+           f"WHERE {' AND '.join(where)} ORDER BY {order}")
     if limit:
         sql += f" LIMIT {int(limit)}"
     return db.rows(conn, sql, params)
@@ -865,20 +887,20 @@ def record_run(conn, stats: dict) -> None:
 
 
 def run(conn, cfg, driver_factory, limit: int | None = None, cap: int | None = None, ids=None, segment=None,
-        sleep=time.sleep, log=print, tier: str | None = None) -> dict:
-    stats = _run(conn, cfg, driver_factory, limit, cap, ids, segment, sleep, log, tier)
+        sleep=time.sleep, log=print, tier: str | None = None, include_low: bool = False) -> dict:
+    stats = _run(conn, cfg, driver_factory, limit, cap, ids, segment, sleep, log, tier, include_low)
     record_run(conn, {**stats, **({"tier": tier} if tier else {})})
     return stats
 
 
-def _run(conn, cfg, driver_factory, limit, cap, ids, segment, sleep, log, tier) -> dict:
+def _run(conn, cfg, driver_factory, limit, cap, ids, segment, sleep, log, tier, include_low=False) -> dict:
     h = cfg.get("harvest") or {}
     cap = int(cap if cap is not None else h.get("daily_cap", 40))
     remaining = cap - used_today(conn)
     if remaining <= 0:
         log(f"Daily cap of {cap} reached — come back tomorrow (or pass --cap).")
         return {"processed": 0, "stopped": "daily cap"}
-    todo = queue(conn, cfg, min(limit or remaining, remaining), ids, segment, tier)
+    todo = queue(conn, cfg, min(limit or remaining, remaining), ids, segment, tier, include_low)
     if not todo:
         log("Nothing to enrich" + (f" in tier '{tier}'." if tier else "."))
         return {"processed": 0}
@@ -1094,8 +1116,10 @@ def main(argv: list[str] | None = None) -> None:
     ap.add_argument("--cap", type=int, help="override harvest.daily_cap for today")
     ap.add_argument("--ids", help="comma-separated contact ids")
     ap.add_argument("--segment", choices=["customer", "competitor", "internal"])
-    ap.add_argument("--tier", choices=list(TIERS),
-                    help="only this priority band and above: top50 accounts' contacts, top500 contacts, cat-a, all")
+    ap.add_argument("--tier", choices=list(TIER_CHOICES),
+                    help="only this band and above: p1, p2, p3 (MD priority list; legacy top50/top500/cat-a) or all")
+    ap.add_argument("--include-low", action="store_true",
+                    help="also harvest P4 (low relevance / noise) and Excluded contacts")
     ap.add_argument("--dry-run", action="store_true", help="print the queue only")
     ap.add_argument("--retry", "--retry-empty", dest="retry", action="store_true",
                     help="re-queue everyone without a summary yet (no profile found, failed, or came back empty)")
@@ -1148,9 +1172,9 @@ def main(argv: list[str] | None = None) -> None:
         if not (args.test or args.limit):
             return
     if args.dry_run:
-        rows = queue(conn, cfg, limit or 50, ids, args.segment, args.tier)
+        rows = queue(conn, cfg, limit or 50, ids, args.segment, args.tier, args.include_low)
         for r in rows:
-            print(f"{r['id']:>5}  t={r['tier']} p={r['priority']}  {r['segment']:<10} {r['full_name']:<30} {r.get('company') or ''}"
+            print(f"{r['id']:>5}  t={r['tier']} {r.get('kyc_tier') or '':<14} p={r['priority']}  {r['segment']:<10} {r['full_name']:<30} {r.get('company') or ''}"
                   f"  face={'need' if r['image_status'] == 'none' else r['image_status']}  summary={r['enrich_status']}")
         print(f"\n{len(rows)} shown · used today: {used_today(conn)}/{(cfg.get('harvest') or {}).get('daily_cap', 40)}")
         return
@@ -1162,7 +1186,7 @@ def main(argv: list[str] | None = None) -> None:
     if gave_up:
         print(f"(self-check: gave up on {gave_up} contact(s) — bad data every time even after repeated "
               f"fixes; marked 'failed', left for --set-url or the dashboard, not another auto-retry)")
-    stats = run(conn, cfg, factory, limit, args.cap, ids, args.segment, tier=args.tier)
+    stats = run(conn, cfg, factory, limit, args.cap, ids, args.segment, tier=args.tier, include_low=args.include_low)
     print(json.dumps(stats, indent=2))
     if args.exit_code and stats.get("stopped"):
         sys.exit(3 if stats["stopped"] == "daily cap" else 2)

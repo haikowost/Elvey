@@ -22,6 +22,8 @@ export interface GNode {
   zoho: boolean | null;
   kyc: 'done' | 'pending' | null;
   oppCount: number;
+  kycTier?: string | null;   // MD's KYC priority tier (P1 Key, P2 Active, ...)
+  kycScore?: number | null;
 }
 
 export interface GLink { source: string; target: string; rel: Rel; ex?: Record<string, unknown> }
@@ -31,6 +33,7 @@ export interface GraphPayload { source: 'seed' | 'live'; root?: string | null; n
 export interface Brief {
   id: string; label: string; type: NodeType; group: Group; sub: string | null; photoUrl: string | null;
   zoho: boolean | null; kyc: 'done' | 'pending' | null; oppCount: number; region: string | null;
+  kycTier?: string | null; kycScore?: number | null;
 }
 
 export interface EgoNode extends Brief { ring: 1 | 2; rel: Rel; rels?: Rel[]; parent?: string; opp?: string; w?: number }
@@ -58,7 +61,8 @@ export interface Dossier {
 export interface KycProgress {
   contacts: number; role_known: number; linkedin_url: number; photo: number; enriched: number;
   no_profile: number; queued: number; used_today: number; daily_cap: number;
-  tiers: { tier: string; label: string; total: number; enriched: number; photo: number }[];
+  tiers: { tier: string; label: string; total: number; enriched: number; pending: number; photo: number; pinned?: number }[];
+  priority_mode?: boolean;
   last_harvest_run: ({ at: string; processed?: number; stopped?: string; tier?: string } & Record<string, unknown>) | null;
   last_linkedin_visit: string | null; last_ingest: string | null;
 }

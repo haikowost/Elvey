@@ -11,6 +11,29 @@ A local, resumable KYC tool for Elvey Group's Projects/Pentagon division. It:
 
 Everything lives in one SQLite file (`elvey_kyc.db`). Every command can be re-run safely.
 
+### v5.1 (2026-10-10): harvest in the MD's KYC priority order, skip the noise
+
+`seed_data/kyc_priority.csv` (1,565 contacts scored on account value, quotes addressed to them,
+cadence, role and data quality) sets the harvest order. `python -m src.priority import` loads it, then
+the reviewed workbook in `config.yaml` `inputs.kyc_priority` if that file exists. In the
+**P1 Key — confirm** / **P2 Active** sheets:
+- **Y** pins the contact to the top.
+- **N** demotes it to P3.
+- **Not relevant** sets the tier to `Excluded`.
+- The **Correction** text is stored in `contacts.kyc_correction` and shown on the contact card as
+  "Review note". Nothing in it is acted on automatically.
+
+Contacts are matched by email, then contact_id, then name + company. Where duplicates merged into
+one contact, the best row wins. The harvester's order is:
+1. curated Elvey/competitor contacts not yet harvested;
+2. pinned contacts;
+3. P1, then P2, then P3.
+
+P4 and Excluded are never harvested unless you pass `--include-low`. Use `--tier p1|p2|p3` to stop
+after a given tier. Without a priority file, the top-50/top-500/category-A order still applies.
+`run_kyc.ps1` runs the import automatically. The KYC progress panel shows harvested/total per tier,
+and the People Tree sorts each company's people by score.
+
 ### v5 (2026-10-09): Spider first, real data in the graph, one command that actually harvests
 
 **Why the People Tree stayed empty:** the LinkedIn harvester drives *your own logged-in browser on

@@ -273,7 +273,7 @@ async function loadProgress() {
       <span><b>${k.role_known}</b> role known${pct(k.role_known)}</span>
       <span><b>${k.linkedin_url}</b> LinkedIn URL${pct(k.linkedin_url)}</span>
       <span><b>${k.photo}</b> photo${pct(k.photo)}</span>
-      <span class="muted">${k.tiers.map(t => `${esc(t.label)} ${t.enriched}/${t.total}`).join(' · ')}</span>
+      <span class="muted">${k.priority_mode ? 'By tier (done/total): ' : ''}${k.tiers.map(t => `${esc(t.label)} ${t.enriched}/${t.total}`).join(' · ')}</span>
       <span class="muted">Last harvest: ${esc(when)}${run && run.stopped ? ' — stopped: ' + esc(run.stopped) : ''}
         · today ${k.used_today}/${k.daily_cap} · ${k.queued} queued</span>`;
   } catch (e) { box.textContent = 'KYC progress unavailable: ' + e.message; }
@@ -305,6 +305,8 @@ const ALL_COLUMNS = [
   { key: 'in_zoho', label: 'In Zoho', get: p => p.in_zoho || '' },
   { key: 'in_makdb', label: 'In MakDB', get: p => p.in_makdb || '' },
   { key: 'priority', label: 'Priority', get: p => p.priority ?? '' },
+  { key: 'kyc_tier', label: 'KYC tier', get: p => p.kyc_tier || '' },
+  { key: 'kyc_score', label: 'KYC score', get: p => p.kyc_score ?? '' },
   { key: 'reports_to', label: 'Reports to', get: p => (p.reports_to && p.reports_to.name) || '' },
 ];
 const DEFAULT_COLS = ['name', 'role', 'company', 'department', 'allocated_rep', 'category', 'contact_class', 'email', 'cell'];
@@ -554,6 +556,8 @@ function contactCard(id) {
       ${g && g.brand_focus ? row('Brand focus', esc(g.brand_focus)) : ''}
       ${g && g.allocation ? row('Allocation', esc(g.allocation)) : ''}
       ${row('Priority', p.priority ? '#' + p.priority : '')}
+      ${row('KYC priority', p.kyc_tier ? esc(`${p.kyc_tier}${p.kyc_score != null ? ' · score ' + p.kyc_score : ''}${p.kyc_order ? ' · #' + p.kyc_order : ''}${p.kyc_pinned ? ' · confirmed' : ''}`) : '')}
+      ${row('Review note', esc(p.kyc_correction || ''))}
       ${row('KYC', esc([p.face ? 'photo ✓' : (p.image_status === 'no_photo' ? 'no LinkedIn photo' : 'no photo yet'), status,
                         p.match_confidence === 'name-only' ? 'matched by name only – please verify' : ''].filter(Boolean).join(' · ')))}
       ${row('In Zoho', p.zoho ? 'yes' : 'not yet')}

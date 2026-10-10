@@ -35,6 +35,10 @@ inputs:
   # If a dated name doesn't exist, run_kyc.ps1 picks the newest 'Elvey Consolidated Relational
   # Database *.xlsx' in the same folder. Env override: KYC_RELATIONAL.
   relational_workbook: 'G:\.shortcut-targets-by-id\1ZYeE9cZf8VERsTP7Nq1jHVFXJvUgzThq\Elveygroup portfolio expert\Sales\Elvey Consolidated Relational Database 20260930.xlsx'
+  # The MD's KYC contact priority (harvest order). seed_data/kyc_priority.csv is always imported
+  # first; point this at Haiko's REVIEWED 'Elvey KYC Contact Priority <date>.xlsx' (Y / N / Not
+  # relevant / correction columns) and it's applied on top. Newest dated copy wins. Optional.
+  kyc_priority: 'G:\.shortcut-targets-by-id\1ZYeE9cZf8VERsTP7Nq1jHVFXJvUgzThq\Elveygroup portfolio expert\Sales\Elvey KYC Contact Priority 20261010.xlsx'
   format: auto
   sheet: 'Customers (import)'   # flat format only: sheet name (default = first sheet)
 
