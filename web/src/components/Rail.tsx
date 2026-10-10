@@ -10,6 +10,7 @@ import SavedViews from './SavedViews';
 export const VIEWS: { key: View; label: string; icon: string; help: string }[] = [
   { key: 'spider', label: 'Spider', icon: '✳', help: 'Opens centred on Elvey. Rings group neighbours by relationship; click any spoke to re-centre, the breadcrumb (or ⌂) takes you back.' },
   { key: 'org', label: 'Org', icon: '⊤', help: 'Our side → integrators → end-users → consultants → competitors. Click a card to expand it.' },
+  { key: 'people', label: 'People', icon: '☰', help: 'Everyone in KYC priority order (Key tiers first). ↻ Update from LinkedIn refreshes one person now — no Claude tokens.' },
   { key: 'investigate', label: 'Investigate', icon: '▤', help: 'Pick an account: its reps, opportunities, projects and linked consultants / end-users.' },
   { key: 'graph', label: '3D graph', icon: '◉', help: 'Everything at once. Drag to orbit, scroll to zoom; hover for the insight card, click for the dossier.' },
 ];

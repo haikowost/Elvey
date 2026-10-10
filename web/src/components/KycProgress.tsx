@@ -37,10 +37,15 @@ export default function KycProgress() {
       <Bar label="LinkedIn URL" n={p.linkedin_url} of={p.contacts} />
       <Bar label="Photo" n={p.photo} of={p.contacts} />
       {p.priority_mode ? <div className="kyc-sub">Harvested by priority tier (done / total)</div> : null}
-      {p.tiers.map((t) => <Bar key={t.tier} label={`${t.label}${t.pending ? ` · ${t.pending} pending` : ''}`} n={t.enriched} of={t.total} />)}
+      {p.tiers.filter((t) => t.total).map((t) => (
+        <Bar key={t.tier} label={`${t.label}${t.pending ? ` · ${t.pending} pending` : ''}${t.failed ? ` · ${t.failed} failed` : ''}`} n={t.enriched} of={t.total} />
+      ))}
       <div className={`kyc-run${ageDays > 2 ? ' stale' : ''}`}>
         {run ? <>Last harvest {new Date(run.at).toLocaleString('en-ZA')}{run.stopped ? ` — stopped: ${run.stopped}` : ''}</> : 'Harvest has never run'}
         <br />{p.contacts} contacts · today {p.used_today}/{p.daily_cap} · {p.queued} queued
+        <br />{p.schedule?.mode === 'scheduled' ? `Next scheduled run: ${p.schedule.next_run ?? '?'}` : 'Manual only (no scheduled run)'}
+        {p.schedule?.old_task_present ? <><br /><span className="err">Old 2-hourly task still scheduled — run scripts\unschedule_kyc.ps1</span></> : null}
+        {p.captures_pending ? <><br /><a href="/capture">{p.captures_pending} LinkedIn capture(s) to match</a></> : null}
       </div>
     </section>
   );

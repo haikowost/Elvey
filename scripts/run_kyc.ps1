@@ -11,24 +11,36 @@
 #      CLEANED contacts sheet). A dated name that no longer exists falls back to the newest export.
 #   3. Matches the KYC face library to contacts.
 #   4. Imports the KYC contact priority (seed_data\kyc_priority.csv + the reviewed workbook in
-#      config.yaml inputs.kyc_priority), then runs the LinkedIn harvester in priority batches:
-#      curated Elvey/competitor contacts not yet harvested, confirmed (Y) contacts, P1, P2, P3.
+#      config.yaml inputs.kyc_priority; INT-/SUP- people not in the DB yet are created), then runs the
+#      LinkedIn harvester in priority batches: Key: Internal -> Key: Supplier -> Key: BD ->
+#      Key: Competitor, confirmed (Y) contacts, P1, P2, P3. Complete contacts (role + profile URL +
+#      photo + work history, harvested < 90 days ago) are skipped; incomplete ones only fetch what's missing.
 #      P4 / Excluded are skipped (-IncludeLow to include them). Without a priority file it falls
 #      back to top-50 accounts, top-500 contacts, category A. The daily cap / pacing / checkpoint stops in config.yaml
 #      apply unchanged. FIRST RUN: a browser window opens - log into LinkedIn there, complete any
 #      security check, then press Enter in THIS window. That login is remembered afterwards.
-#   5. Exports data\exports\Elvey KYC enriched contacts <date>.xlsx + data\exports\faces\.
+#   5. Exports data\exports\Elvey KYC enriched contacts <date>.xlsx + data\exports\faces\, and the
+#      people snapshot (people_snapshot.json/.csv) to config.yaml exports.snapshot_dir (default: the
+#      Google Drive KYC folder) - the claude.ai people view is refreshed from that file.
 #   6. Starts the dashboard (its own window) and opens http://127.0.0.1:<port>/graph/.
 #
 # Switches: -SkipHarvest (just refresh data + open the dashboard), -NoDashboard, -BatchLimit N
-# (max contacts per tier per run; the daily cap still wins), -Tiers p1,p2 (subset), -IncludeLow.
+# (max contacts per tier per run; the daily cap still wins), -Tiers key,p1 (subset), -IncludeLow,
+# -Scheduled (what scripts\schedule_kyc.ps1 registers: no dashboard, no prompts, small batches).
 param(
     [switch]$SkipHarvest,
     [switch]$NoDashboard,
     [int]$BatchLimit = 0,
-    [string[]]$Tiers = @('p1', 'p2', 'p3'),
-    [switch]$IncludeLow
+    [string[]]$Tiers = @('key', 'p1', 'p2', 'p3'),
+    [switch]$IncludeLow,
+    [switch]$Scheduled
 )
+if ($Scheduled) {
+    $NoDashboard = $true
+    $env:KYC_NO_PAUSE = '1'
+    if ($BatchLimit -le 0) { $BatchLimit = 10 }
+    $Tiers = @('p3')   # one small batch, strictly in priority order (Key tiers first, then P1, P2, P3)
+}
 
 $ErrorActionPreference = 'Continue'
 $env:PYTHONUTF8 = '1'          # names like 'Carla Muller' with accents print fine in any console
@@ -44,8 +56,16 @@ function Fail($text) {
     Write-Host ""; Write-Host "!! $text" -ForegroundColor Red
     Write-Host "   Log: $log"
     try { Stop-Transcript | Out-Null } catch { }
-    Read-Host "Press Enter to close"
+    if (-not $env:KYC_NO_PAUSE) { Read-Host "Press Enter to close" }
     exit 1
+}
+
+# The retired every-2-hours task harvests in the OLD order from an old checkout - it must go.
+& schtasks /Query /TN "Elvey LinkedIn harvest" 2>$null | Out-Null
+if ($LASTEXITCODE -eq 0) {
+    Write-Host ""
+    Write-Host "!! The old scheduled task 'Elvey LinkedIn harvest' (every 2 hours, old harvest order) is still registered." -ForegroundColor Yellow
+    Write-Host "   Remove it with:  powershell -ExecutionPolicy Bypass -File scripts\unschedule_kyc.ps1" -ForegroundColor Yellow
 }
 
 # ---------------------------------------------------------------- 1. Python environment
@@ -99,6 +119,7 @@ if (-not $SkipHarvest) {
         $hargs = @('-m', 'src.harvest', '--tier', $tier, '--exit-code')
         if ($BatchLimit -gt 0) { $hargs += @('--limit', "$BatchLimit") }
         if ($IncludeLow) { $hargs += '--include-low' }
+        if ($Scheduled) { $hargs += '--no-prompt' }
         & $py @hargs
         $code = $LASTEXITCODE
         if ($code -eq 3) { Write-Host "Daily cap reached - the rest continues on the next run (tomorrow)." -ForegroundColor Yellow; break }
@@ -113,6 +134,10 @@ if (-not $SkipHarvest) {
 Step "Exporting enriched contacts + faces"
 & $py -m src.export
 if ($LASTEXITCODE -ne 0) { Write-Host "(export reported a problem - continuing)" -ForegroundColor Yellow }
+
+Step "People snapshot (for the claude.ai people view)"
+& $py -m src.export snapshot
+if ($LASTEXITCODE -ne 0) { Write-Host "(snapshot reported a problem - continuing)" -ForegroundColor Yellow }
 
 Step "KYC progress"
 & $py -m src.dashboard --progress

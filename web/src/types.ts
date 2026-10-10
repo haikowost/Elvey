@@ -3,7 +3,7 @@ export type Group = 'elvey' | 'customer' | 'supplier' | 'enduser' | 'consultant'
 export type Rel =
   | 'works_at' | 'part_of' | 'does_business_with' | 'involved_in' | 'specifies'
   | 'serves' | 'competes' | 'opportunity' | 'knows';
-export type View = 'graph' | 'spider' | 'org' | 'investigate';
+export type View = 'graph' | 'spider' | 'org' | 'investigate' | 'people';
 
 export interface Opp { t?: string; p?: string; val?: string; via?: string | null }
 
@@ -61,8 +61,11 @@ export interface Dossier {
 export interface KycProgress {
   contacts: number; role_known: number; linkedin_url: number; photo: number; enriched: number;
   no_profile: number; queued: number; used_today: number; daily_cap: number;
-  tiers: { tier: string; label: string; total: number; enriched: number; pending: number; photo: number; pinned?: number }[];
+  tiers: { tier: string; label: string; total: number; enriched: number; pending: number; failed?: number; photo: number; pinned?: number }[];
   priority_mode?: boolean;
+  schedule?: { mode: 'scheduled' | 'manual only'; next_run: string | null; task: string | null; old_task_present: boolean };
+  captures_pending?: number;
+  last_snapshot?: { at: string; json: string; people: number } | null;
   last_harvest_run: ({ at: string; processed?: number; stopped?: string; tier?: string } & Record<string, unknown>) | null;
   last_linkedin_visit: string | null; last_ingest: string | null;
 }
@@ -79,3 +82,5 @@ export interface Investigation {
   competitors: (Brief & { via: string })[];
   plays: string[];
 }
+
+export interface HarvestResult { ok: boolean; result: string | null; used_today: number; contact: Record<string, unknown> }

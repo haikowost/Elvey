@@ -15,6 +15,7 @@ matters", per the spec).
 from __future__ import annotations
 
 import argparse
+import base64
 import io
 import json
 import shutil
@@ -135,13 +136,132 @@ def export_enriched(conn, cfg, out_dir: Path | None = None) -> dict:
             "faces_missing": missing}
 
 
+# --------------------------------------------------------------------------- people snapshot
+
+SNAPSHOT_JSON = "people_snapshot.json"
+SNAPSHOT_CSV = "people_snapshot.csv"
+SNAPSHOT_COLUMNS = ("id", "name", "company", "segment", "tier", "score", "kyc_order", "pinned", "role", "department",
+                    "email", "linkedin", "location", "employment", "now_at", "kyc_status", "complete",
+                    "last_harvested", "correction", "summary")
+THUMB_PX = 72
+
+
+def snapshot_dir(cfg) -> Path:
+    """Where people_snapshot.json goes: exports.snapshot_dir when its folder (or its parent) exists;
+    blank = the Google Drive KYC folder (paths.kyc_folder, a Drive for desktop path) when that exists;
+    else data/exports. Relative paths resolve against config.yaml."""
+    configured = cfg.path("exports", "snapshot_dir")
+    if configured and (configured.exists() or configured.parent.exists()):
+        return configured
+    if not configured and cfg.kyc_folder and cfg.kyc_folder.is_dir():
+        return cfg.kyc_folder
+    return cfg.data_dir / "exports"
+
+
+def _thumb(cfg, filename: str | None, px: int = THUMB_PX) -> str | None:
+    if not filename or not cfg.kyc_folder:
+        return None
+    f = cfg.kyc_folder / filename
+    if not f.is_file():
+        return None
+    try:
+        from PIL import Image
+
+        img = Image.open(f).convert("RGB")
+        img.thumbnail((px, px))
+        buf = io.BytesIO()
+        img.save(buf, "JPEG", quality=70, optimize=True)
+        return "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode()
+    except Exception:  # noqa: BLE001 - one unreadable face must not stop the snapshot
+        return None
+
+
+def snapshot_data(conn, cfg) -> dict:
+    """Everything the people view needs, as plain JSON: people (tier, score, role, company, profile URL,
+    small photo, last harvested, correction notes), accounts and the links between them."""
+    from .harvest import REFRESH_DAYS, is_complete
+    from .priority import tier_counts
+
+    days = int((cfg.get("harvest") or {}).get("refresh_days", REFRESH_DAYS))
+    roles: dict[int, list[str]] = {}
+    for r in db.rows(conn, "SELECT account_id, role FROM account_roles ORDER BY role"):
+        roles.setdefault(r["account_id"], []).append(r["role"])
+    accounts = [{"id": f"a{a['id']}", "name": a["name"], "segment": a["segment"], "rank": a["rank"], "rep": a["rep"],
+                 "division": a["division"], "kyc_status": a["kyc_status"], "roles": roles.get(a["id"], [])}
+                for a in db.rows(conn, "SELECT * FROM accounts ORDER BY rank IS NULL, rank, name")]
+    people, links = [], []
+    for c in db.rows(conn, """SELECT c.*, a.name AS company FROM contacts c LEFT JOIN accounts a ON a.id = c.account_id
+                              WHERE c.contact_status = 'active'
+                              ORDER BY c.kyc_priority_order IS NULL, c.kyc_priority_order, c.priority IS NULL,
+                                       c.priority, c.full_name"""):
+        has_photo = c["image_status"] in ("downloaded", "manual")
+        people.append({
+            "id": f"c{c['id']}", "name": c["full_name"], "company": c["company"],
+            "account_id": f"a{c['account_id']}" if c["account_id"] else None, "segment": c["segment"],
+            "tier": c["kyc_tier"], "score": c["kyc_score"], "kyc_order": c["kyc_priority_order"],
+            "pinned": bool(c["kyc_pinned"]), "role": c["role"], "department": c["department"], "email": c["email"],
+            "linkedin": c["linkedin_profile_url"] or (c["linkedin_contact_url"] if c["linkedin_contact_url"] and
+                                                      "/in/" in c["linkedin_contact_url"] else None),
+            "location": ", ".join(x for x in (c["city"], c["province"], c["country"]) if x) or None,
+            "employment": c["employment_status"], "now_at": c["linkedin_current_company"],
+            "kyc_status": c["enrich_status"], "complete": is_complete(c, days),
+            "last_harvested": c["enrich_last_at"], "correction": c["kyc_correction"],
+            "summary": c["linkedin_summary"], "experience": db.jload(c["linkedin_experience"], []),
+            "photo": _thumb(cfg, c["image_filename"]) if has_photo else None,
+        })
+        if c["account_id"]:
+            links.append({"source": f"c{c['id']}", "target": f"a{c['account_id']}", "rel": "works_at"})
+        if c["reports_to_id"]:
+            links.append({"source": f"c{c['id']}", "target": f"c{c['reports_to_id']}", "rel": "reports_to"})
+    for l in db.rows(conn, "SELECT source, target, rel FROM graph_links"):
+        links.append(dict(l))
+    last_run = db.jload((db.one(conn, "SELECT value FROM meta WHERE key = 'last_harvest_run'") or {}).get("value"))
+    return {"generated_at": time.strftime("%Y-%m-%dT%H:%M:%S"), "source": "elvey-kyc local app",
+            "counts": {"people": len(people), "accounts": len(accounts), "links": len(links),
+                       "with_photo": sum(1 for p in people if p["photo"]),
+                       "complete": sum(1 for p in people if p["complete"])},
+            "tiers": tier_counts(conn), "last_harvest_run": last_run,
+            "people": people, "accounts": accounts, "links": links}
+
+
+def write_snapshot(conn, cfg, out_dir: Path | str | None = None) -> dict:
+    """people_snapshot.json + people_snapshot.csv into exports.snapshot_dir (written to a temp name
+    and renamed, so Drive never syncs half a file)."""
+    import csv
+
+    out = Path(out_dir) if out_dir else snapshot_dir(cfg)
+    out.mkdir(parents=True, exist_ok=True)
+    data = snapshot_data(conn, cfg)
+    js, cs = out / SNAPSHOT_JSON, out / SNAPSHOT_CSV
+    tmp = js.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":"), default=str), encoding="utf-8")
+    tmp.replace(js)
+    tmp = cs.with_suffix(".csv.tmp")
+    with open(tmp, "w", newline="", encoding="utf-8-sig") as fh:
+        w = csv.DictWriter(fh, fieldnames=list(SNAPSHOT_COLUMNS), extrasaction="ignore")
+        w.writeheader()
+        for p in data["people"]:
+            w.writerow({**p, "pinned": "Y" if p["pinned"] else "", "complete": "Y" if p["complete"] else ""})
+    tmp.replace(cs)
+    with conn:
+        conn.execute("INSERT OR REPLACE INTO meta(key, value) VALUES ('last_snapshot', ?)",
+                     [json.dumps({"at": data["generated_at"], "json": str(js), "people": len(data["people"])})])
+    return {"json": str(js), "csv": str(cs), **data["counts"]}
+
+
 def main(argv: list[str] | None = None) -> None:
-    ap = argparse.ArgumentParser(description="Export the enriched contacts (.xlsx) + face images")
-    ap.add_argument("--out", help="output folder (default data/exports)")
+    ap = argparse.ArgumentParser(description="Export the enriched contacts (.xlsx) + face images, or "
+                                             "`snapshot`: people_snapshot.json/.csv for the people view")
+    ap.add_argument("cmd", nargs="?", choices=("enriched", "snapshot"), default="enriched")
+    ap.add_argument("--out", help="output folder (default data/exports; snapshot: exports.snapshot_dir)")
     ap.add_argument("--config")
     args = ap.parse_args(argv)
     cfg = load_config(args.config)
-    print(json.dumps(export_enriched(db.connect(cfg.db_path), cfg, args.out), indent=2))
+    conn = db.connect(cfg.db_path)
+    if args.cmd == "snapshot":
+        print(json.dumps(write_snapshot(conn, cfg, args.out), indent=2))
+        return
+    print(json.dumps(export_enriched(conn, cfg, args.out), indent=2))
 
 
 if __name__ == "__main__":

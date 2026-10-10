@@ -74,6 +74,16 @@ harvest:
   summary_chars: 500
   max_experience: 5
   max_attempts: 2        # give up on a contact after N failed attempts
+  # A contact with role + LinkedIn profile URL + photo + work history, harvested within this many days,
+  # is complete and skipped; incomplete ones are retried for what's missing only.
+  refresh_days: 90
+
+exports:
+  # `python -m src.export snapshot` (run at the end of every run_kyc.ps1 pass and after each manual
+  # "Update from LinkedIn") writes people_snapshot.json + people_snapshot.csv here. Blank = the Google
+  # Drive KYC folder (paths.kyc_folder) when Drive for desktop has it mounted, else data/exports.
+  # The claude.ai "Elvey Deal & People Intelligence" view is refreshed from this file by the daily pass.
+  snapshot_dir: ''
 
 dashboard:
   host: 127.0.0.1

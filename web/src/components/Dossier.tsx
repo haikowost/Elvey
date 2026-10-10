@@ -4,12 +4,14 @@ import { useStore } from '../store';
 import { GROUP_LABEL, REL_COLOR, REL_LABEL } from '../theme';
 import type { Dossier as D } from '../types';
 import { Avatar, Dot, KycChip, OppBadge, ZohoChip } from './bits';
+import UpdateButton from './UpdateButton';
 
 export default function Dossier() {
   const id = useStore((s) => s.selectedId);
   const open = useStore((s) => s.dossierOpen);
   const openDossier = useStore((s) => s.openDossier);
   const select = useStore((s) => s.select);
+  const nodes = useStore((s) => s.nodes); // a reload after "Update from LinkedIn" refetches the dossier
   const [d, setD] = useState<D | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
@@ -19,7 +21,7 @@ export default function Dossier() {
     setErr(null);
     api.entity(id).then((x) => live && setD(x)).catch((e) => live && setErr(String(e)));
     return () => { live = false; };
-  }, [id, open]);
+  }, [id, open, nodes]);
 
   if (!open || !id) return null;
   if (err) return <aside className="dossier glass"><button className="icon-btn close" onClick={() => openDossier(false)}>✕</button><p className="err">{err}</p></aside>;
@@ -52,6 +54,7 @@ export default function Dossier() {
       {n.type === 'person' ? (
         <>
           <h3>LinkedIn</h3>
+          <div className="actions"><UpdateButton nodeId={n.id} /></div>
           {d.kyc_pending ? (
             <div className="pending">KYC pending — this contact hasn't been enriched yet. The harvester will fill in their summary and work history.</div>
           ) : (

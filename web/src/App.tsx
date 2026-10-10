@@ -8,6 +8,7 @@ import { useStore } from './store';
 import type { View } from './types';
 import Investigate from './views/Investigate';
 import Org from './views/Org';
+import People from './views/People';
 import Spider from './views/Spider';
 
 // three.js is most of the bundle: only fetch it when the 3D view is actually opened
@@ -83,6 +84,7 @@ export default function App() {
             {view === 'spider' ? <Spider /> : null}
             {view === 'org' ? <Org /> : null}
             {view === 'investigate' ? <Investigate /> : null}
+            {view === 'people' ? <People /> : null}
           </>
         ) : !loadError ? <div className="empty"><div className="muted">Loading the deal network…</div></div> : null}
         <div className="topbar">

@@ -229,3 +229,19 @@ a { color: var(--customer); }
 .kyc .kyc-run.stale { color: #f5a524; }
 .kyc .kyc-sub { font-size: 11px; color: var(--muted); margin: 8px 0 4px; }
 .kyc .kyc-of { color: var(--muted); font-weight: 400; }
+
+/* People view + "Update from LinkedIn" */
+.people-view { position: absolute; inset: 0; overflow: auto; padding: 64px 16px 24px; }
+.people-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px 10px; border-radius: 12px; margin-bottom: 10px; position: sticky; top: 0; z-index: 2; }
+.people-bar input[type=search] { min-width: 220px; flex: 1; }
+.people-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.people-row { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-radius: 10px; flex-wrap: wrap; }
+.people-who { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 220px; text-align: left; background: none; border: 0; color: inherit; cursor: pointer; padding: 0; }
+.people-who span { display: flex; flex-direction: column; min-width: 0; }
+.people-who .muted { font-size: 12px; }
+.people-tier { font-size: 12px; min-width: 120px; }
+.upd { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.upd-msg { font-size: 11.5px; color: var(--muted); }
+.upd-msg.err { color: #f87171; }
+@media (max-width: 640px) { .people-view { padding: 64px 12px 24px; } .people-tier { min-width: 0; } }
+.people-bar .select { width: auto; }

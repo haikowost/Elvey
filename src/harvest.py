@@ -545,7 +545,7 @@ def ensure_login(page, prompt=input, interactive: bool = True, max_rounds: int =
 
 
 class LinkedInDriver:
-    def __init__(self, cfg, headless: bool = False):
+    def __init__(self, cfg, headless: bool = False, interactive: bool | None = None):
         from playwright.sync_api import sync_playwright
 
         self.h = cfg.get("harvest") or {}
@@ -560,7 +560,7 @@ class LinkedInDriver:
         self.ctx = self._pw.chromium.launch_persistent_context(str(profile), **launch)
         self.page = self.ctx.pages[0] if self.ctx.pages else self.ctx.new_page()
         try:
-            self._ensure_login()
+            self._ensure_login(interactive=interactive)
         except StopHarvest:
             self.close()
             raise
@@ -706,24 +706,66 @@ TIER_SQL = """CASE
     ELSE 4 END"""
 # --tier names in priority mode (the legacy names map onto the same three batches, so
 # scripts/run_kyc.ps1 works either way)
-PRIORITY_TIERS = {"p1": 2, "p2": 3, "p3": 5, "all": 5, "top50": 2, "top500": 3, "cat-a": 5}
-LEGACY_ALIASES = {"p1": "top50", "p2": "top500", "p3": "cat-a"}
-TIER_CHOICES = ("p1", "p2", "p3", "top50", "top500", "cat-a", "all")
+# 'key' = the four Key: tiers (+ curated never-harvested); each later band includes everything above it
+PRIORITY_TIERS = {"key": 4, "p1": 6, "p2": 7, "p3": 9, "all": 9, "top50": 6, "top500": 7, "cat-a": 9}
+LEGACY_ALIASES = {"key": "top50", "p1": "top50", "p2": "top500", "p3": "cat-a"}
+TIER_CHOICES = ("key", "p1", "p2", "p3", "top50", "top500", "cat-a", "all")
+
+# A contact is COMPLETE - and skipped - when everything the harvest exists to collect is there and was
+# looked at recently: a role, a real /in/ profile URL, a photo and work history, harvested < N days ago
+# (harvest.refresh_days, default 90). Incomplete contacts are queued for what's missing only (the face
+# is only fetched when there isn't one); complete ones come back for a refresh once they go stale.
+REFRESH_DAYS = 90
+HAS_URL_SQL = ("(coalesce(c.linkedin_profile_url, '') LIKE '%linkedin.com/in/%' "
+               "OR coalesce(c.linkedin_contact_url, '') LIKE '%linkedin.com/in/%')")
+
+
+def complete_sql(days: int = REFRESH_DAYS) -> str:
+    return (f"(coalesce(trim(c.role), '') != '' AND {HAS_URL_SQL} AND c.image_status IN ('downloaded', 'manual') "
+            f"AND coalesce(c.linkedin_experience, '') NOT IN ('', '[]') AND c.enrich_last_at IS NOT NULL "
+            f"AND c.enrich_last_at >= datetime('now', 'localtime', '-{int(days)} days'))")
+
+
+def needs_sql(days: int = REFRESH_DAYS) -> str:
+    """Who still has something to collect (and hasn't been given up on)."""
+    stale = f"(c.enrich_last_at IS NULL OR c.enrich_last_at < datetime('now', 'localtime', '-{int(days)} days'))"
+    return (f"(NOT {complete_sql(days)} AND ("
+            f"c.enrich_status = 'pending' OR (c.enrich_status = 'failed' AND c.enrich_attempts < ?) "
+            f"OR (c.enrich_status = 'done' AND (c.image_status = 'none' OR {stale}))))")
+
+
+def is_complete(c: dict, days: int = REFRESH_DAYS, now: datetime | None = None) -> bool:
+    """Python twin of complete_sql (used by the dashboard / tests)."""
+    if not ((c.get("role") or "").strip() and (is_profile_url(c.get("linkedin_profile_url")) or
+                                               is_profile_url(c.get("linkedin_contact_url")))):
+        return False
+    if c.get("image_status") not in ("downloaded", "manual") or (c.get("linkedin_experience") or "") in ("", "[]"):
+        return False
+    try:
+        at = datetime.fromisoformat(str(c.get("enrich_last_at")))
+    except ValueError:
+        return False
+    return ((now or datetime.now()) - at).days < days
 
 
 def queue(conn, cfg, limit: int | None = None, ids: list[int] | None = None, segment: str | None = None,
-          tier: str | None = None, include_low: bool = False) -> list[dict]:
-    """Who to enrich next, best first. `tier` ('p1' | 'p2' | 'p3' | 'all', or the legacy
+          tier: str | None = None, include_low: bool = False, force: bool = False) -> list[dict]:
+    """Who to enrich next, best first. `tier` ('key' | 'p1' | 'p2' | 'p3' | 'all', or the legacy
     'top50' | 'top500' | 'cat-a') limits the queue to that band and everything above it, which is
-    how scripts/run_kyc.ps1 batches a day's cap. Explicit `ids` are always honoured."""
+    how scripts/run_kyc.ps1 batches a day's cap. Explicit `ids` are always honoured (still only when
+    something is missing, unless `force` - the dashboard's "Update from LinkedIn" button)."""
     from .priority import LOW_RANK, RANK_SQL, has_priority
 
     if tier and tier not in TIER_CHOICES:
         raise ValueError(f"unknown tier {tier!r} (use one of {', '.join(TIER_CHOICES)})")
-    max_attempts = (cfg.get("harvest") or {}).get("max_attempts", 2)
-    where = ["(c.image_status = 'none' OR c.enrich_status = 'pending' OR (c.enrich_status = 'failed' AND c.enrich_attempts < ?))",
-             "c.enrich_status != 'no_profile'", "c.contact_status = 'active'"]
-    params: list = [max_attempts]
+    h = cfg.get("harvest") or {}
+    max_attempts = h.get("max_attempts", 2)
+    if force and ids:
+        where, params = [], []
+    else:
+        where = [needs_sql(int(h.get("refresh_days", REFRESH_DAYS))), "c.enrich_status != 'no_profile'",
+                 "c.contact_status = 'active'"]
+        params = [max_attempts]
     if ids:
         where.append(f"c.id IN ({','.join('?' * len(ids))})")
         params += ids
@@ -755,8 +797,10 @@ def queue(conn, cfg, limit: int | None = None, ids: list[int] | None = None, seg
 
 
 def used_today(conn) -> int:
-    return conn.execute("SELECT count(*) FROM harvest_log WHERE day = ? AND result != 'stopped'",
-                        [date.today().isoformat()]).fetchone()[0]
+    """LinkedIn page-sets the harvester opened today. Bookmarklet captures ('capture:...') are pages
+    Haiko opened himself, so they never count against the daily cap."""
+    return conn.execute("SELECT count(*) FROM harvest_log WHERE day = ? AND result != 'stopped' "
+                        "AND result NOT LIKE 'capture%'", [date.today().isoformat()]).fetchone()[0]
 
 
 def save_debug(cfg, contact: dict, text: str | None, kind: str) -> None:
@@ -781,18 +825,27 @@ def find_account(conn, company: str | None) -> int | None:
     return None
 
 
-def apply_result(conn, cfg, contact: dict, res: Result, need_face: bool) -> str:
-    """Write one harvest result to the DB (and the face to the KYC folder). Returns the log label."""
+def apply_result(conn, cfg, contact: dict, res: Result, need_face: bool, source: str = "harvest",
+                 trusted: bool = False) -> str:
+    """Write one harvest result to the DB (and the face to the KYC folder). Returns the log label.
+
+    source='capture' is a page Haiko sent with the bookmarklet: logged as 'capture:<label>' (never
+    counts against the daily cap), and the role it shows wins over a spreadsheet role (still never
+    over a manual edit). trusted=True skips the name check (he picked the contact himself)."""
     h = cfg.get("harvest") or {}
     changes: dict = {"enrich_last_at": time.strftime("%Y-%m-%d %H:%M:%S")}
     label = res.status
-    if res.status == "done" and res.profile_name and name_score(res.profile_name, contact["full_name"]) < NAME_MATCH_MIN:
+    if res.status == "done" and not trusted and res.profile_name and \
+            name_score(res.profile_name, contact["full_name"]) < NAME_MATCH_MIN:
         res = Result("no_profile", error=f"LinkedIn profile found was '{res.profile_name}', not this person",
                      debug_text=res.debug_text)
         label = "no_profile"
     extra = db.jload(contact.get("extra"), {})
     if res.status == "done":
         empty = not (res.headline or res.about or res.experience)
+        old_exp = db.jload(contact.get("linkedin_experience"), [])
+        if not res.experience and old_exp:
+            res.experience = old_exp  # a re-visit that couldn't read Experience must not wipe what we had
         changes.update({
             "linkedin_summary": build_summary(res.headline, res.about, int(h.get("summary_chars", 500)),
                                               experience=res.experience, location=res.location),
@@ -824,7 +877,8 @@ def apply_result(conn, cfg, contact: dict, res: Result, need_face: bool) -> str:
         # a spreadsheet role (role_source='data') or a human edit ('manual') is never overwritten;
         # a blank/'pending' role (the sheet's "lookup pending (KYC app)" placeholder) or a stale
         # LinkedIn-sourced role may be (re)filled — this is the fix for role not reaching the sheet.
-        if title and ROLE_RANK.get("linkedin", 0) >= ROLE_RANK.get(contact.get("role_source"), 0):
+        role_rank = ROLE_RANK["data"] if source == "capture" else ROLE_RANK.get("linkedin", 0)
+        if title and role_rank >= ROLE_RANK.get(contact.get("role_source"), 0):
             if contact.get("role") != title[:100]:
                 changes["role"] = title[:100]
             changes["role_source"] = "linkedin"
@@ -856,7 +910,7 @@ def apply_result(conn, cfg, contact: dict, res: Result, need_face: bool) -> str:
                 folder = cfg.kyc_folder
                 folder.mkdir(parents=True, exist_ok=True)
                 target = folder / fname
-                if not target.exists():
+                if not target.exists() or contact.get("image_status") not in ("downloaded", "manual"):
                     target.write_bytes(res.photo)
                 changes.update({"image_filename": fname, "image_status": "downloaded"})
             else:
@@ -872,6 +926,8 @@ def apply_result(conn, cfg, contact: dict, res: Result, need_face: bool) -> str:
         changes.update({"enrich_status": "failed", "enrich_error": (res.error or "")[:500],
                         "enrich_attempts": (contact.get("enrich_attempts") or 0) + 1})
         save_debug(cfg, contact, (res.error or "") + "\n\n" + (res.debug_text or ""), "failed")
+    if source == "capture":
+        label = f"capture:{label}"
     with conn:
         db.update(conn, "contacts", contact["id"], changes)
         conn.execute("INSERT INTO harvest_log(contact_id, day, result, detail) VALUES (?,?,?,?)",
@@ -887,20 +943,22 @@ def record_run(conn, stats: dict) -> None:
 
 
 def run(conn, cfg, driver_factory, limit: int | None = None, cap: int | None = None, ids=None, segment=None,
-        sleep=time.sleep, log=print, tier: str | None = None, include_low: bool = False) -> dict:
-    stats = _run(conn, cfg, driver_factory, limit, cap, ids, segment, sleep, log, tier, include_low)
-    record_run(conn, {**stats, **({"tier": tier} if tier else {})})
+        sleep=time.sleep, log=print, tier: str | None = None, include_low: bool = False, force: bool = False,
+        record: bool = True) -> dict:
+    stats = _run(conn, cfg, driver_factory, limit, cap, ids, segment, sleep, log, tier, include_low, force)
+    if record:
+        record_run(conn, {**stats, **({"tier": tier} if tier else {})})
     return stats
 
 
-def _run(conn, cfg, driver_factory, limit, cap, ids, segment, sleep, log, tier, include_low=False) -> dict:
+def _run(conn, cfg, driver_factory, limit, cap, ids, segment, sleep, log, tier, include_low=False, force=False) -> dict:
     h = cfg.get("harvest") or {}
     cap = int(cap if cap is not None else h.get("daily_cap", 40))
     remaining = cap - used_today(conn)
     if remaining <= 0:
         log(f"Daily cap of {cap} reached — come back tomorrow (or pass --cap).")
         return {"processed": 0, "stopped": "daily cap"}
-    todo = queue(conn, cfg, min(limit or remaining, remaining), ids, segment, tier, include_low)
+    todo = queue(conn, cfg, min(limit or remaining, remaining), ids, segment, tier, include_low, force)
     if not todo:
         log("Nothing to enrich" + (f" in tier '{tier}'." if tier else "."))
         return {"processed": 0}
@@ -916,7 +974,7 @@ def _run(conn, cfg, driver_factory, limit, cap, ids, segment, sleep, log, tier, 
         return {**stats, "stopped": msg}
     try:
         for n, c in enumerate(todo, 1):
-            need_face = c["image_status"] == "none"
+            need_face = c["image_status"] == "none" or (force and c["image_status"] == "no_photo")
             log(f"[{n}/{len(todo)}] {c['full_name']} ({c.get('company') or '-'}) face={'y' if need_face else 'n'}")
             try:
                 res = driver.fetch(c, need_face)
@@ -1133,6 +1191,8 @@ def main(argv: list[str] | None = None) -> None:
                         "(also runs automatically, quietly, at the start of every normal run)")
     ap.add_argument("--no-fix", action="store_true", help="with --verify, only report — don't re-queue anything")
     ap.add_argument("--headless", action="store_true", help="not recommended (LinkedIn is stricter)")
+    ap.add_argument("--no-prompt", action="store_true",
+                    help="never wait for a LinkedIn log-in in the console (scheduled runs): stop instead")
     ap.add_argument("--exit-code", action="store_true",
                     help="for scripts: exit 3 when the daily cap is reached, 2 when LinkedIn stopped the run")
     ap.add_argument("--config")
@@ -1141,7 +1201,8 @@ def main(argv: list[str] | None = None) -> None:
     conn = db.connect(cfg.db_path)
     ids = [int(x) for x in args.ids.split(",")] if args.ids else None
     limit = 5 if args.test else args.limit
-    factory = lambda: LinkedInDriver(cfg, headless=args.headless)  # noqa: E731
+    factory = lambda: LinkedInDriver(cfg, headless=args.headless,  # noqa: E731
+                                     interactive=False if args.no_prompt else None)
     if args.report:
         report(conn, args.report)
         return

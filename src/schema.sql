@@ -207,3 +207,15 @@ CREATE TABLE IF NOT EXISTS quotes (
     gp          REAL
 );
 CREATE INDEX IF NOT EXISTS ix_quotes_account ON quotes(account_id);
+
+-- LinkedIn profiles Haiko sent with the "Send to KYC" bookmarklet (src/capture.py). Applied straight
+-- away when they match one contact; otherwise 'pending' until the /capture picker matches or creates.
+CREATE TABLE IF NOT EXISTS captures (
+    id          INTEGER PRIMARY KEY,
+    url         TEXT,
+    payload     TEXT NOT NULL,              -- sanitized page read (JSON)
+    status      TEXT NOT NULL DEFAULT 'pending',   -- pending|applied|dismissed|failed
+    contact_id  INTEGER REFERENCES contacts(id),
+    match_how   TEXT,                       -- profile url|name+company|picked|created
+    received_at TEXT NOT NULL DEFAULT (datetime('now'))
+);

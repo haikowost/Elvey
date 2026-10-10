@@ -9,12 +9,12 @@ import threading
 import time
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import Body, FastAPI, HTTPException, Query, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import analyze, chat, db, export, graph, harvest, orgchart, priority, zoho
+from . import analyze, capture, chat, db, export, graph, harvest, orgchart, priority, schedule, zoho
 from .config import load_config
 from .images import coverage, update_account_kyc_status
 from .util import ACCOUNT_ROLES, CONTACT_CLASSES, DEPARTMENTS, norm_company
@@ -54,6 +54,13 @@ class ChatMessage(BaseModel):
 class PushRequest(BaseModel):
     selections: list[Selection]
     live: bool = False
+
+
+class CaptureChoice(BaseModel):
+    contact_id: int | None = None   # "This is them"
+    create: bool = False            # "Create new contact" (at `company`, else the profile's current company)
+    company: str | None = None
+    dismiss: bool = False
 
 
 class QuoteExportRequest(BaseModel):
@@ -224,17 +231,19 @@ def kyc_progress(conn, cfg) -> dict:
     active = "contact_status = 'active'"
     url = "(coalesce(linkedin_profile_url, '') LIKE '%linkedin.com/in/%' OR coalesce(linkedin_contact_url, '') LIKE '%linkedin.com/in/%')"
     tiers = []
-    if priority.has_priority(conn):  # the MD's tiers: P1 coverage is what matters
+    if priority.has_priority(conn):  # the MD's tiers: Key + P1 coverage is what matters
         tiers = [{"tier": t["tier"], "label": t["tier"], "total": t["total"], "enriched": t["done"],
-                  "pending": t["pending"], "photo": t["photo"], "pinned": t["pinned"]} for t in priority.tier_counts(conn)]
+                  "failed": t["failed"], "pending": t["pending"], "photo": t["photo"], "pinned": t["pinned"]}
+                 for t in priority.tier_counts(conn)]
     for key, label in (() if tiers else (("top50", "Top-50 accounts"), ("top500", "Top-500 contacts"), ("cat-a", "Category A"))):
         n = harvest.TIERS[key]
         row = conn.execute(
-            f"SELECT count(*), sum(c.enrich_status = 'done'), sum(c.image_status IN ('downloaded','manual')) "
+            f"SELECT count(*), sum(c.enrich_status = 'done'), sum(c.image_status IN ('downloaded','manual')), "
+            f"sum(c.enrich_status IN ('no_profile', 'failed')) "
             f"FROM contacts c LEFT JOIN accounts a ON a.id = c.account_id WHERE c.{active} AND ({harvest.TIER_SQL}) = ?",
             [n]).fetchone()
-        tiers.append({"tier": key, "label": label, "total": row[0], "enriched": row[1] or 0,
-                      "pending": row[0] - (row[1] or 0), "photo": row[2] or 0})
+        tiers.append({"tier": key, "label": label, "total": row[0], "enriched": row[1] or 0, "failed": row[3] or 0,
+                      "pending": row[0] - (row[1] or 0) - (row[3] or 0), "photo": row[2] or 0})
     last_run = db.jload((db.one(conn, "SELECT value FROM meta WHERE key = 'last_harvest_run'") or {}).get("value"))
     last_visit = q("SELECT max(ts) FROM harvest_log")
     return {
@@ -251,14 +260,68 @@ def kyc_progress(conn, cfg) -> dict:
         "last_harvest_run": last_run,
         "last_linkedin_visit": last_visit,
         "last_ingest": q("SELECT value FROM meta WHERE key = 'last_ingest'"),
+        "schedule": schedule.status(cfg.data_dir),
+        "captures_pending": q("SELECT count(*) FROM captures WHERE status = 'pending'"),
+        "last_snapshot": db.jload(q("SELECT value FROM meta WHERE key = 'last_snapshot'")),
     }
 
 
-def create_app(cfg=None) -> FastAPI:
+def bookmarklet_source(port: int) -> str:
+    """The "Send to KYC" bookmarklet: src/static/bookmarklet.js with the harvester's own page reader
+    (harvest.JS_PROFILE) and photo selector baked in, as a javascript: URL."""
+    import json as _json
+    from urllib.parse import quote
+
+    import re as _re
+
+    js = (STATIC / "bookmarklet.js").read_text(encoding="utf-8")
+    js = _re.sub(r"^\s*/\*.*?\*/\s*", "", js, flags=_re.S)  # the header comment is for humans only
+    js = (js.replace("__PORT__", str(int(port))).replace("__PHOTO_SELECTOR__", _json.dumps(harvest.PHOTO_SELECTOR))
+            .replace("__JS_PROFILE__", "(" + harvest.JS_PROFILE.strip() + ")"))
+    return "javascript:" + quote(js, safe="/:;,.()[]{}'=+-_*!?&|<>$@~")
+
+
+def _cors_headers(request: Request) -> dict:
+    """CORS for /api/capture only, and only for linkedin.com pages (plus Chrome's private-network
+    preflight, since a public https page is calling 127.0.0.1)."""
+    origin = request.headers.get("origin") or ""
+    if not capture.LINKEDIN_ORIGIN_RE.match(origin):
+        return {}
+    return {"Access-Control-Allow-Origin": origin, "Vary": "Origin", "Access-Control-Allow-Methods": "POST, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type", "Access-Control-Allow-Private-Network": "true",
+            "Access-Control-Max-Age": "600"}
+
+
+def _same_origin(request: Request) -> bool:
+    origin = request.headers.get("origin")
+    return origin is None or origin.rstrip("/") == str(request.base_url).rstrip("/")
+
+
+def create_app(cfg=None, driver_factory=None, snapshot_async: bool = True) -> FastAPI:
+    """driver_factory: how the "Update from LinkedIn" button opens LinkedIn (tests pass a fake);
+    default = the harvester's own logged-in browser profile, never prompting in a console."""
     cfg = cfg or load_config()
     conn = db.connect(cfg.db_path)
     lock = threading.Lock()  # one sqlite connection shared by the worker threads
+    harvest_lock = threading.Lock()  # one LinkedIn browser at a time (it's one persistent profile)
+    job: dict = {"running": False, "contact_id": None, "name": None, "started": None, "last": None}
+    factory = driver_factory or (lambda: harvest.LinkedInDriver(cfg, interactive=False))
     app = FastAPI(title="Elvey KYC")
+
+    def refresh_snapshot():
+        """people_snapshot.json after a manual update / capture, off the request thread."""
+        def work():
+            c2 = db.connect(cfg.db_path)
+            try:
+                export.write_snapshot(c2, cfg)
+            except Exception as e:  # noqa: BLE001 - a Drive hiccup must never break the dashboard
+                print(f"(snapshot not written: {e})")
+            finally:
+                c2.close()
+        if snapshot_async:
+            threading.Thread(target=work, daemon=True).start()
+        else:
+            work()
 
     def client():
         try:
@@ -341,6 +404,115 @@ def create_app(cfg=None) -> FastAPI:
                 return {"ok": True, "contact": edit_contact(conn, contact_id, req.model_dump(exclude_none=True))}
             except ValueError as e:
                 raise HTTPException(400, str(e))
+
+    @app.post("/api/contacts/{contact_id}/harvest")
+    def harvest_contact(contact_id: int):
+        """"Update from LinkedIn": enrich this ONE contact now with the harvester (same logged-in browser
+        profile, same parsing, same daily cap). No Claude, no tokens. Blocks until done (~20-40 s)."""
+        with lock:
+            c = db.one(conn, "SELECT id, full_name FROM contacts WHERE id = ?", [contact_id])
+        if not c:
+            raise HTTPException(404, "contact not found")
+        if not harvest_lock.acquire(blocking=False):
+            raise HTTPException(409, f"LinkedIn is busy updating {job['name'] or 'someone else'} - try again in a moment")
+        hconn = db.connect(cfg.db_path)  # its own connection: the browser part must not block the dashboard
+        try:
+            job.update(running=True, contact_id=contact_id, name=c["full_name"], started=time.strftime("%H:%M:%S"))
+            stats = harvest.run(hconn, cfg, factory, limit=1, ids=[contact_id], force=True, record=False,
+                                log=lambda *a: None)
+        finally:
+            hconn.close()
+            job.update(running=False, last={"contact_id": contact_id, "name": c["full_name"],
+                                            "at": time.strftime("%Y-%m-%d %H:%M:%S")})
+            harvest_lock.release()
+        stopped = stats.get("stopped")
+        if stopped == "daily cap":
+            raise HTTPException(429, "Today's LinkedIn daily cap is used up - this resets tomorrow "
+                                     "(or use the Send to KYC bookmarklet, which doesn't count)")
+        if stopped:
+            raise HTTPException(503, f"LinkedIn update didn't run: {stopped}")
+        label = next((k for k in stats if k not in ("processed", "used_today")), None)
+        job["last"]["result"] = label
+        cache["graph"] = None
+        refresh_snapshot()
+        with lock:
+            row = db.one(conn, "SELECT c.*, a.name AS company FROM contacts c LEFT JOIN accounts a "
+                               "ON a.id = c.account_id WHERE c.id = ?", [contact_id])
+        row["experience"] = db.jload(row.pop("linkedin_experience"), [])
+        return {"ok": True, "result": label, "used_today": stats.get("used_today"), "contact": row}
+
+    @app.get("/api/harvest/status")
+    def harvest_status():
+        return job
+
+    # ------------------------------------------------------------------ "Send to KYC" bookmarklet
+
+    @app.options("/api/capture", include_in_schema=False)
+    def capture_preflight(request: Request):
+        headers = _cors_headers(request)
+        return Response(status_code=204 if headers else 403, headers=headers)
+
+    @app.post("/api/capture")
+    def capture_post(request: Request, payload: dict = Body(...)):
+        headers = _cors_headers(request)
+        if not headers and not _same_origin(request):
+            raise HTTPException(403, "captures are accepted from linkedin.com pages and this dashboard only")
+        with lock:
+            out = capture.receive(conn, cfg, payload)
+        if out.get("status") == "saved":
+            cache["graph"] = None
+            refresh_snapshot()
+        return JSONResponse(out, headers=headers)
+
+    @app.get("/api/captures")
+    def captures_pending():
+        with lock:
+            return capture.pending(conn)
+
+    @app.get("/api/captures/{capture_id}")
+    def capture_one(capture_id: int):
+        with lock:
+            items = [x for x in capture.pending(conn) if x["capture_id"] == capture_id]
+            cap = capture.get(conn, capture_id)
+        if items:
+            return items[0]
+        if not cap:
+            raise HTTPException(404, "capture not found")
+        return {"capture_id": capture_id, "status": cap["status"], "contact_id": cap["contact_id"]}
+
+    @app.post("/api/captures/{capture_id}/apply")
+    def capture_apply(capture_id: int, req: CaptureChoice):
+        with lock:
+            try:
+                if req.dismiss:
+                    capture.dismiss(conn, capture_id)
+                    return {"status": "dismissed"}
+                if req.create:
+                    out = capture.create_and_apply(conn, cfg, capture_id, req.company)
+                elif req.contact_id:
+                    out = capture.apply(conn, cfg, capture_id, req.contact_id, "picked")
+                else:
+                    raise ValueError("pick a contact, or create a new one")
+            except ValueError as e:
+                raise HTTPException(400, str(e))
+        cache["graph"] = None
+        refresh_snapshot()
+        return out
+
+    @app.get("/bookmarklet", response_class=HTMLResponse, include_in_schema=False)
+    def bookmarklet_page(request: Request):
+        port = request.url.port or int((cfg.get("dashboard") or {}).get("port", 8765))
+        href = bookmarklet_source(port).replace("&", "&amp;").replace('"', "&quot;")
+        return (STATIC / "bookmarklet.html").read_text(encoding="utf-8").replace("__HREF__", href)
+
+    @app.get("/capture", response_class=HTMLResponse, include_in_schema=False)
+    def capture_page():
+        return (STATIC / "capture.html").read_text(encoding="utf-8")
+
+    @app.post("/api/snapshot")
+    def snapshot_now():
+        with lock:
+            return export.write_snapshot(conn, cfg)
 
     @app.get("/api/zoho/diff")
     def diff():
